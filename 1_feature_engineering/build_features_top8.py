@@ -27,6 +27,7 @@ INTERMEDIATE_DIR = DATA_DIR / "intermediate"
 PKL_PATHS = (
     RAW_DIR / "batch1.pkl",
     RAW_DIR / "batch2.pkl",
+    RAW_DIR / "batch3_varcharge.pkl",
 )
 OUT_PATH = INTERMEDIATE_DIR / "features_top8_cycles.csv"
 N_CYCLE_WINDOWS: Iterable[int] = (25, 50, 100)
@@ -106,6 +107,7 @@ def main() -> None:
             rows.append(
                 {
                     "cell_id": cell_id,
+                    "dataset_prefix": cell_id.split("c", 1)[0],
                     "n_cycles": window,
                     "cycle_life": cycle_life,
                     "Qd_mean": float(np.mean(qd_win)),

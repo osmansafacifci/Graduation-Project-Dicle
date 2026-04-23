@@ -8,8 +8,8 @@ simply trained on dataset A and evaluated directly on dataset B.
 Usage:
     python 2_modeling_featuring/evaluate_cross_dataset_generalization.py \
         --dataset data/intermediate/features_top8_cycles.csv \
-        --train-batch b1 \
-        --test-batch b2
+        --train-batch b1 b2 b3 \
+        --test-batch hust
 """
 
 from __future__ import annotations
@@ -55,14 +55,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--train-batch",
         type=str,
-        default="b1",
-        help="Source batch prefix to train on (for example: b1).",
+        nargs="+",
+        default=["b1"],
+        help="Source dataset/batch prefixes to train on (for example: b1 b2 b3).",
     )
     parser.add_argument(
         "--test-batch",
         type=str,
-        default="b2",
-        help="Target batch prefix to test on (for example: b2).",
+        nargs="+",
+        default=["b2"],
+        help="Target dataset/batch prefixes to test on (for example: hust).",
     )
     parser.add_argument(
         "--output",
@@ -159,8 +161,8 @@ def build_models() -> dict[str, Callable[[], object]]:
 
 def evaluate_direction(
     df: pd.DataFrame,
-    train_batch: str,
-    test_batch: str,
+    train_batches: list[str],
+    test_batches: list[str],
     models: dict[str, Callable[[], object]],
     *,
     feature_columns: list[str],
@@ -173,10 +175,10 @@ def evaluate_direction(
         cycle_results: dict[int, dict[str, float]] = {}
         for n_cycles in windows:
             train_df = df[
-                (df["dataset_prefix"] == train_batch) & (df["n_cycles"] == n_cycles)
+                (df["dataset_prefix"].isin(train_batches)) & (df["n_cycles"] == n_cycles)
             ].copy()
             test_df = df[
-                (df["dataset_prefix"] == test_batch) & (df["n_cycles"] == n_cycles)
+                (df["dataset_prefix"].isin(test_batches)) & (df["n_cycles"] == n_cycles)
             ].copy()
             if train_df.empty or test_df.empty:
                 continue
@@ -203,14 +205,18 @@ def evaluate_direction(
 
 def main() -> None:
     args = parse_args()
-    if args.train_batch == args.test_batch:
-        raise SystemExit("train-batch ve test-batch ayni olmamali.")
+    train_batches = args.train_batch
+    test_batches = args.test_batch
+    if set(train_batches) & set(test_batches):
+        raise SystemExit("train-batch ve test-batch kesisimi bos olmali.")
 
     output_path = args.output
     if output_path is None:
+        train_name = "_".join(train_batches)
+        test_name = "_".join(test_batches)
         output_path = (
             RESULTS_DIR
-            / f"results_cross_dataset_{args.train_batch}_to_{args.test_batch}.json"
+            / f"results_cross_dataset_{train_name}_to_{test_name}.json"
         )
 
     prepared = load_prepared_dataset(
@@ -227,19 +233,21 @@ def main() -> None:
         explicit_columns=parse_feature_columns(args.feature_columns),
     )
     available_batches = sorted(df["dataset_prefix"].dropna().unique().tolist())
-    if args.train_batch not in available_batches:
+    missing_train = [batch for batch in train_batches if batch not in available_batches]
+    if missing_train:
         raise SystemExit(
-            f"Train batch bulunamadi: {args.train_batch}. Mevcut batch'ler: {available_batches}"
+            f"Train batch bulunamadi: {missing_train}. Mevcut batch'ler: {available_batches}"
         )
-    if args.test_batch not in available_batches:
+    missing_test = [batch for batch in test_batches if batch not in available_batches]
+    if missing_test:
         raise SystemExit(
-            f"Test batch bulunamadi: {args.test_batch}. Mevcut batch'ler: {available_batches}"
+            f"Test batch bulunamadi: {missing_test}. Mevcut batch'ler: {available_batches}"
         )
 
     summary = {
         "protocol": "train_on_A_test_on_B_without_adaptation",
-        "train_batch": args.train_batch,
-        "test_batch": args.test_batch,
+        "train_batch": train_batches,
+        "test_batch": test_batches,
         "dataset": str(args.dataset),
         "feature_set": args.feature_set,
         "feature_columns": feature_columns,
@@ -248,8 +256,8 @@ def main() -> None:
         "censor_summary": prepared.censor_summary,
         "models": evaluate_direction(
             df,
-            args.train_batch,
-            args.test_batch,
+            train_batches,
+            test_batches,
             build_models(),
             feature_columns=feature_columns,
             target_column=prepared.target_column,

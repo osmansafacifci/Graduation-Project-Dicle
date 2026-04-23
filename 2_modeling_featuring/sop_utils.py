@@ -40,6 +40,16 @@ FEATURE_SETS = {
     "top8": TOP8_FEATURES,
     "top7_no_qd_std": [feature for feature in TOP8_FEATURES if feature != "Qd_std"],
     "sop12_transition": SOP12_TRANSITION_FEATURES,
+    "sop12": SOP12_TRANSITION_FEATURES,
+    "sop_common_capacity_dqdv": [
+        "Qd_mean",
+        "Qd_std",
+        "dQd_slope",
+        "dqdv_peak_delta",
+        "dqdv_peak_std",
+        "dqdv_area_delta",
+        "dqdv_peakpos_delta",
+    ],
 }
 
 
@@ -138,7 +148,10 @@ def prepare_dataset(
     drop_censored: bool = False,
 ) -> PreparedDataset:
     prepared = df.copy()
-    prepared["dataset_prefix"] = _infer_dataset_prefix(prepared["cell_id"])
+    if "dataset_prefix" in prepared.columns and prepared["dataset_prefix"].notna().all():
+        prepared["dataset_prefix"] = prepared["dataset_prefix"].astype(str)
+    else:
+        prepared["dataset_prefix"] = _infer_dataset_prefix(prepared["cell_id"])
     prepared.dropna(subset=["cell_id", "n_cycles"], inplace=True)
 
     target_column = _apply_dataset_specific_target(

@@ -127,9 +127,15 @@ def build_rows(
         cycles = np.asarray(cell_data["summary"]["cycle"], dtype=float).ravel()
         q0 = first_positive(qd)
         threshold_80 = 0.8 * q0 if math.isfinite(q0) else float("nan")
+        threshold_85 = 0.85 * q0 if math.isfinite(q0) else float("nan")
         eol_80 = (
             first_crossing_cycle(cycles, qd, threshold=threshold_80, inclusive=True)
             if math.isfinite(threshold_80)
+            else float("nan")
+        )
+        eol_85 = (
+            first_crossing_cycle(cycles, qd, threshold=threshold_85, inclusive=True)
+            if math.isfinite(threshold_85)
             else float("nan")
         )
         eol_88 = first_crossing_cycle(cycles, qd, threshold=0.88, inclusive=False)
@@ -153,6 +159,9 @@ def build_rows(
                 "eol_80pct_q0_cycle": eol_80,
                 "eol_80pct_q0_label": eol_80 if math.isfinite(eol_80) else float(observed_cycles + 1),
                 "is_censored_80pct_q0": int(not math.isfinite(eol_80)),
+                "eol_85pct_q0_cycle": eol_85,
+                "eol_85pct_q0_label": eol_85 if math.isfinite(eol_85) else float(observed_cycles + 1),
+                "is_censored_85pct_q0": int(not math.isfinite(eol_85)),
                 "eol_88ah_cycle": eol_88,
                 "eol_88ah_label": eol_88 if math.isfinite(eol_88) else float(observed_cycles + 1),
                 "is_censored_88ah": int(not math.isfinite(eol_88)),
@@ -178,6 +187,14 @@ def main() -> None:
         merge_status=merge_status,
         include_nonfinished=args.include_nonfinished,
     )
+    if batch2 is not None:
+        rows.extend(
+            build_rows(
+                batch2,
+                merge_status={cell_id: "native" for cell_id in batch2},
+                include_nonfinished=True,
+            )
+        )
     if (RAW_DIR / "batch3_varcharge.pkl").exists():
         batch3 = load_pickle(RAW_DIR / "batch3_varcharge.pkl")
         rows.extend(

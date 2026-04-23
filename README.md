@@ -107,8 +107,13 @@ Sample curves from the raw MAT data:
 
 - Bu calismada transfer learning, domain adaptation veya fine-tuning kullanilmamaktadir.
 - Deney protokolu basitce `A veri setinde egit, B veri setinde test et` seklindedir.
-- Bir batch uzerinde egitip diger batch uzerinde dogrudan test etmek icin `python 2_modeling_featuring/evaluate_cross_dataset_generalization.py --train-batch b1 --test-batch b2` komutunu kullan.
-- Ters yonu degerlendirmek icin `--train-batch b2 --test-batch b1` calistirilabilir.
+- MATR icin `batch1+batch2+batch3` birlikte kaynak veri seti olarak ele alinmalidir; batch1 ve batch2 ayri veri setleri olarak yorumlanmamalidir.
+- `python 1_feature_engineering/build_features_top8.py` komutu `data/raw/batch1.pkl`, `data/raw/batch2.pkl` ve `data/raw/batch3_varcharge.pkl` dosyalarindan ortak feature tablosunu uretir.
+- `batch3_varcharge.pkl` icindeki `cycle_life` etiketi bos oldugu icin cross-dataset tabloda `batch3` icin `eol_80pct_q0_label` etiketi korunur: `python 2_modeling_featuring/prepare_sop_feature_table.py --input data/intermediate/features_top8_cycles.csv --feature-set top8 --label-column cycle_life --keep-extra-columns eol_80pct_q0_label is_censored_80pct_q0 --output data/intermediate/features_top8_cycles_cross_dataset.csv`.
+- HUST verisi Mendeley Data'daki `nsc7hnsg4s/2` kaynagindan alinmali ve ayni feature semasina donusturulmelidir. HUST pickle klasoru icin `python 1_feature_engineering/build_batteryml_top8_features.py --input-dir /Users/diclesaracoban/Downloads/HUST_data --dataset-prefix hust --output data/intermediate/features_hust_top8_cycles.csv` komutu HUST feature tablosunu uretir.
+- HUST dosyalarinda sicaklik ve internal resistance sinyalleri olmadigi icin MATR -> HUST deneyinde ortak feature kesisimi kullanilir: `Qd_mean,Qd_std,dQd_slope`.
+- MATR -> HUST deneyi icin MATR ve HUST feature CSV'leri ayni dosyada birlestirildikten sonra su protokol calistirilir: `python 2_modeling_featuring/evaluate_cross_dataset_generalization.py --dataset data/intermediate/features_matr_hust_cross_dataset.csv --train-batch b1 b2 b3 --test-batch hust --label-column eol_80pct_q0_label --feature-columns Qd_mean,Qd_std,dQd_slope`.
+- Gercek MATR -> HUST sonucu `outputs/results/results_cross_dataset_matr_to_hust_capacity3.json`, ozet tablo ise `outputs/results/results_cross_dataset_matr_to_hust_capacity3_summary.csv` dosyasina kaydedilmistir.
 - Script sonuclari `outputs/results/results_cross_dataset_<train>_to_<test>.json` dosyasina kaydeder.
 
 ## SOP Migration
@@ -118,6 +123,19 @@ Sample curves from the raw MAT data:
 - Split dosyalari `splits/b1_<seed>.json` ve `splits/b2_<seed>.json` seklinde kaydedilir.
 - Gecis asamasindaki within/cross deneyleri icin `python 2_modeling_featuring/run_sop_protocol_baselines.py` komutunu kullan.
 - Bu script SOP metrik ve split protokolunu uygular, ancak henuz mevcut 8-feature tabloyu kullanir. 12-feature engineering tamamlandiginda ayni deney yapisi yeni feature set ile yeniden calistirilmalidir.
+
+### Final SOP12 / HUST update
+
+- Final SOP feature tablolari `python 1_feature_engineering/build_sop12_features.py` ile uretilir.
+- Final SOP label hedefi `q0` degerinin `%85` seviyesine ilk dususudur (`eol_85pct_q0_label`). `%80` hedefi MATR icinde yuksek sansurleme urettigi icin referans kolon olarak tutulur, ancak final deneylerde `%85` hedefi `cycle_life` olarak kullanilir.
+- Guncel sansurleme oranlari: MATR `%80` icin yaklasik `0.537`, `%85` icin yaklasik `0.105`; HUST `%85` icin `0.000`.
+- MATR icin tam 12-feature SOP tablosu: `data/intermediate/features_matr_sop12.csv`.
+- HUST icin IR ve sicaklik sinyalleri bulunmadigindan tam 12-feature tablo fiziksel olarak olusturulamaz; HUST icin ortak SOP kapasite+dQ/dV tablosu: `data/intermediate/features_hust_sop_common.csv`.
+- MATR+HUST ortak feature tablosu: `data/intermediate/features_matr_hust_sop_common.csv`.
+- Final SOP splitleri `python 2_modeling_featuring/generate_json_splits.py --dataset data/intermediate/features_matr_hust_sop_common.csv --dataset-prefixes matr hust --output-dir splits/sop_matr_hust` ile uretilir.
+- Tam SOP12 within-MATR deneyi: `python 2_modeling_featuring/run_sop_protocol_baselines.py --dataset data/intermediate/features_matr_sop12.csv --feature-set sop12 --label-column cycle_life --split-dir splits/sop_matr_hust --within-prefixes matr --windows 25 50 100 --output outputs/results/results_sop12_within_matr.json`.
+- Ortak SOP feature setiyle within-MATR, within-HUST ve MATR->HUST deneyi: `python 2_modeling_featuring/run_sop_protocol_baselines.py --dataset data/intermediate/features_matr_hust_sop_common.csv --feature-set sop_common_capacity_dqdv --label-column cycle_life --split-dir splits/sop_matr_hust --within-prefixes matr hust --cross-pairs matr:hust --windows 25 50 100 --output outputs/results/results_sop_common_matr_hust.json`.
+- `%85` hedefli final ozet tablo: `outputs/results/results_sop_final_summary_eol85.csv`.
 
 ### Additional Figures
 

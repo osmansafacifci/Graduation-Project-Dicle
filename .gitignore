@@ -5,6 +5,11 @@ batch2.pkl
 *.mat
 *.pptx
 data-driven-prediction-of-battery-cycle-life-before-capacity-degradation-master/dataset/
+HUST_data/
+data/HUST_data/
+data/raw/HUST_data/
+data/processed/HUST_data/
+data/processed/HUST/
 
 # Generated visualization assets
 plots/

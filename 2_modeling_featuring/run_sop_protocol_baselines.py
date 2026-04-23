@@ -13,7 +13,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from catboost import CatBoostRegressor
 from metrics_utils import bootstrap_metric_ci, compute_metrics
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import ElasticNetCV
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -85,6 +87,18 @@ def parse_args() -> argparse.Namespace:
         default=list(PRIMARY_WINDOWS),
         help="Cycle windows to evaluate.",
     )
+    parser.add_argument(
+        "--within-prefixes",
+        nargs="+",
+        default=["b1", "b2"],
+        help="Dataset prefixes to evaluate with train/test splits from the same dataset.",
+    )
+    parser.add_argument(
+        "--cross-pairs",
+        nargs="*",
+        default=[],
+        help="Cross-dataset pairs in train:test format, for example matr:hust.",
+    )
     return parser.parse_args()
 
 
@@ -94,6 +108,13 @@ def subset_by_cells(df: pd.DataFrame, cell_ids: list[str]) -> pd.DataFrame:
 
 def build_model_factories() -> dict[str, object]:
     return {
+        "random_forest": lambda: RandomForestRegressor(
+            n_estimators=400,
+            min_samples_leaf=2,
+            max_features="sqrt",
+            random_state=42,
+            n_jobs=-1,
+        ),
         "elastic_net": lambda: make_pipeline(
             StandardScaler(),
             ElasticNetCV(
@@ -114,6 +135,14 @@ def build_model_factories() -> dict[str, object]:
             random_state=42,
             n_jobs=-1,
             tree_method="hist",
+        ),
+        "catboost": lambda: CatBoostRegressor(
+            iterations=400,
+            learning_rate=0.05,
+            depth=6,
+            loss_function="MAE",
+            random_seed=42,
+            verbose=False,
         ),
     }
 
@@ -224,8 +253,37 @@ def main() -> None:
         feature_set=args.feature_set,
         explicit_columns=parse_feature_columns(args.feature_columns),
     )
+    within_dataset = {
+        f"{prefix}_to_{prefix}": run_experiment(
+            feature_df,
+            args.split_dir,
+            prefix,
+            prefix,
+            args.seeds,
+            feature_columns=feature_columns,
+            target_column=prepared.target_column,
+            windows=args.windows,
+        )
+        for prefix in args.within_prefixes
+    }
+    cross_dataset = {}
+    for pair in args.cross_pairs:
+        if ":" not in pair:
+            raise SystemExit(f"Cross pair must use train:test format, got: {pair}")
+        train_prefix, test_prefix = pair.split(":", 1)
+        cross_dataset[f"{train_prefix}_to_{test_prefix}"] = run_experiment(
+            feature_df,
+            args.split_dir,
+            train_prefix,
+            test_prefix,
+            args.seeds,
+            feature_columns=feature_columns,
+            target_column=prepared.target_column,
+            windows=args.windows,
+        )
+
     summary = {
-        "protocol_version": "sop_baseline_transition",
+        "protocol_version": "sop_baseline",
         "notes": [
             "Uses SOP JSON splits, seed averaging, and bootstrap confidence intervals.",
             "Supports configurable feature sets, labels, and optional censor filtering.",
@@ -236,50 +294,8 @@ def main() -> None:
         "target_column": prepared.target_column,
         "windows": args.windows,
         "censor_summary": prepared.censor_summary,
-        "within_dataset": {
-            "b1_to_b1": run_experiment(
-                feature_df,
-                args.split_dir,
-                "b1",
-                "b1",
-                args.seeds,
-                feature_columns=feature_columns,
-                target_column=prepared.target_column,
-                windows=args.windows,
-            ),
-            "b2_to_b2": run_experiment(
-                feature_df,
-                args.split_dir,
-                "b2",
-                "b2",
-                args.seeds,
-                feature_columns=feature_columns,
-                target_column=prepared.target_column,
-                windows=args.windows,
-            ),
-        },
-        "cross_dataset": {
-            "b1_to_b2": run_experiment(
-                feature_df,
-                args.split_dir,
-                "b1",
-                "b2",
-                args.seeds,
-                feature_columns=feature_columns,
-                target_column=prepared.target_column,
-                windows=args.windows,
-            ),
-            "b2_to_b1": run_experiment(
-                feature_df,
-                args.split_dir,
-                "b2",
-                "b1",
-                args.seeds,
-                feature_columns=feature_columns,
-                target_column=prepared.target_column,
-                windows=args.windows,
-            ),
-        },
+        "within_dataset": within_dataset,
+        "cross_dataset": cross_dataset,
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -81,7 +81,10 @@ def main() -> None:
             df = df.merge(labels_df[["cell_id"] + label_only_cols], on="cell_id", how="left")
 
     feature_columns = FEATURE_SETS[args.feature_set]
-    keep_columns = ["cell_id", "n_cycles", args.label_column, *feature_columns, *args.keep_extra_columns]
+    id_columns = ["cell_id"]
+    if "dataset_prefix" in df.columns:
+        id_columns.append("dataset_prefix")
+    keep_columns = [*id_columns, "n_cycles", args.label_column, *feature_columns, *args.keep_extra_columns]
     ensure_columns_present(df, keep_columns)
 
     exported = df[keep_columns].copy()

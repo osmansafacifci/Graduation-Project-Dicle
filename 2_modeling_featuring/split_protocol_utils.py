@@ -28,7 +28,7 @@ def load_feature_rows(path: Path) -> list[dict[str, str]]:
 
 
 def infer_dataset_prefix(cell_id: str) -> str:
-    match = re.match(r"^(b\d+)", str(cell_id))
+    match = re.match(r"^(b\d+|hust|matr)", str(cell_id))
     if not match:
         raise SystemExit(f"Could not infer dataset prefix from cell_id: {cell_id}")
     return match.group(1)
@@ -38,7 +38,8 @@ def build_cell_records(rows: list[dict[str, str]], dataset_prefix: str) -> list[
     by_cell: dict[str, float] = {}
     for row in rows:
         cell_id = row["cell_id"]
-        if infer_dataset_prefix(cell_id) != dataset_prefix:
+        row_prefix = row.get("dataset_prefix") or infer_dataset_prefix(cell_id)
+        if row_prefix != dataset_prefix:
             continue
         cycle_life_raw = row["cycle_life"]
         if cycle_life_raw is None or not str(cycle_life_raw).strip():
