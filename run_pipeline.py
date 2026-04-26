@@ -1,26 +1,33 @@
 """
-End-to-end pipeline runner: raw data → labels → features → splits → experiments.
+End-to-end pipeline runner: raw data → MATR + HUST audit CSVs.
 
-Each stage shells out to the existing student scripts. The runner handles
-ordering, timing, missing-data checks, and skip/resume so you don't have
-to remember the right invocation order.
+This runner is built around the supervisor's reference notebooks
+(Cell_Audit_MATR_Provided_vs_Recomputed_EOL.ipynb,
+ HUST_Standalone_Preprocess_and_Audit.ipynb), faithfully ported into
+ 0_data_prep/build_matr_audit.py and 0_data_prep/build_hust_audit.py.
+It is independent of the student's existing build_raw_label_table.py /
+build_sop12_features.py path (which has known issues with Q0, feature
+naming, and batch3 source).
 
-Quick start (first time):
-    pip install gdown
-    python 0_data_prep/download_data.py        # ~15-20 GB into data/raw/
-    python run_pipeline.py                     # everything
+Quick start:
+    pip install -r requirements.txt
+    python run_pipeline.py                        # download + audits
+    python run_pipeline.py --skip-download        # data already on disk
+    python run_pipeline.py --stages audit_matr    # only one stage
+    python run_pipeline.py --status               # which outputs exist
 
-Common variations:
-    python run_pipeline.py --skip-download             # data already on disk
-    python run_pipeline.py --stages labels features    # only those stages
-    python run_pipeline.py --resume                    # skip stages whose outputs exist
-
-Stages (in order):
-    download   data/raw/{batch1,batch2,batch3_varcharge}.pkl + data/raw/HUST_data/*.pkl
-    labels     data/intermediate/raw_label_table.csv
-    features   data/intermediate/features_{matr_sop12,hust_sop_common,matr_hust_sop_common}.csv
-    splits     splits/sop_matr_hust/{matr,hust}_{seed}.json
-    experiments outputs/results/results_*.json
+Stages:
+    download      pulls MATR + HUST raw data from public Drive folders
+                  -> data/raw/{batch1,batch2,batch3}.pkl
+                  -> data/raw/HUST_data/*.pkl  (77 cells)
+    audit_matr    faithful port of MATR audit notebook
+                  -> data/intermediate/matr_cell_audit_strict.csv
+                  -> data/intermediate/matr_cell_audit_replication.csv
+                  -> data/intermediate/matr_retention_summary.csv
+    audit_hust    faithful port of HUST preprocess + audit notebook
+                  -> data/intermediate/hust_cycles_tidy.csv
+                  -> data/intermediate/hust_threshold_audit.csv
+                  -> data/intermediate/hust_threshold_summary.csv
 """
 
 from __future__ import annotations
@@ -37,8 +44,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 HUST_DIR = RAW_DIR / "HUST_data"
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
-SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_matr_hust"
-RESULTS_DIR = PROJECT_ROOT / "outputs" / "results"
 
 PYTHON = sys.executable
 
@@ -47,11 +52,9 @@ PYTHON = sys.executable
 class Stage:
     name: str
     description: str
-    run: Callable[[], int]      # returns subprocess returncode (0 = success)
-    outputs: Sequence[Path]     # files produced; used by --resume / status check
+    run: Callable[[], int]
+    outputs: Sequence[Path]
 
-
-# ---------- stage runners ----------
 
 def _run(cmd: list[str], cwd: Path = PROJECT_ROOT) -> int:
     print(f"\n$ {' '.join(str(c) for c in cmd)}")
@@ -62,89 +65,60 @@ def stage_download() -> int:
     return _run([PYTHON, "0_data_prep/download_data.py"])
 
 
-def stage_labels() -> int:
-    required = [RAW_DIR / "batch1.pkl", RAW_DIR / "batch2.pkl"]
+def stage_audit_matr() -> int:
+    required = [RAW_DIR / "batch1.pkl", RAW_DIR / "batch2.pkl", RAW_DIR / "batch3.pkl"]
     missing = [p for p in required if not p.exists()]
     if missing:
-        print(f"[skip] labels: missing raw inputs: {[str(m) for m in missing]}")
-        print("       run with download stage first or place pkls under data/raw/")
+        print(f"[skip] audit_matr: missing inputs: {[str(m.relative_to(PROJECT_ROOT)) for m in missing]}")
+        print("       run download stage first.")
         return 1
-    return _run([PYTHON, "1_feature_engineering/build_raw_label_table.py"])
+    return _run([PYTHON, "0_data_prep/build_matr_audit.py"])
 
 
-def stage_features() -> int:
-    if not (INTERMEDIATE_DIR / "raw_label_table.csv").exists():
-        print("[skip] features: raw_label_table.csv missing — run labels stage first.")
+def stage_audit_hust() -> int:
+    if not HUST_DIR.exists() or not any(HUST_DIR.glob("*.pkl")):
+        print(f"[skip] audit_hust: no HUST .pkl files at {HUST_DIR.relative_to(PROJECT_ROOT)}")
+        print("       run download stage first.")
         return 1
-    cmd = [PYTHON, "1_feature_engineering/build_sop12_features.py"]
-    if HUST_DIR.exists() and any(HUST_DIR.glob("*.pkl")):
-        cmd += ["--hust-dir", str(HUST_DIR)]
-    else:
-        print(f"[warn] features: no HUST data found at {HUST_DIR}; HUST tables will be empty.")
-    return _run(cmd)
+    return _run([PYTHON, "0_data_prep/build_hust_audit.py"])
 
-
-def stage_splits() -> int:
-    if not (INTERMEDIATE_DIR / "features_matr_sop12.csv").exists():
-        print("[skip] splits: features_matr_sop12.csv missing — run features stage first.")
-        return 1
-    rc1 = _run([PYTHON, "2_modeling_featuring/generate_json_splits.py"])
-    rc2 = _run([PYTHON, "2_modeling_featuring/generate_observed_only_splits.py"])
-    return rc1 or rc2
-
-
-def stage_experiments() -> int:
-    if not SPLITS_DIR.exists() or not any(SPLITS_DIR.glob("matr_*.json")):
-        print(f"[skip] experiments: no splits found at {SPLITS_DIR} — run splits stage first.")
-        return 1
-    rc1 = _run([PYTHON, "2_modeling_featuring/run_sop_protocol_baselines.py"])
-    rc2 = _run([PYTHON, "2_modeling_featuring/evaluate_cross_dataset_generalization.py"])
-    return rc1 or rc2
-
-
-# ---------- registry ----------
 
 STAGES: dict[str, Stage] = {
     "download": Stage(
         name="download",
         description="Fetch MATR + HUST raw data from public Drive folders",
         run=stage_download,
-        outputs=[RAW_DIR / "batch1.pkl", RAW_DIR / "batch2.pkl", HUST_DIR],
-    ),
-    "labels": Stage(
-        name="labels",
-        description="Build merged MATR raw label table (Q0, EOL, censoring)",
-        run=stage_labels,
-        outputs=[INTERMEDIATE_DIR / "raw_label_table.csv"],
-    ),
-    "features": Stage(
-        name="features",
-        description="Build SOP12 + cross-dataset feature tables (MATR + HUST)",
-        run=stage_features,
         outputs=[
-            INTERMEDIATE_DIR / "features_matr_sop12.csv",
-            INTERMEDIATE_DIR / "features_hust_sop_common.csv",
-            INTERMEDIATE_DIR / "features_matr_hust_sop_common.csv",
+            RAW_DIR / "batch1.pkl",
+            RAW_DIR / "batch2.pkl",
+            RAW_DIR / "batch3.pkl",
+            HUST_DIR,
         ],
     ),
-    "splits": Stage(
-        name="splits",
-        description="Generate 70/15/15 stratified splits for MATR and HUST (5 seeds)",
-        run=stage_splits,
-        outputs=[SPLITS_DIR],
+    "audit_matr": Stage(
+        name="audit_matr",
+        description="MATR cell-level audit (notebook port: provided vs recomputed 80% Q0 EOL)",
+        run=stage_audit_matr,
+        outputs=[
+            INTERMEDIATE_DIR / "matr_cell_audit_strict.csv",
+            INTERMEDIATE_DIR / "matr_cell_audit_replication.csv",
+            INTERMEDIATE_DIR / "matr_retention_summary.csv",
+        ],
     ),
-    "experiments": Stage(
-        name="experiments",
-        description="Run within-dataset and cross-dataset experiments (Elastic Net, XGBoost, ...)",
-        run=stage_experiments,
-        outputs=[RESULTS_DIR],
+    "audit_hust": Stage(
+        name="audit_hust",
+        description="HUST preprocess + threshold audit (notebook port: 90/85/80% Q0)",
+        run=stage_audit_hust,
+        outputs=[
+            INTERMEDIATE_DIR / "hust_cycles_tidy.csv",
+            INTERMEDIATE_DIR / "hust_threshold_audit.csv",
+            INTERMEDIATE_DIR / "hust_threshold_summary.csv",
+        ],
     ),
 }
 
-DEFAULT_ORDER = ["download", "labels", "features", "splits", "experiments"]
+DEFAULT_ORDER = ["download", "audit_matr", "audit_hust"]
 
-
-# ---------- orchestration ----------
 
 def _outputs_exist(stage: Stage) -> bool:
     for out in stage.outputs:
@@ -167,23 +141,11 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         choices=DEFAULT_ORDER,
         default=DEFAULT_ORDER,
-        help="Stages to run (in order). Default: all.",
+        help="Stages to run, in order. Default: all.",
     )
-    parser.add_argument(
-        "--skip-download",
-        action="store_true",
-        help="Skip the download stage (data already on disk).",
-    )
-    parser.add_argument(
-        "--resume",
-        action="store_true",
-        help="Skip stages whose declared outputs already exist.",
-    )
-    parser.add_argument(
-        "--status",
-        action="store_true",
-        help="Print which stage outputs exist, then exit.",
-    )
+    parser.add_argument("--skip-download", action="store_true", help="Skip the download stage.")
+    parser.add_argument("--resume", action="store_true", help="Skip stages whose outputs exist.")
+    parser.add_argument("--status", action="store_true", help="Print which outputs exist; exit.")
     return parser.parse_args()
 
 
@@ -195,8 +157,9 @@ def print_status() -> None:
         marker = "✓" if ok else "·"
         print(f"  [{marker}] {name:<12} {stage.description}")
         for out in stage.outputs:
-            exists = "exists" if out.exists() else "missing"
-            print(f"        {out.relative_to(PROJECT_ROOT) if out.is_absolute() and PROJECT_ROOT in out.parents else out} ({exists})")
+            rel = out.relative_to(PROJECT_ROOT) if PROJECT_ROOT in out.parents else out
+            present = "exists" if out.exists() else "missing"
+            print(f"        {rel}  ({present})")
 
 
 def main() -> int:
@@ -210,7 +173,7 @@ def main() -> int:
         selected.remove("download")
 
     print(f"Pipeline plan: {' → '.join(selected)}")
-    overall_start = time.time()
+    overall = time.time()
     failures: list[str] = []
 
     for name in selected:
@@ -227,7 +190,7 @@ def main() -> int:
         if rc != 0:
             failures.append(name)
 
-    total = time.time() - overall_start
+    total = time.time() - overall
     print(f"\n========== Pipeline finished in {total:.1f}s ==========")
     if failures:
         print(f"Failed stages: {', '.join(failures)}")
