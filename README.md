@@ -1,178 +1,237 @@
-# Graduation-Project
+# Battery Lifetime Prediction — Cross-Dataset Pipeline
 
-## Eight-Feature Pipeline (Batch 1)
+Early-cycle battery lifetime prediction on Severson/MATR and HUST, with the
+supervisor's SOPv2 specification driving labels, features, splits, and models.
 
-- `2017-05-12_batchdata_updated_struct_errorcorrect.mat` -> `data/raw/batch1.pkl` -> `data/intermediate/features_top8_cycles.csv` (138 rows, 46 cells x 3 early-cycle windows).
-- Feature list: `IR_delta`, `dQd_slope`, `Qd_mean`, `IR_slope`, `Tavg_mean`, `IR_mean`, `Qd_std`, `IR_std`. Dropping Qd_std simply removes that column from the same CSV.
-- Current split protocol is cell-ID-based `70/15/15` as train/calibration/test. Hyperparameter tuning is done with grouped 5-fold CV inside the training split.
-- Reported primary metrics are `MAE`, `sMAPE`, and `R²`, together with bootstrap `95%` confidence intervals for test-set experiments.
+This repo is a fork of [diclecoban/Graduation-Project](https://github.com/diclecoban/Graduation-Project)
+with a parallel, SOP-compliant pipeline (`*_v2`) added on top so the same
+raw data can be re-processed end-to-end without depending on the original
+author's local machine.
 
-### Dataset overview
+> **Reproducibility note.** Raw `.pkl` files (~15-20 GB combined) are gitignored
+> and live on Google Drive. The full pipeline can be re-run by anyone with the
+> code, the public Drive folders, and ~30 minutes of compute (Colab is the
+> easiest path — see "Colab workflow" below).
 
-| Dataset | Cells | Rows (25/50/100) | Signals per row |
-|---------|-------|------------------|-----------------|
-| Batch 1 (2017-05-12) | 46 | 138 | 8 |
-| Batch 2 (2018-02-20) | 47 | 141 | 8 |
-| Combined | 93 | 279 | 8 |
+---
 
-Sample curves from the raw MAT data:
+## What's in the repo
 
-- Voltage vs time for two discharge cycles of cell `b1c0`: `plots/sample_voltage_curves.png`
-- Capacity fade trajectories for representative cells from Batch 1 and Batch 2: `plots/sample_capacity_fade.png`
+```
+├── 0_data_prep/
+│   ├── download_data.py            # gdown the public MATR + HUST Drive folders
+│   ├── build_matr_audit.py         # MATR cell-level audit (Q0, EOL, censoring)
+│   └── build_hust_audit.py         # HUST cycle-level audit (Coulomb counting → Q_d)
+├── 1_feature_engineering/
+│   └── build_sop12_features_v2.py  # 12 capacity-only SOP features for MATR & HUST
+├── 2_modeling_featuring/
+│   ├── generate_sop_splits_v2.py   # 70/15/15 lifetime-stratified splits, 5 seeds
+│   ├── vif_screening.py            # VIF report on MATR train (default report-only)
+│   ├── run_experiments_v2.py       # ElasticNet + XGBoost (+ optional CatBoost)
+│   └── metrics_utils.py            # MAE / sMAPE / R² + bootstrap 95% CI helpers
+├── notebooks/
+│   └── run_pipeline_colab.ipynb    # Drive-mount Colab runner (no local disk needed)
+├── run_pipeline.py                 # end-to-end orchestrator with --resume / --status
+├── data/
+│   ├── raw/                        # gitignored — populated by Drive mount or gdown
+│   └── intermediate/               # audit + feature CSVs (committed)
+├── splits/sop_v2/                  # JSON splits, one file per (dataset, seed)
+├── outputs/results_v2/             # per-seed and seed-averaged experiment results
+└── requirements.txt
+```
 
-### Model results: with vs without Qd_std
+The legacy student scripts (`build_raw_label_table.py`, `build_sop12_features.py`,
+`run_sop_protocol_baselines.py`, etc.) are kept untouched for reference but are
+known to deviate from the SOP — they use IR/Tavg/dQdV-style features under the
+"sop12" name, and they read `Q0` from `first_positive(qd)` instead of the median
+over cycles 2-5. The `*_v2` modules are the corrected path.
 
-| Model | n_cycles      | MAE (Qd_std var) | R2 (Qd_std var) | MAE (Qd_std yok) | R2 (Qd_std yok) |
-|-------|----------     |------------------|-----------------|------------------|-----------------|
-| Random Forest | 25    | 123.21 | 0.04 | 113.21 | 0.18                                         |
-| Random Forest | 50    | 95.42 | 0.43 | 93.40 | 0.48                                           |
-| Random Forest | 100   | 78.13 | 0.62 | 70.56 | 0.69                                          |
-| XGBoost | 25 | 125.15 | -0.08 | 136.16 | -0.17                                             |
-| XGBoost | 50 | 70.52  | 0.63 | 71.47 | 0.63                                                 |
-| XGBoost | 100 | 58.55 | 0.73 | 63.12 | 0.71                                                |
-| CatBoost | 25 | 130.09 | -0.36 | 136.01 | -0.42                                            |
-| CatBoost | 50 | 124.98 | 0.06 | 102.11 | 0.34                                              |
-| CatBoost | 100 | 76.31 | 0.59 | 79.12 | 0.56                                               |
+---
 
-### MAE vs n_cycles
+## Pipeline stages
 
-| Model | 25 (var) | 50 (var) | 100 (var) | 25 (yok) | 50 (yok) | 100 (yok) |
-|-------|----------|----------|-----------|----------|----------|-----------|
-| Random Forest | 123.21 | 95.42 | 78.13 | 113.21 | 93.40 | 70.56 |
-| XGBoost | 125.15 | 70.52 | 58.55 | 136.16 | 71.47 | 63.12 |
-| CatBoost | 130.09 | 124.98 | 76.31 | 136.01 | 102.11 | 79.12 |
+| Stage | Script | Outputs |
+|---|---|---|
+| `download` | `0_data_prep/download_data.py` | `data/raw/{batch1,batch2,batch3}.pkl`, `data/raw/HUST_data/*.pkl` |
+| `audit_matr` | `0_data_prep/build_matr_audit.py` | `matr_cell_audit_{strict,replication}.csv`, `matr_retention_summary.csv` |
+| `audit_hust` | `0_data_prep/build_hust_audit.py` | `hust_cycles_tidy.csv`, `hust_threshold_audit.csv`, `hust_threshold_summary.csv` |
+| `features` | `1_feature_engineering/build_sop12_features_v2.py` | `features_sop12_{matr,hust,combined}.csv` |
+| `splits` | `2_modeling_featuring/generate_sop_splits_v2.py` | `splits/sop_v2/{matr,hust}_{seed}.json` |
+| `vif` | `2_modeling_featuring/vif_screening.py` | `vif_screening.json`, `vif_report.txt` |
+| `experiments` | `2_modeling_featuring/run_experiments_v2.py` | `outputs/results_v2/results_within_{matr,hust}.json`, `results_summary.csv` |
 
-### sMAPE vs n_cycles
+Run any subset:
 
-| Model | 25 (var) | 50 (var) | 100 (var) | 25 (yok) | 50 (yok) | 100 (yok) |
-|-------|----------|----------|-----------|----------|----------|-----------|
-| Random Forest | 14.46% | 10.80% | 9.05% | 13.24% | 10.58% | 8.12% |
-| XGBoost | 14.83% | 8.12% | 6.60% | 16.15% | 8.22% | 7.22% |
-| CatBoost | 15.12% | 13.82% | 8.47% | 16.16% | 11.54% | 9.16% |
+```bash
+python run_pipeline.py                                    # full pipeline
+python run_pipeline.py --skip-download                    # data already on disk
+python run_pipeline.py --resume                           # only fill in missing outputs
+python run_pipeline.py --status                           # show which outputs exist
+python run_pipeline.py --stages features splits           # just these two
+```
 
-### Single table: MAE | MAPE (var vs yok)
+---
 
-| Model | 25 | 50 | 100 |
-|-------|----|----|-----|
-| Random Forest | var: 123.21 / 14.46%<br>yok: 113.21 / 13.24% | var: 95.42 / 10.80%<br>yok: 93.40 / 10.58% | var: 78.13 / 9.05%<br>yok: 70.56 / 8.12% |
-| XGBoost | var: 125.15 / 14.83%<br>yok: 136.16 / 16.15% | var: 70.52 / 8.12%<br>yok: 71.47 / 8.22% | var: 58.55 / 6.60%<br>yok: 63.12 / 7.22% |
-| CatBoost | var: 130.09 / 15.12%<br>yok: 136.01 / 16.16% | var: 124.98 / 13.82%<br>yok: 102.11 / 11.54% | var: 76.31 / 8.47%<br>yok: 79.12 / 9.16% |
+## SOP compliance (v2 path)
 
-### Naive baseline performance (test split)
+| SOP §  | Requirement | Status |
+|---|---|---|
+| §1.1 | `Q0 = median(Q_dis at cycles 2..5)` | ✅ |
+| §1.2 | `EOL = first cycle where Q_dis ≤ 0.85 × Q0` (single-cycle) | ✅ — supervisor lifted from 0.80 to 0.85 to keep MATR batch1+3 modelable |
+| §1.3 | HUST `Q_dis` = total Coulomb-counted across all discharge stages | ✅ |
+| §1.4 | Censored cells excluded from modeling, count reported | ✅ |
+| §2 | 12 capacity-only features (Qdis_N, delta_Qdis, retention_ratio, slope_linear, variance_Qdis, range_Qdis, max_drop, std_diff, skewness_Qdis, slope_ratio, Qdis_cycle10, mean_diff) | ✅ |
+| §2.1 | `N=100` primary, `N=50` secondary | ✅ default; `--n-windows 25 50 100` for ablation |
+| §2.2 | Z-score: fit on **train only**, transform calibration & test | ✅ |
+| §2.3 | Capacity normalization (divide raw-capacity features by `Q0`) | ✅ via `--capacity-normalize` (off by default; MATR + HUST share A123 1.1 Ah) |
+| §2.4 | VIF screening on MATR train | ✅ — report-only by default; `--drop` flag for iterative pruning |
+| §3 | 70/15/15 cell-level split, 5 seeds {42, 123, 456, 789, 1011}, lifetime-quartile stratification | ✅ |
+| §4.1 | Elastic Net with internal 5-fold CV across `l1_ratio ∈ {0.1, ..., 1.0}` | ✅ |
+| §4.2 | XGBoost with internal 5-fold CV across `max_depth ∈ {3,5,7}` × `lr ∈ {0.01, 0.05, 0.1}`, `n_estimators` chosen by per-fold early stopping (patience=50) | ✅ |
+| §4.3 | CatBoost (optional comparison) | ✅ via `--models elastic_net xgboost catboost` |
+| §5.2 | Cross-dataset experiments (MATR↔HUST) | ⏳ next phase |
+| §6.3 | Shift metrics (MMD, Mahalanobis) | ⏳ next phase |
+| §7 | Conformal prediction | ⏳ later phase |
 
-| Baseline | MAE | R2 | MAPE (%) | SMAPE (%) |
-|----------|-----|----|----------|-----------|
-| Mean predictor | 243.48 | -0.00 | 38.49 | 34.70 |
-| Batch-only predictor | 166.75 | 0.45 | 26.70 | 24.04 |
-| Cycle-count-only predictor | 243.48 | -0.00 | 38.49 | 34.70 |
+---
 
-### Figures and tables
+## Current results (5-seed average ± std)
 
-- MAPE trends: `plots/mape_random_forest.png`, `plots/mape_xgboost.png`, `plots/mape_catboost.png`
-- Table snapshots (MAE | MAPE): `plots/table_random_forest.png`, `plots/table_xgboost.png`, `plots/table_catboost.png`
-- Aggregated metrics tables: `plots/table_results_mae_r2.png` (MAE/R²) and `plots/table_results_mape_smape.png` (supplementary error tables) covering all models and Qd_std settings.
-- CatBoost CV selection summary: `plots/table_catboost_cv_selected.png` (best hyperparameters per slice + test metrics) and hold-out vs CV comparison: `plots/table_holdout_vs_cv.png`.
-- Conformal prediction plots: `plots/conformal_random_forest.png`, `plots/conformal_xgboost.png`, `plots/conformal_catboost.png`, `plots/conformal_elastic_net.png`.
-- Feature vs cycle coverage: `plots/table_features_cycles.png`
-- Feature importance per model/cycle plus combined mosaic: `plots/feature_importance_<model>_<cycles>.png`, `plots/feature_importance_combined.png`
+From the first end-to-end Colab run (2026-04-26, default settings: EOL @ 0.85, all
+12 SOP features, no VIF pruning, ElasticNet + XGBoost only).
 
-### Notes
+```
+dataset  experiment    model        N    MAE                 sMAPE             R²
+matr     matr_to_matr  elastic_net  50   733.7  ± 872.7      40.28 ± 2.89      −135.0  ± 269.0   ⚠ unstable
+matr     matr_to_matr  elastic_net  100  1147.6 ± 1766.9     39.81 ± 3.15      −493.1  ± 986.3   ⚠ unstable
+matr     matr_to_matr  xgboost      50   287.9  ± 42.4       34.92 ± 4.92      −0.46   ± 0.42
+matr     matr_to_matr  xgboost      100  248.6  ± 45.3       33.04 ± 5.33       0.15   ± 0.21
+hust     hust_to_hust  elastic_net  50   222.5  ± 26.8       14.95 ± 1.89       0.05   ± 0.17
+hust     hust_to_hust  elastic_net  100  203.1  ± 33.4       13.72 ± 2.18       0.21   ± 0.21
+hust     hust_to_hust  xgboost      50   200.1  ± 30.6       13.65 ± 2.34       0.08   ± 0.28
+hust     hust_to_hust  xgboost      100  194.8  ± 27.3       13.31 ± 2.18       0.23   ± 0.20
+```
 
-- Removing Qd_std improves MAE and sMAPE for RF and XGB at 100 cycles, while CatBoost still benefits from keeping it for the early windows.
-- Only 46 samples exist per cycle slice (138 total), so the models are variance-limited; adding more batches would make the comparison more stable.
-- Even without Qd_std, `IR_delta`, `IR_slope`, and `Tavg_mean` stay dominant at 100 cycles, whereas Qd_std matters most in the 25-50 cycle windows.
+### Censoring summary
 
-### Train / calibration / test splits
+| Dataset | Cells | Censored at 0.85 × Q0 | Modeling cells |
+|---|---|---|---|
+| MATR (b1+b2+b3 strict merge) | 135 | 6 (4.4%) | 129 |
+| HUST | 77 | 0 (0%) | 77 |
 
-- Use `python 2_modeling_featuring/split_train_val_test.py` to generate deterministic CSVs for each split. By default the script shuffles `cell_id` values with seed 42 and writes `data/splits/features_top8_cycles_{train,calibration,test}.csv`.
-- The ratio is `0.7 / 0.15 / 0.15` for train/calibration/test.
-- All `n_cycles` windows belonging to the same `cell_id` stay together, so calibration/test metrics reflect performance on unseen batteries rather than unseen windows from the same battery.
-- There is no separate validation split. Hyperparameter selection is done only inside the training split with grouped 5-fold CV.
+### VIF finding
 
-### Cross-validation
+VIF computed on MATR training slice (seed=42, N=100, 89 cells, z-scored 12 features):
 
-- The script `2_modeling_featuring/cross_validate_models.py` evaluates Random Forest, XGBoost, CatBoost, and ElasticNet with grouped 5-fold cross-validation (grouped by `cell_id`) so that every battery is held out entirely in at least one fold.
-- Running `python 2_modeling_featuring/cross_validate_models.py` produces `outputs/results/results_top8_cv_metrics.json`, which stores the mean +/- std of MAE, R², and sMAPE-centered error metrics for each model / feature set / `n_cycles` slice.
-- Use these CV aggregates—together with the deterministic train/calibration/test splits—to report performance with lower variance than a single random hold-out.
+```
+delta_Qdis        inf      FLAG
+mean_diff         inf      FLAG
+std_diff          80060    FLAG
+max_drop          73511    FLAG
+retention_ratio   23406    FLAG
+range_Qdis        18284    FLAG
+Qdis_N             877     FLAG
+variance_Qdis      693     FLAG
+Qdis_cycle10       538     FLAG
+slope_linear       446     FLAG
+skewness_Qdis       12.7   FLAG
+slope_ratio          1.6   ok
+```
 
-### CV-guided final models
+Eleven of twelve features sit above the VIF=5 threshold. This is **not a data
+problem** — it's structural multicollinearity by construction: the 12 SOP
+features are all derived from the same `Q_discharge` time series, and several
+are direct algebraic transformations of each other (`delta_Qdis = Q_dis(N) -
+Q_dis(2)`, `retention_ratio = Q_dis(N) / Q_dis(2)`, `mean_diff ≈ delta_Qdis /
+(N-2)`, etc.). The redundancy is sharpened by the early-cycle window: at N=50
+or N=100 most cells have lost only 1-3% capacity, so `Q_dis(N)`, `Q_dis(2)` and
+`Q_dis(cycle10)` differ by very small amounts.
 
-- `python 2_modeling_featuring/train_catboost_cv_selected.py` runs grouped 5-fold CV only on the training CSV, picks the best CatBoost configuration per `n_cycles`, and then retrains on the full training split to score the held-out test cells.
-- The script saves `outputs/results/results_catboost_cv_selected.json` and a companion table `plots/table_catboost_cv_selected.png` summarizing the chosen hyperparameters, CV MAE (mean +/- std), and final test MAE/sMAPE/R² values together with bootstrap 95% confidence intervals.
-- Use this output to quote statements such as “CV ile secilen CatBoost 100 dongude test sMAPE yaklasik %13 ve bootstrap %95 GA dar bir araliktadir” when comparing with future models.
+This is the direct cause of Elastic Net's instability on MATR (σ > μ across
+seeds, R² in the −100s): a linear model cannot stably weight 12 nearly
+collinear inputs. Tree-based XGBoost is invariant to feature correlation and
+therefore produces sane numbers from the same inputs. A VIF-pruned ablation
+(see "VIF drop ablation" below) is planned to confirm Elastic Net recovers
+once the redundant features are removed.
 
-## Appendices
+---
 
-## Cross-Dataset Generalization
+## Colab workflow (no local disk required)
 
-- Bu calismada transfer learning, domain adaptation veya fine-tuning kullanilmamaktadir.
-- Deney protokolu basitce `A veri setinde egit, B veri setinde test et` seklindedir.
-- MATR icin `batch1+batch2+batch3` birlikte kaynak veri seti olarak ele alinmalidir; batch1 ve batch2 ayri veri setleri olarak yorumlanmamalidir.
-- `python 1_feature_engineering/build_features_top8.py` komutu `data/raw/batch1.pkl`, `data/raw/batch2.pkl` ve `data/raw/batch3_varcharge.pkl` dosyalarindan ortak feature tablosunu uretir.
-- `batch3_varcharge.pkl` icindeki `cycle_life` etiketi bos oldugu icin cross-dataset tabloda `batch3` icin `eol_80pct_q0_label` etiketi korunur: `python 2_modeling_featuring/prepare_sop_feature_table.py --input data/intermediate/features_top8_cycles.csv --feature-set top8 --label-column cycle_life --keep-extra-columns eol_80pct_q0_label is_censored_80pct_q0 --output data/intermediate/features_top8_cycles_cross_dataset.csv`.
-- HUST verisi Mendeley Data'daki `nsc7hnsg4s/2` kaynagindan alinmali ve ayni feature semasina donusturulmelidir. HUST pickle klasoru icin `python 1_feature_engineering/build_batteryml_top8_features.py --input-dir /Users/diclesaracoban/Downloads/HUST_data --dataset-prefix hust --output data/intermediate/features_hust_top8_cycles.csv` komutu HUST feature tablosunu uretir.
-- HUST dosyalarinda sicaklik ve internal resistance sinyalleri olmadigi icin MATR -> HUST deneyinde ortak feature kesisimi kullanilir: `Qd_mean,Qd_std,dQd_slope`.
-- MATR -> HUST deneyi icin MATR ve HUST feature CSV'leri ayni dosyada birlestirildikten sonra su protokol calistirilir: `python 2_modeling_featuring/evaluate_cross_dataset_generalization.py --dataset data/intermediate/features_matr_hust_cross_dataset.csv --train-batch b1 b2 b3 --test-batch hust --label-column eol_80pct_q0_label --feature-columns Qd_mean,Qd_std,dQd_slope`.
-- Gercek MATR -> HUST sonucu `outputs/results/results_cross_dataset_matr_to_hust_capacity3.json`, ozet tablo ise `outputs/results/results_cross_dataset_matr_to_hust_capacity3_summary.csv` dosyasina kaydedilmistir.
-- Script sonuclari `outputs/results/results_cross_dataset_<train>_to_<test>.json` dosyasina kaydeder.
+The raw datasets are too large to keep on a laptop. The Colab notebook mounts
+your Drive, runs the entire pipeline server-side, and ships back a small ZIP
+of artifacts that you commit to Git.
 
-## SOP Migration
+1. Drive layout (already in place):
 
-- SOP uyumlu sabit split dosyalari icin `python 2_modeling_featuring/generate_json_splits.py --dataset-prefixes b1 b2` calistir.
-- Bu splitler `cell_id` bazinda, `70/15/15` train/calibration/test olarak ve cycle-life quartile stratification ile uretilir.
-- Split dosyalari `splits/b1_<seed>.json` ve `splits/b2_<seed>.json` seklinde kaydedilir.
-- Gecis asamasindaki within/cross deneyleri icin `python 2_modeling_featuring/run_sop_protocol_baselines.py` komutunu kullan.
-- Bu script SOP metrik ve split protokolunu uygular, ancak henuz mevcut 8-feature tabloyu kullanir. 12-feature engineering tamamlandiginda ayni deney yapisi yeni feature set ile yeniden calistirilmalidir.
+   ```
+   MyDrive/
+     ├── Braatz_NatEnergy2019/   # batch1.pkl, batch2.pkl, batch3.pkl  (MATR)
+     └── HUST/                   # 1-1.pkl, 1-2.pkl, ..., 10-8.pkl     (HUST, 77 cells)
+   ```
 
-### Final SOP12 / HUST update
+2. Open the notebook in Colab:
+   <https://colab.research.google.com/github/osmansafacifci/Graduation-Project-Dicle/blob/main/notebooks/run_pipeline_colab.ipynb>
 
-- Final SOP feature tablolari `python 1_feature_engineering/build_sop12_features.py` ile uretilir.
-- Final SOP label hedefi `q0` degerinin `%85` seviyesine ilk dususudur (`eol_85pct_q0_label`). `%80` hedefi MATR icinde yuksek sansurleme urettigi icin referans kolon olarak tutulur, ancak final deneylerde `%85` hedefi `cycle_life` olarak kullanilir.
-- Guncel sansurleme oranlari: MATR `%80` icin yaklasik `0.537`, `%85` icin yaklasik `0.105`; HUST `%85` icin `0.000`.
-- MATR icin tam 12-feature SOP tablosu: `data/intermediate/features_matr_sop12.csv`.
-- HUST icin IR ve sicaklik sinyalleri bulunmadigindan tam 12-feature tablo fiziksel olarak olusturulamaz; HUST icin ortak SOP kapasite+dQ/dV tablosu: `data/intermediate/features_hust_sop_common.csv`.
-- MATR+HUST ortak feature tablosu: `data/intermediate/features_matr_hust_sop_common.csv`.
-- Final SOP splitleri `python 2_modeling_featuring/generate_json_splits.py --dataset data/intermediate/features_matr_hust_sop_common.csv --dataset-prefixes matr hust --output-dir splits/sop_matr_hust` ile uretilir.
-- Tam SOP12 within-MATR deneyi: `python 2_modeling_featuring/run_sop_protocol_baselines.py --dataset data/intermediate/features_matr_sop12.csv --feature-set sop12 --label-column cycle_life --split-dir splits/sop_matr_hust --within-prefixes matr --windows 25 50 100 --output outputs/results/results_sop12_within_matr.json`.
-- Ortak SOP feature setiyle within-MATR, within-HUST ve MATR->HUST deneyi: `python 2_modeling_featuring/run_sop_protocol_baselines.py --dataset data/intermediate/features_matr_hust_sop_common.csv --feature-set sop_common_capacity_dqdv --label-column cycle_life --split-dir splits/sop_matr_hust --within-prefixes matr hust --cross-pairs matr:hust --windows 25 50 100 --output outputs/results/results_sop_common_matr_hust.json`.
-- `%85` hedefli final ozet tablo: `outputs/results/results_sop_final_summary_eol85.csv`.
+3. **Runtime → Run all**. Approve the Drive mount when prompted. Total wall
+   time ~15-30 min (audit_hust dominates: 77 cells × Coulomb counting).
 
-### Additional Figures
+4. The last cell triggers a ZIP download
+   (`pipeline_outputs_<timestamp>.zip`, ~10 MB).
 
-- `plots/sample_voltage_curves.png`: Example discharge voltage vs time curves (cycles 6 and 96 for cell b1c0).
-- `plots/sample_capacity_fade.png`: Capacity trajectories for representative Batch 1 and Batch 2 cells.
-- Per-model MAE/MAPE tables and importance plots under `plots/`.
-- `plots/naive_baselines_metrics.png`: Bar charts of mean/batch-only/cycle-count-only predictors (MAE, R², sMAPE).
+5. On your laptop:
 
-### Detailed Results Tables
+   ```bash
+   cd /path/to/Graduation-Project-Dicle
+   unzip -o ~/Downloads/pipeline_outputs_*.zip
+   git add data/intermediate splits/sop_v2 outputs/results_v2
+   git commit -m "pipeline run from Colab $(date +%F)"
+   git push
+   ```
 
-- `outputs/results/results_top8_metrics.json`: Hold-out MAE/R²/MAPE for RandomForest, XGBoost, CatBoost (with/without Qd_std, per window).
-- `outputs/results/results_top8_cv_metrics.json`: Grouped 5-fold CV mean +/- std for MAE/R²/sMAPE-centered metrics (all four models).
-- `outputs/results/results_catboost_cv_selected.json`: CV-selected CatBoost hyperparameters plus final train→test metrics, where tuning is done only inside the training split.
-- `outputs/results/results_conformal_<model>.json`: per-model conformal quantiles and coverage values (train on train, calibrate on calibration, evaluate on test).
+### Configuration knobs (notebook cell 0)
 
-### Hyperparameter Configurations
+| Variable | Default | Effect |
+|---|---|---|
+| `EOL_FRACTION` | `0.85` | Lower threshold for cycle_life; flip to `0.80` to follow the original SOP |
+| `EXTRA_WINDOWS` | `[]` | Add `25` for the N=25 ablation |
+| `EXTRA_MODELS` | `[]` | Add `'catboost'` for the optional comparison model |
+| `CAPACITY_NORMALIZE` | `False` | Set to `True` if you add a third dataset with a different nominal capacity |
+| `VIF_DROP` | `False` | When `True`, VIF screening also drops features and experiments use the pruned subset (separate output dir) |
 
-- RandomForest: 400 estimators, min_samples_leaf=2, max_features=√, random_state=42.
-- XGBoost: 800 trees, max_depth=6, learning_rate=0.03, subsample/colsample=0.8, reg_lambda=2, reg_alpha=1.
-- CatBoost (baseline): iterations=400, learning_rate=0.05, depth=6, loss=MAE. CV-selected variants listed in `outputs/results/results_catboost_cv_selected.json`.
-- ElasticNet: StandardScaler + ElasticNetCV with l1_ratio ∈ {0.1,0.5,0.9}, α grid logspace(1e-4,1), max_iter=10k.
+---
 
-### Complete Feature List
+## Local workflow (if you do have disk)
 
-1. `IR_delta` – difference between end and start IR over the window.
-2. `dQd_slope` – slope of discharge capacity sequence (proxy for dQ/dV shifts).
-3. `Qd_mean`
-4. `Qd_std`
-5. `IR_slope`
-6. `Tavg_mean`
-7. `IR_mean`
-8. `IR_std`
-(Raw PKL files also contain per-cycle `I`, `V`, `Qd`, `T`, `dQ/dV` arrays and policy metadata.)
+```bash
+git clone https://github.com/osmansafacifci/Graduation-Project-Dicle.git
+cd Graduation-Project-Dicle
+pip install -r requirements.txt
+python run_pipeline.py                # ~30-60 min, ~15-20 GB downloaded into data/raw/
+```
 
-### Additional Experiments
+---
 
-- dQ/dV-derived feature sets (`dqdv_features.csv`) explored in `ExtractDQdVFeatures.ipynb`.
-- ElasticNet baseline with StandardScaler assessed via `plot_mape_vs_cycles.py`.
-- Hold-out vs CV comparison script (`make_holdout_vs_cv_table.py`) to quantify variance reduction.
-- Conformal prediction intervals generated via `make_conformal_predictions.py` for each model.
+## Roadmap
+
+- [x] §1 labels (Q0, EOL@85%, censoring)
+- [x] §2 features (12 capacity-only + capacity-normalize + VIF report)
+- [x] §3 splits (70/15/15, 5 seeds, lifetime-quartile-stratified)
+- [x] §4 within-dataset experiments (Elastic Net, XGBoost, CatBoost optional)
+- [ ] VIF drop ablation (separate experiment branch)
+- [ ] §5.2 cross-dataset experiments (MATR ↔ HUST)
+- [ ] §6.3 shift metrics (MMD, Mahalanobis)
+- [ ] §7 conformal prediction (Split CP, target recalibration)
+
+---
+
+## Background reading
+
+- Severson et al. 2019, *Data-driven prediction of battery cycle life before
+  capacity degradation*, Nature Energy.
+- Ma et al. 2022, *Real-time personalized health status prediction of
+  lithium-ion batteries using deep transfer learning*, Energy & Environmental
+  Science (HUST dataset).
+- BatteryML — Microsoft's reference data preprocessing for both datasets:
+  <https://github.com/microsoft/BatteryML>
+- Original Dicle Sara Çoban repo: <https://github.com/diclecoban/Graduation-Project>

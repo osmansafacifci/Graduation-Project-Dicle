@@ -376,6 +376,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--windows", type=int, nargs="+", default=DEFAULT_WINDOWS,
                         help="Prediction windows N. Default: 50 100 (per SOP §2.1). "
                              "Optional ablation: add 25.")
+    parser.add_argument("--features-from", type=Path, default=None,
+                        help="Path to a text file with one feature name per line. "
+                             "If omitted, all 12 SOP features are used. "
+                             "Use data/intermediate/vif_kept_features.txt for the VIF-pruned ablation.")
+    parser.add_argument("--output-dir", type=Path, default=None,
+                        help="Directory to write results into. "
+                             "Defaults to outputs/results_v2/. Use a separate path "
+                             "(e.g. outputs/results_v2_vif_drop/) for ablations.")
     return parser.parse_args()
 
 
@@ -385,7 +393,33 @@ def main() -> int:
         print(f"[error] {FEATURES_PATH} missing — run build_sop12_features_v2.py first.")
         return 1
     df = pd.read_csv(FEATURES_PATH)
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Resolve feature subset (default = all 12 SOP features)
+    feature_cols: list[str] = list(SOP12_FEATURE_COLS)
+    feature_subset_source = "sop12 (all 12)"
+    if args.features_from is not None:
+        if not args.features_from.exists():
+            print(f"[error] --features-from {args.features_from} not found.")
+            return 1
+        listed = [line.strip() for line in args.features_from.read_text().splitlines() if line.strip()]
+        unknown = [f for f in listed if f not in SOP12_FEATURE_COLS]
+        if unknown:
+            print(f"[error] features-from contains unknown features: {unknown}")
+            return 1
+        if not listed:
+            print(f"[error] --features-from {args.features_from} is empty.")
+            return 1
+        feature_cols = listed
+        feature_subset_source = f"loaded from {args.features_from} ({len(feature_cols)} features)"
+
+    # Override the module-level constant for evaluate_split() consumers
+    global SOP12_FEATURE_COLS
+    SOP12_FEATURE_COLS = feature_cols
+
+    results_dir = args.output_dir if args.output_dir is not None else RESULTS_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[setup] features: {feature_subset_source} -> {feature_cols}")
+    print(f"[setup] output_dir: {results_dir}")
 
     summary_rows: list[dict] = []
 
@@ -399,8 +433,8 @@ def main() -> int:
         bundle = {
             "protocol": "SOP_within_dataset_v2",
             "dataset": dataset,
-            "feature_set": "sop12 (capacity-only, 12 features)",
-            "feature_columns": SOP12_FEATURE_COLS,
+            "feature_set": feature_subset_source,
+            "feature_columns": list(feature_cols),
             "target": "cycle_life @ 0.85 * Q0 (single-cycle EOL)",
             "split_ratios": list((0.70, 0.15, 0.15)),
             "standardization": "z-score, fit on train, transform cal/test",
@@ -441,14 +475,14 @@ def main() -> int:
                         **agg,
                     })
 
-        out_path = RESULTS_DIR / f"results_within_{dataset}.json"
+        out_path = results_dir / f"results_within_{dataset}.json"
         with out_path.open("w") as f:
             json.dump(bundle, f, indent=2)
         print(f"\n[save] {out_path}")
 
     # combined human-readable summary
     summary_df = pd.DataFrame(summary_rows)
-    summary_path = RESULTS_DIR / "results_summary.csv"
+    summary_path = results_dir / "results_summary.csv"
     summary_df.to_csv(summary_path, index=False)
     print(f"[save] {summary_path}")
 
