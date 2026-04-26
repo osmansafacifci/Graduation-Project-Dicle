@@ -111,6 +111,19 @@ def stage_splits() -> int:
     return _run([PYTHON, "2_modeling_featuring/generate_sop_splits_v2.py"])
 
 
+def stage_vif() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not combined.exists():
+        print(f"[skip] vif: missing {combined.relative_to(PROJECT_ROOT)} — run features first.")
+        return 1
+    if not splits_root.exists() or not any(splits_root.glob("matr_*.json")):
+        print(f"[skip] vif: missing {splits_root.relative_to(PROJECT_ROOT)} — run splits first.")
+        return 1
+    # Default = report-only per supervisor's request.
+    return _run([PYTHON, "2_modeling_featuring/vif_screening.py"])
+
+
 def stage_experiments() -> int:
     splits_root = PROJECT_ROOT / "splits" / "sop_v2"
     if not splits_root.exists() or not any(splits_root.glob("*.json")):
@@ -167,6 +180,15 @@ STAGES: dict[str, Stage] = {
         run=stage_splits,
         outputs=[PROJECT_ROOT / "splits" / "sop_v2"],
     ),
+    "vif": Stage(
+        name="vif",
+        description="VIF screening on MATR train (report-only by default, no features dropped)",
+        run=stage_vif,
+        outputs=[
+            INTERMEDIATE_DIR / "vif_screening.json",
+            INTERMEDIATE_DIR / "vif_report.txt",
+        ],
+    ),
     "experiments": Stage(
         name="experiments",
         description="Within-dataset Elastic Net + XGBoost (MAE/sMAPE/R²/95% CI, z-score)",
@@ -179,7 +201,7 @@ STAGES: dict[str, Stage] = {
     ),
 }
 
-DEFAULT_ORDER = ["download", "audit_matr", "audit_hust", "features", "splits", "experiments"]
+DEFAULT_ORDER = ["download", "audit_matr", "audit_hust", "features", "splits", "vif", "experiments"]
 
 
 def _outputs_exist(stage: Stage) -> bool:

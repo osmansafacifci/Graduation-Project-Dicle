@@ -68,6 +68,14 @@ SOP12_FEATURE_COLS = [
     "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
 ]
 
+# Per SOP §2.3: raw-capacity features that should be divided by Q0 when a
+# dataset has a different nominal capacity (so the same model can score across
+# datasets with mismatched cell chemistries / sizes).
+# retention_ratio and slope_ratio are already ratios — no normalization needed.
+CAPACITY_RAW_FEATURES = [
+    "Qdis_N", "delta_Qdis", "Qdis_cycle10", "max_drop", "mean_diff",
+]
+
 # Same merge metadata as build_matr_audit.py (kept in sync intentionally)
 BATCH1_CONTINUATION_FROM_BATCH2 = {
     "b1c0": {"source_cell": "b2c7", "add_len": 662},
@@ -213,6 +221,7 @@ def build_feature_rows(
     dataset: str,
     n_windows: tuple[int, ...],
     eol_fraction: float,
+    capacity_normalize: bool = False,
 ) -> list[dict]:
     rows = []
     for cell_id in sorted(qd_by_cell):
@@ -228,6 +237,11 @@ def build_feature_rows(
             feats = compute_sop12(qd, n)
             if feats is None:
                 continue
+            if capacity_normalize and q0 > 0:
+                # Per SOP §2.3: divide raw-capacity features by Q0 to put a
+                # different-nominal-capacity dataset on the same scale.
+                for col in CAPACITY_RAW_FEATURES:
+                    feats[col] = feats[col] / q0
             row = {
                 "dataset": dataset,
                 "cell_id": cell_id,
@@ -235,6 +249,7 @@ def build_feature_rows(
                 "q0": q0,
                 "cycle_life": cycle_life,
                 "is_censored": is_censored,
+                "capacity_normalized": int(capacity_normalize),
                 **feats,
             }
             rows.append(row)
@@ -246,7 +261,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eol-fraction", type=float, default=DEFAULT_EOL_FRACTION,
                         help="EOL threshold fraction of Q0 (SOP=0.85). Default: 0.85")
     parser.add_argument("--n-windows", type=int, nargs="+", default=list(DEFAULT_N_WINDOWS),
-                        help="Prediction windows N. Default: 50 100")
+                        help="Prediction windows N. Default: 50 100. Add 25 for ablation.")
+    parser.add_argument("--capacity-normalize", action="store_true",
+                        help="Divide raw-capacity features (Qdis_N, delta_Qdis, Qdis_cycle10, "
+                             "max_drop, mean_diff) by Q0. Use when adding a third dataset with "
+                             "different nominal capacity. Off by default (MATR + HUST share 1.1Ah).")
     parser.add_argument("--matr-only", action="store_true")
     parser.add_argument("--hust-only", action="store_true")
     return parser.parse_args()
@@ -261,18 +280,27 @@ def main() -> int:
     matr_rows: list[dict] = []
     hust_rows: list[dict] = []
 
+    cap_norm = args.capacity_normalize
+    cap_msg = "Q0-normalized" if cap_norm else "raw"
+
     if not args.hust_only:
-        print(f"\n[matr] building features (N={n_windows}, EOL={eol:.2f}*Q0)")
+        print(f"\n[matr] building features (N={n_windows}, EOL={eol:.2f}*Q0, capacity={cap_msg})")
         matr_qd = load_matr_qd_series()
-        matr_rows = build_feature_rows(matr_qd, dataset="matr", n_windows=n_windows, eol_fraction=eol)
+        matr_rows = build_feature_rows(
+            matr_qd, dataset="matr", n_windows=n_windows,
+            eol_fraction=eol, capacity_normalize=cap_norm,
+        )
         out = INTERMEDIATE_DIR / "features_sop12_matr.csv"
         pd.DataFrame(matr_rows).to_csv(out, index=False)
         print(f"[matr] saved {len(matr_rows)} rows -> {out}")
 
     if not args.matr_only:
-        print(f"\n[hust] building features (N={n_windows}, EOL={eol:.2f}*Q0)")
+        print(f"\n[hust] building features (N={n_windows}, EOL={eol:.2f}*Q0, capacity={cap_msg})")
         hust_qd = load_hust_qd_series()
-        hust_rows = build_feature_rows(hust_qd, dataset="hust", n_windows=n_windows, eol_fraction=eol)
+        hust_rows = build_feature_rows(
+            hust_qd, dataset="hust", n_windows=n_windows,
+            eol_fraction=eol, capacity_normalize=cap_norm,
+        )
         out = INTERMEDIATE_DIR / "features_sop12_hust.csv"
         pd.DataFrame(hust_rows).to_csv(out, index=False)
         print(f"[hust] saved {len(hust_rows)} rows -> {out}")

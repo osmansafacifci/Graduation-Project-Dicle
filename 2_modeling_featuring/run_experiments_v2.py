@@ -56,6 +56,7 @@ RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2"
 SEEDS = [42, 123, 456, 789, 1011]
 DEFAULT_WINDOWS = [50, 100]
 DEFAULT_MODELS = ["elastic_net", "xgboost"]
+ALL_MODELS = ["elastic_net", "xgboost", "catboost"]
 
 SOP12_FEATURE_COLS = [
     "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
@@ -179,6 +180,90 @@ def fit_xgboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
     return final_model, info
 
 
+def fit_catboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """CatBoost (SOP §4.3 — optional comparison model).
+
+    Same outer protocol as XGBoost: per-fold early stopping in 5-fold CV
+    over (depth, learning_rate); refit on full train at mean best iteration.
+    """
+    try:
+        from catboost import CatBoostRegressor
+    except ImportError as exc:
+        raise SystemExit(
+            "catboost not installed. Add it to your environment (pip install catboost)."
+        ) from exc
+
+    from sklearn.model_selection import KFold
+
+    n_samples = len(y_train)
+    n_folds = max(2, min(5, n_samples - 1))
+    n_estimators_max = 2000
+    patience = 50
+
+    param_grid = [(d, lr) for d in (4, 6, 8) for lr in (0.01, 0.05, 0.1)]
+
+    best_mae = float("inf")
+    best_params: dict = {}
+    best_iter_per_fold: list[int] = []
+    best_fold_maes: list[float] = []
+
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
+    folds = list(kf.split(X_train_scaled))
+
+    for depth, lr in param_grid:
+        fold_maes: list[float] = []
+        fold_best_iters: list[int] = []
+        for train_idx, val_idx in folds:
+            X_tr, X_v = X_train_scaled[train_idx], X_train_scaled[val_idx]
+            y_tr, y_v = y_train[train_idx], y_train[val_idx]
+            model = CatBoostRegressor(
+                iterations=n_estimators_max,
+                depth=depth,
+                learning_rate=lr,
+                loss_function="MAE",
+                random_seed=seed,
+                early_stopping_rounds=patience,
+                verbose=False,
+                allow_writing_files=False,
+            )
+            model.fit(X_tr, y_tr, eval_set=(X_v, y_v), verbose=False)
+            pred_v = model.predict(X_v)
+            fold_maes.append(float(np.mean(np.abs(y_v - pred_v))))
+            best_iter = int(model.get_best_iteration() or n_estimators_max - 1) + 1
+            fold_best_iters.append(best_iter)
+
+        mean_mae = float(np.mean(fold_maes))
+        if mean_mae < best_mae:
+            best_mae = mean_mae
+            best_params = {"depth": depth, "learning_rate": lr}
+            best_iter_per_fold = fold_best_iters
+            best_fold_maes = fold_maes
+
+    iterations_final = max(50, int(round(float(np.mean(best_iter_per_fold)))))
+    final_model = CatBoostRegressor(
+        iterations=iterations_final,
+        depth=best_params["depth"],
+        learning_rate=best_params["learning_rate"],
+        loss_function="MAE",
+        random_seed=seed,
+        verbose=False,
+        allow_writing_files=False,
+    )
+    final_model.fit(X_train_scaled, y_train, verbose=False)
+
+    info = {
+        **best_params,
+        "iterations": iterations_final,
+        "cv_folds": n_folds,
+        "cv_patience": patience,
+        "cv_iterations_max": n_estimators_max,
+        "cv_mae_per_fold": best_fold_maes,
+        "cv_mae_mean": float(best_mae),
+        "cv_best_iter_per_fold": best_iter_per_fold,
+    }
+    return final_model, info
+
+
 # ---------- per-seed evaluation ----------
 
 def evaluate_split(
@@ -243,6 +328,17 @@ def evaluate_split(
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["xgboost"] = m
 
+    if "catboost" in models:
+        cb_model, cb_info = fit_catboost(X_train_s, y_train, seed=seed)
+        pred = cb_model.predict(X_test_s)
+        m = compute_metrics(y_test, pred)
+        m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["tuning"] = cb_info  # depth, learning_rate, iterations, CV stats
+        if len(X_cal_s):
+            cal_pred = cb_model.predict(X_cal_s)
+            m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
+        out["catboost"] = m
+
     return out
 
 
@@ -274,8 +370,12 @@ def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=["matr", "hust"])
-    parser.add_argument("--models", nargs="+", default=DEFAULT_MODELS, choices=["elastic_net", "xgboost"])
-    parser.add_argument("--windows", type=int, nargs="+", default=DEFAULT_WINDOWS)
+    parser.add_argument("--models", nargs="+", default=DEFAULT_MODELS, choices=ALL_MODELS,
+                        help="Models to train. Default: elastic_net xgboost. "
+                             "Optional: add catboost (SOP §4.3 — comparison only).")
+    parser.add_argument("--windows", type=int, nargs="+", default=DEFAULT_WINDOWS,
+                        help="Prediction windows N. Default: 50 100 (per SOP §2.1). "
+                             "Optional ablation: add 25.")
     return parser.parse_args()
 
 
