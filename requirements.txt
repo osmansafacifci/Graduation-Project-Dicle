@@ -5,6 +5,7 @@
 jupyter
 #
 ###### Requirements with Version Specifiers ######
+gdown>=5.2.0
 h5py>=3.10.0
 matplotlib>=3.8,<3.12
 numpy>=1.26,<2.0
