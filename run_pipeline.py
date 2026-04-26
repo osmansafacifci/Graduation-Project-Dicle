@@ -28,6 +28,13 @@ Stages:
                   -> data/intermediate/hust_cycles_tidy.csv
                   -> data/intermediate/hust_threshold_audit.csv
                   -> data/intermediate/hust_threshold_summary.csv
+    features      build the corrected SOP12 (capacity-only) feature table
+                  -> data/intermediate/features_sop12_{matr,hust,combined}.csv
+    splits        70/15/15 lifetime-stratified splits (5 seeds × 2 datasets)
+                  -> splits/sop_v2/{matr,hust}_{seed}.json
+    experiments   within-dataset Elastic Net + XGBoost (MAE / sMAPE / R² / 95% CI)
+                  -> outputs/results_v2/results_within_{matr,hust}.json
+                  -> outputs/results_v2/results_summary.csv
 """
 
 from __future__ import annotations
@@ -83,6 +90,35 @@ def stage_audit_hust() -> int:
     return _run([PYTHON, "0_data_prep/build_hust_audit.py"])
 
 
+def stage_features() -> int:
+    matr_required = [RAW_DIR / "batch1.pkl", RAW_DIR / "batch2.pkl", RAW_DIR / "batch3.pkl"]
+    matr_missing = [p for p in matr_required if not p.exists()]
+    hust_tidy = INTERMEDIATE_DIR / "hust_cycles_tidy.csv"
+    if matr_missing:
+        print(f"[skip] features: missing MATR pkls: {[str(m.relative_to(PROJECT_ROOT)) for m in matr_missing]}")
+        return 1
+    if not hust_tidy.exists():
+        print(f"[skip] features: missing {hust_tidy.relative_to(PROJECT_ROOT)} — run audit_hust first.")
+        return 1
+    return _run([PYTHON, "1_feature_engineering/build_sop12_features_v2.py"])
+
+
+def stage_splits() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    if not combined.exists():
+        print(f"[skip] splits: missing {combined.relative_to(PROJECT_ROOT)} — run features first.")
+        return 1
+    return _run([PYTHON, "2_modeling_featuring/generate_sop_splits_v2.py"])
+
+
+def stage_experiments() -> int:
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not splits_root.exists() or not any(splits_root.glob("*.json")):
+        print(f"[skip] experiments: missing splits at {splits_root.relative_to(PROJECT_ROOT)} — run splits first.")
+        return 1
+    return _run([PYTHON, "2_modeling_featuring/run_experiments_v2.py"])
+
+
 STAGES: dict[str, Stage] = {
     "download": Stage(
         name="download",
@@ -115,9 +151,35 @@ STAGES: dict[str, Stage] = {
             INTERMEDIATE_DIR / "hust_threshold_summary.csv",
         ],
     ),
+    "features": Stage(
+        name="features",
+        description="Build corrected SOP12 capacity-only feature table for MATR and HUST",
+        run=stage_features,
+        outputs=[
+            INTERMEDIATE_DIR / "features_sop12_matr.csv",
+            INTERMEDIATE_DIR / "features_sop12_hust.csv",
+            INTERMEDIATE_DIR / "features_sop12_combined.csv",
+        ],
+    ),
+    "splits": Stage(
+        name="splits",
+        description="70/15/15 lifetime-stratified cell splits (5 seeds × 2 datasets)",
+        run=stage_splits,
+        outputs=[PROJECT_ROOT / "splits" / "sop_v2"],
+    ),
+    "experiments": Stage(
+        name="experiments",
+        description="Within-dataset Elastic Net + XGBoost (MAE/sMAPE/R²/95% CI, z-score)",
+        run=stage_experiments,
+        outputs=[
+            PROJECT_ROOT / "outputs" / "results_v2" / "results_within_matr.json",
+            PROJECT_ROOT / "outputs" / "results_v2" / "results_within_hust.json",
+            PROJECT_ROOT / "outputs" / "results_v2" / "results_summary.csv",
+        ],
+    ),
 }
 
-DEFAULT_ORDER = ["download", "audit_matr", "audit_hust"]
+DEFAULT_ORDER = ["download", "audit_matr", "audit_hust", "features", "splits", "experiments"]
 
 
 def _outputs_exist(stage: Stage) -> bool:
