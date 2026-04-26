@@ -38,7 +38,6 @@ import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import ElasticNetCV
-from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 
 # scoped to this directory so we can `from metrics_utils import ...`
@@ -83,6 +82,22 @@ def fit_elastic_net(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: in
 
 
 def fit_xgboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """XGBoost tuning per SOP §4.2:
+        - max_depth ∈ {3, 5, 7}
+        - learning_rate ∈ {0.01, 0.05, 0.1}
+        - n_estimators chosen via early stopping (patience=50)
+        - Inner 5-fold CV; within each fold, fit on fold-train and evaluate on
+          fold-val as eval_set so early stopping triggers per fold.
+
+    Strategy:
+        1. For each (max_depth, learning_rate), run 5-fold CV. In each fold,
+           fit with n_estimators_max=2000 and early_stopping_rounds=50 against
+           the held-out fold; record val MAE at best_iteration and best_iteration.
+        2. Pick (max_depth, learning_rate) that minimizes mean fold val MAE.
+        3. Refit final model on full train with n_estimators = round(mean of
+           per-fold best_iterations) — no eval_set, no early stopping at refit
+           time (the iteration count is already chosen).
+    """
     try:
         from xgboost import XGBRegressor
     except ImportError as exc:
@@ -90,28 +105,78 @@ def fit_xgboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
             "xgboost not installed. Add it to your environment (pip install xgboost)."
         ) from exc
 
+    from sklearn.model_selection import KFold
+
     n_samples = len(y_train)
-    cv = max(2, min(5, n_samples - 1))
-    base = XGBRegressor(
-        n_estimators=500,
+    n_folds = max(2, min(5, n_samples - 1))
+    n_estimators_max = 2000
+    patience = 50
+
+    param_grid = [(d, lr) for d in (3, 5, 7) for lr in (0.01, 0.05, 0.1)]
+
+    best_mae = float("inf")
+    best_params: dict = {}
+    best_iter_per_fold: list[int] = []
+    best_fold_maes: list[float] = []
+
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
+    folds = list(kf.split(X_train_scaled))
+
+    for max_depth, lr in param_grid:
+        fold_maes: list[float] = []
+        fold_best_iters: list[int] = []
+        for train_idx, val_idx in folds:
+            X_tr, X_v = X_train_scaled[train_idx], X_train_scaled[val_idx]
+            y_tr, y_v = y_train[train_idx], y_train[val_idx]
+            model = XGBRegressor(
+                n_estimators=n_estimators_max,
+                max_depth=max_depth,
+                learning_rate=lr,
+                random_state=seed,
+                n_jobs=-1,
+                tree_method="hist",
+                objective="reg:squarederror",
+                early_stopping_rounds=patience,
+                eval_metric="mae",
+                verbosity=0,
+            )
+            model.fit(X_tr, y_tr, eval_set=[(X_v, y_v)], verbose=False)
+            pred_v = model.predict(X_v)
+            fold_maes.append(float(np.mean(np.abs(y_v - pred_v))))
+            best_iter = int(getattr(model, "best_iteration", n_estimators_max - 1)) + 1
+            fold_best_iters.append(best_iter)
+
+        mean_mae = float(np.mean(fold_maes))
+        if mean_mae < best_mae:
+            best_mae = mean_mae
+            best_params = {"max_depth": max_depth, "learning_rate": lr}
+            best_iter_per_fold = fold_best_iters
+            best_fold_maes = fold_maes
+
+    n_estimators_final = max(50, int(round(float(np.mean(best_iter_per_fold)))))
+    final_model = XGBRegressor(
+        n_estimators=n_estimators_final,
+        max_depth=best_params["max_depth"],
+        learning_rate=best_params["learning_rate"],
         random_state=seed,
         n_jobs=-1,
         tree_method="hist",
         objective="reg:squarederror",
         verbosity=0,
     )
-    grid = GridSearchCV(
-        base,
-        param_grid={
-            "max_depth": [3, 5, 7],
-            "learning_rate": [0.01, 0.05, 0.1],
-        },
-        cv=cv,
-        scoring="neg_mean_absolute_error",
-        n_jobs=-1,
-    )
-    grid.fit(X_train_scaled, y_train)
-    return grid.best_estimator_, grid.best_params_
+    final_model.fit(X_train_scaled, y_train, verbose=False)
+
+    info = {
+        **best_params,
+        "n_estimators": n_estimators_final,
+        "cv_folds": n_folds,
+        "cv_patience": patience,
+        "cv_n_estimators_max": n_estimators_max,
+        "cv_mae_per_fold": best_fold_maes,
+        "cv_mae_mean": float(best_mae),
+        "cv_best_iter_per_fold": best_iter_per_fold,
+    }
+    return final_model, info
 
 
 # ---------- per-seed evaluation ----------
@@ -168,11 +233,11 @@ def evaluate_split(
         out["elastic_net"] = m
 
     if "xgboost" in models:
-        xgb_model, best_params = fit_xgboost(X_train_s, y_train, seed=seed)
+        xgb_model, xgb_info = fit_xgboost(X_train_s, y_train, seed=seed)
         pred = xgb_model.predict(X_test_s)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
-        m["best_params"] = best_params
+        m["tuning"] = xgb_info  # max_depth, learning_rate, n_estimators, CV stats
         if len(X_cal_s):
             cal_pred = xgb_model.predict(X_cal_s)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
