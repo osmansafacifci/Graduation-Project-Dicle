@@ -1,0 +1,25 @@
+# Minimal dependencies for the v2 pipeline (audit + features + splits + VIF + experiments).
+#
+# Use this file instead of requirements.txt when working with the *_v2 modules.
+# requirements.txt carries inherited pins (numpy<2.0, scipy<1.13, ...) that
+# break the install on Python 3.13 because pre-built wheels for those old
+# versions don't exist and source builds need OpenBLAS.
+#
+# Install:
+#     pip install -r requirements-v2.txt
+#
+# Compatible with Python 3.10–3.13.
+
+# data fetching
+gdown>=5.2.0
+
+# core scientific stack (latest stable wheels — no version ceilings)
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+h5py>=3.10
+
+# modeling
+scikit-learn>=1.3
+xgboost>=2.0
+catboost>=1.2

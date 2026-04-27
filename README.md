@@ -232,9 +232,14 @@ Once the feature CSVs are committed (or unzipped from the Phase A ZIP), you
 no longer need Drive or Colab. Everything runs on your laptop:
 
 ```bash
-pip install -r requirements.txt    # one-time
-python run_pipeline.py --phase model              # splits + VIF report + 6-model experiments
+pip install -r requirements-v2.txt    # one-time, slim install (works on Python 3.10–3.13)
+python run_pipeline.py --phase model  # splits + VIF report + 6-model experiments
 ```
+
+> Note: `requirements.txt` carries old pins inherited from the original
+> Severson replication code (`numpy<2.0`, `scipy<1.13`) that don't have
+> pre-built wheels for Python 3.13. Use `requirements-v2.txt` instead — it
+> declares only what the v2 pipeline actually imports, with no upper bounds.
 
 Or call individual scripts with custom flags — for example, a smaller model
 subset, or the VIF-pruned ablation:
