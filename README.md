@@ -167,9 +167,30 @@ or N=100 most cells have lost only 1-3% capacity, so `Q_dis(N)`, `Q_dis(2)` and
 This is the direct cause of Elastic Net's instability on MATR (σ > μ across
 seeds, R² in the −100s): a linear model cannot stably weight 12 nearly
 collinear inputs. Tree-based XGBoost is invariant to feature correlation and
-therefore produces sane numbers from the same inputs. A VIF-pruned ablation
-(see "VIF drop ablation" below) is planned to confirm Elastic Net recovers
-once the redundant features are removed.
+therefore produces sane numbers from the same inputs.
+
+### VIF-pruned subset
+
+Iterative VIF pruning (drop highest-VIF feature, recompute, repeat until all
+remaining VIF ≤ 5) converges to a five-feature subset:
+
+```
+retention_ratio    relative capacity decline (Q_dis(N) / Q_dis(2))
+variance_Qdis      trajectory stability
+skewness_Qdis      shape asymmetry
+slope_ratio        fade acceleration (slope_2nd-half / slope_1st-half)
+Qdis_cycle10       early-life capacity reference
+```
+
+The seven dropped features (`delta_Qdis`, `std_diff`, `mean_diff`,
+`range_Qdis`, `Qdis_N`, `max_drop`, `slope_linear`) are mostly algebraic
+duplicates of the survivors — once `Qdis_N` and `delta_Qdis` are gone,
+`mean_diff` and `slope_linear` no longer add unique information. The five
+survivors each capture a distinct geometric property of the QD curve.
+
+The "VIF drop ablation" output directory (`outputs/results_v2_vif_drop/`)
+runs the same six-model lineup on this five-feature subset for
+side-by-side comparison with the full 12-feature baseline.
 
 ---
 

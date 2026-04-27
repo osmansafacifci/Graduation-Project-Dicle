@@ -1,5 +1,5 @@
 {
-  "mode": "REPORT-ONLY",
+  "mode": "DROP",
   "seed": 42,
   "n_cycles": 100,
   "threshold": 5.0,
@@ -19,17 +19,17 @@
     "mean_diff"
   ],
   "initial_vif": {
-    "Qdis_N": 877.060388129677,
+    "Qdis_N": 876.9738437459706,
     "delta_Qdis": null,
-    "retention_ratio": 23406.524778484785,
-    "slope_linear": 446.0278140168984,
-    "variance_Qdis": 693.6350045090364,
-    "range_Qdis": 18284.7982322167,
-    "max_drop": 73511.36421011349,
-    "std_diff": 80060.26684474954,
-    "skewness_Qdis": 12.724249282369385,
-    "slope_ratio": 1.5897354776681274,
-    "Qdis_cycle10": 538.7173999742027,
+    "retention_ratio": 23412.137646736446,
+    "slope_linear": 446.05357571128565,
+    "variance_Qdis": 693.6497939331156,
+    "range_Qdis": 18287.231643284907,
+    "max_drop": 73511.43402402656,
+    "std_diff": 80058.31378962494,
+    "skewness_Qdis": 12.726613830925023,
+    "slope_ratio": 1.589905437260802,
+    "Qdis_cycle10": 538.7068109737266,
     "mean_diff": null
   },
   "flagged_features": [
@@ -46,19 +46,152 @@
     "skewness_Qdis"
   ],
   "kept_features": [
-    "Qdis_N",
-    "delta_Qdis",
     "retention_ratio",
-    "slope_linear",
     "variance_Qdis",
-    "range_Qdis",
-    "max_drop",
-    "std_diff",
     "skewness_Qdis",
     "slope_ratio",
-    "Qdis_cycle10",
-    "mean_diff"
+    "Qdis_cycle10"
   ],
-  "removed_features": [],
-  "iterations": []
+  "removed_features": [
+    "delta_Qdis",
+    "std_diff",
+    "mean_diff",
+    "range_Qdis",
+    "Qdis_N",
+    "max_drop",
+    "slope_linear"
+  ],
+  "iterations": [
+    {
+      "iteration": 0,
+      "n_features": 12,
+      "vif": {
+        "Qdis_N": 876.9738437459706,
+        "delta_Qdis": null,
+        "retention_ratio": 23412.137646736446,
+        "slope_linear": 446.05357571128565,
+        "variance_Qdis": 693.6497939331156,
+        "range_Qdis": 18287.231643284907,
+        "max_drop": 73511.43402402656,
+        "std_diff": 80058.31378962494,
+        "skewness_Qdis": 12.726613830925023,
+        "slope_ratio": 1.589905437260802,
+        "Qdis_cycle10": 538.7068109737266,
+        "mean_diff": null
+      },
+      "dropped": "delta_Qdis",
+      "dropped_vif": null
+    },
+    {
+      "iteration": 1,
+      "n_features": 11,
+      "vif": {
+        "Qdis_N": 865.1034253725128,
+        "retention_ratio": 22685.701249539525,
+        "slope_linear": 437.29648860572166,
+        "variance_Qdis": 653.0710365151729,
+        "range_Qdis": 17550.999802296647,
+        "max_drop": 73498.35506674669,
+        "std_diff": 79547.55678916156,
+        "skewness_Qdis": 12.001405694976798,
+        "slope_ratio": 1.4480816270799453,
+        "Qdis_cycle10": 530.6765307156476,
+        "mean_diff": 23941.352036075645
+      },
+      "dropped": "std_diff",
+      "dropped_vif": 79547.55678916156
+    },
+    {
+      "iteration": 2,
+      "n_features": 10,
+      "vif": {
+        "Qdis_N": 845.4789733281963,
+        "retention_ratio": 22668.955142685194,
+        "slope_linear": 404.8270911132895,
+        "variance_Qdis": 554.2672134993544,
+        "range_Qdis": 16953.59997213349,
+        "max_drop": 13509.785785605864,
+        "skewness_Qdis": 11.585941876416653,
+        "slope_ratio": 1.4454763831269188,
+        "Qdis_cycle10": 518.3353259840385,
+        "mean_diff": 23880.15220631765
+      },
+      "dropped": "mean_diff",
+      "dropped_vif": 23880.15220631765
+    },
+    {
+      "iteration": 3,
+      "n_features": 9,
+      "vif": {
+        "Qdis_N": 814.6551392062398,
+        "retention_ratio": 74.17332814622986,
+        "slope_linear": 397.4510171922721,
+        "variance_Qdis": 539.1782098532834,
+        "range_Qdis": 13674.991969209035,
+        "max_drop": 10791.110723192289,
+        "skewness_Qdis": 11.569562575642024,
+        "slope_ratio": 1.3804276467284249,
+        "Qdis_cycle10": 502.43930134710087
+      },
+      "dropped": "range_Qdis",
+      "dropped_vif": 13674.991969209035
+    },
+    {
+      "iteration": 4,
+      "n_features": 8,
+      "vif": {
+        "Qdis_N": 674.7218121442346,
+        "retention_ratio": 61.80861796909231,
+        "slope_linear": 226.96011919966622,
+        "variance_Qdis": 393.12915562368585,
+        "max_drop": 663.7685112890474,
+        "skewness_Qdis": 8.645206739519816,
+        "slope_ratio": 1.3746714581838535,
+        "Qdis_cycle10": 411.96023663821313
+      },
+      "dropped": "Qdis_N",
+      "dropped_vif": 674.7218121442346
+    },
+    {
+      "iteration": 5,
+      "n_features": 7,
+      "vif": {
+        "retention_ratio": 59.532567267284186,
+        "slope_linear": 73.55254140225529,
+        "variance_Qdis": 222.55277020672867,
+        "max_drop": 360.59283645428246,
+        "skewness_Qdis": 7.737322986359835,
+        "slope_ratio": 1.355314139043018,
+        "Qdis_cycle10": 1.1284943556195148
+      },
+      "dropped": "max_drop",
+      "dropped_vif": 360.59283645428246
+    },
+    {
+      "iteration": 6,
+      "n_features": 6,
+      "vif": {
+        "retention_ratio": 13.410624623666637,
+        "slope_linear": 22.35144143913073,
+        "variance_Qdis": 2.3515407860637825,
+        "skewness_Qdis": 4.872116251326272,
+        "slope_ratio": 1.3488054510333647,
+        "Qdis_cycle10": 1.1164491338133813
+      },
+      "dropped": "slope_linear",
+      "dropped_vif": 22.35144143913073
+    },
+    {
+      "iteration": 7,
+      "n_features": 5,
+      "vif": {
+        "retention_ratio": 1.461583505987617,
+        "variance_Qdis": 1.8472089576695454,
+        "skewness_Qdis": 2.013826074220821,
+        "slope_ratio": 1.231495206309541,
+        "Qdis_cycle10": 1.110432002801763
+      },
+      "dropped": null
+    }
+  ]
 }

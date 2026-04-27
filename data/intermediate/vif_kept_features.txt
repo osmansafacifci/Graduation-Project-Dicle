@@ -1,0 +1,5 @@
+retention_ratio
+variance_Qdis
+skewness_Qdis
+slope_ratio
+Qdis_cycle10

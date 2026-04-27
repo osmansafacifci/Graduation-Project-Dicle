@@ -5,15 +5,13 @@ feature                    VIF  flag
 ------------------------------------------
 delta_Qdis                 inf  FLAG (>5.0)
 mean_diff                  inf  FLAG (>5.0)
-std_diff             80060.267  FLAG (>5.0)
-max_drop             73511.364  FLAG (>5.0)
-retention_ratio      23406.525  FLAG (>5.0)
-range_Qdis           18284.798  FLAG (>5.0)
-Qdis_N                 877.060  FLAG (>5.0)
-variance_Qdis          693.635  FLAG (>5.0)
-Qdis_cycle10           538.717  FLAG (>5.0)
-slope_linear           446.028  FLAG (>5.0)
-skewness_Qdis           12.724  FLAG (>5.0)
+std_diff             80058.314  FLAG (>5.0)
+max_drop             73511.434  FLAG (>5.0)
+retention_ratio      23412.138  FLAG (>5.0)
+range_Qdis           18287.232  FLAG (>5.0)
+Qdis_N                 876.974  FLAG (>5.0)
+variance_Qdis          693.650  FLAG (>5.0)
+Qdis_cycle10           538.707  FLAG (>5.0)
+slope_linear           446.054  FLAG (>5.0)
+skewness_Qdis           12.727  FLAG (>5.0)
 slope_ratio              1.590  
-
-Mode = REPORT-ONLY. No features dropped. Re-run with --drop to prune.
