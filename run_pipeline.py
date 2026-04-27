@@ -203,6 +203,17 @@ STAGES: dict[str, Stage] = {
 
 DEFAULT_ORDER = ["download", "audit_matr", "audit_hust", "features", "splits", "vif", "experiments"]
 
+# Phase shortcuts. Two-phase workflow:
+#   extract: heavy I/O — reads raw .pkl from Drive, produces feature CSVs.
+#            Run this once on Colab (or anywhere with the raw data).
+#   model:   CPU-only — reads the feature CSVs that extract produced and
+#            runs everything downstream. Run this locally; iterate freely.
+PHASES: dict[str, list[str]] = {
+    "extract": ["download", "audit_matr", "audit_hust", "features"],
+    "model":   ["splits", "vif", "experiments"],
+    "all":     DEFAULT_ORDER,
+}
+
 
 def _outputs_exist(stage: Stage) -> bool:
     for out in stage.outputs:
@@ -221,11 +232,19 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
+        "--phase",
+        choices=list(PHASES.keys()),
+        default=None,
+        help="Convenience shortcut. 'extract' = audit + features (heavy I/O, run on Colab). "
+             "'model' = splits + vif + experiments (CPU-light, run locally). "
+             "'all' = everything. Overrides --stages when set.",
+    )
+    parser.add_argument(
         "--stages",
         nargs="+",
         choices=DEFAULT_ORDER,
         default=DEFAULT_ORDER,
-        help="Stages to run, in order. Default: all.",
+        help="Stages to run, in order. Default: all. Ignored when --phase is set.",
     )
     parser.add_argument("--skip-download", action="store_true", help="Skip the download stage.")
     parser.add_argument("--resume", action="store_true", help="Skip stages whose outputs exist.")
@@ -252,7 +271,7 @@ def main() -> int:
         print_status()
         return 0
 
-    selected = list(args.stages)
+    selected = list(PHASES[args.phase]) if args.phase else list(args.stages)
     if args.skip_download and "download" in selected:
         selected.remove("download")
 

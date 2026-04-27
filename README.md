@@ -173,11 +173,22 @@ once the redundant features are removed.
 
 ---
 
-## Colab workflow (no local disk required)
+## Two-phase workflow
 
-The raw datasets are too large to keep on a laptop. The Colab notebook mounts
-your Drive, runs the entire pipeline server-side, and ships back a small ZIP
-of artifacts that you commit to Git.
+The pipeline is split into two phases so you only pay the heavy I/O cost
+when feature definitions actually change:
+
+| Phase | Where | Why | Time | Inputs | Outputs |
+|---|---|---|---|---|---|
+| **A — Extract** | Colab | Reads ~15-20 GB of raw `.pkl` from Drive | ~5-10 min | Drive raw data | `data/intermediate/*.csv` (~200 KB) |
+| **B — Model** | Local laptop | Reads only the feature CSVs Phase A produced; pure CPU | seconds-minutes | Feature CSVs | Splits, VIF report, model results |
+
+Phase A is run **once** (or whenever you change `EOL_FRACTION`,
+`EXTRA_WINDOWS`, the feature list, etc.). Phase B is iterated **as often as
+you like** — try new models, re-run with VIF pruning, change seeds, run
+ablations — without ever touching Drive again.
+
+### Phase A — Colab extract
 
 1. Drive layout (already in place):
 
@@ -190,41 +201,61 @@ of artifacts that you commit to Git.
 2. Open the notebook in Colab:
    <https://colab.research.google.com/github/osmansafacifci/Graduation-Project-Dicle/blob/main/notebooks/run_pipeline_colab.ipynb>
 
-3. **Runtime → Run all**. Approve the Drive mount when prompted. Total wall
-   time ~15-30 min (audit_hust dominates: 77 cells × Coulomb counting).
+3. **Runtime → Run all**. Approve the Drive mount when prompted. Wall time
+   ~5-10 min (`audit_hust` dominates: 77 cells × Coulomb counting).
 
-4. The last cell triggers a ZIP download
-   (`pipeline_outputs_<timestamp>.zip`, ~10 MB).
+4. The last cell triggers a ZIP download (`extract_outputs_<timestamp>.zip`,
+   ~200 KB) containing only the audit + feature CSVs.
 
 5. On your laptop:
 
    ```bash
    cd /path/to/Graduation-Project-Dicle
-   unzip -o ~/Downloads/pipeline_outputs_*.zip
-   git add data/intermediate splits/sop_v2 outputs/results_v2
-   git commit -m "pipeline run from Colab $(date +%F)"
+   git pull
+   unzip -o ~/Downloads/extract_outputs_*.zip
+   git add data/intermediate
+   git commit -m "extract phase: refresh feature CSVs from Colab $(date +%F)"
    git push
    ```
 
-### Configuration knobs (notebook cell 0)
+#### Phase A configuration knobs (notebook cell 0)
 
 | Variable | Default | Effect |
 |---|---|---|
-| `EOL_FRACTION` | `0.85` | Lower threshold for cycle_life; flip to `0.80` to follow the original SOP |
-| `EXTRA_WINDOWS` | `[]` | Add `25` for the N=25 ablation |
-| `EXTRA_MODELS` | `[]` | Add `'catboost'` for the optional comparison model |
+| `EOL_FRACTION` | `0.85` | Threshold for cycle_life; flip to `0.80` to follow the original SOP |
+| `EXTRA_WINDOWS` | `[]` | Add `25` to also compute features at N=25 |
 | `CAPACITY_NORMALIZE` | `False` | Set to `True` if you add a third dataset with a different nominal capacity |
-| `VIF_DROP` | `False` | When `True`, VIF screening also drops features and experiments use the pruned subset (separate output dir) |
 
----
+### Phase B — local modeling
 
-## Local workflow (if you do have disk)
+Once the feature CSVs are committed (or unzipped from the Phase A ZIP), you
+no longer need Drive or Colab. Everything runs on your laptop:
 
 ```bash
-git clone https://github.com/osmansafacifci/Graduation-Project-Dicle.git
-cd Graduation-Project-Dicle
-pip install -r requirements.txt
-python run_pipeline.py                # ~30-60 min, ~15-20 GB downloaded into data/raw/
+pip install -r requirements.txt    # one-time
+python run_pipeline.py --phase model              # splits + VIF report + 6-model experiments
+```
+
+Or call individual scripts with custom flags — for example, a smaller model
+subset, or the VIF-pruned ablation:
+
+```bash
+python 2_modeling_featuring/run_experiments_v2.py --models pls catboost gaussian_process
+python 2_modeling_featuring/vif_screening.py --drop
+python 2_modeling_featuring/run_experiments_v2.py \
+    --features-from data/intermediate/vif_kept_features.txt \
+    --output-dir outputs/results_v2_vif_drop
+```
+
+Phase B outputs (`splits/sop_v2/`, `outputs/results_v2/`, etc.) live alongside
+the Phase A artifacts in the same repo, all small enough to commit to Git.
+
+### Phase shortcuts
+
+```bash
+python run_pipeline.py --phase extract    # download + audits + features (heavy I/O)
+python run_pipeline.py --phase model      # splits + VIF + experiments (CPU-light)
+python run_pipeline.py --phase all        # everything end to end (rarely needed)
 ```
 
 ---
