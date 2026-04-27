@@ -88,17 +88,34 @@ python run_pipeline.py --stages features splits           # just these two
 | §3 | 70/15/15 cell-level split, 5 seeds {42, 123, 456, 789, 1011}, lifetime-quartile stratification | ✅ |
 | §4.1 | Elastic Net with internal 5-fold CV across `l1_ratio ∈ {0.1, ..., 1.0}` | ✅ |
 | §4.2 | XGBoost with internal 5-fold CV across `max_depth ∈ {3,5,7}` × `lr ∈ {0.01, 0.05, 0.1}`, `n_estimators` chosen by per-fold early stopping (patience=50) | ✅ |
-| §4.3 | CatBoost (optional comparison) | ✅ via `--models elastic_net xgboost catboost` |
+| §4.3 | CatBoost (optional comparison) | ✅ |
+| **+** | Expanded model lineup beyond §4: PLS Regression (multicollinearity-aware linear), Random Forest (bagging trees, contrast to boosting), Gaussian Process (native uncertainty for §7 prep) | ✅ |
 | §5.2 | Cross-dataset experiments (MATR↔HUST) | ⏳ next phase |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ⏳ next phase |
 | §7 | Conformal prediction | ⏳ later phase |
 
 ---
 
+## Model lineup (6 models)
+
+The SOP §4 lineup (Elastic Net + XGBoost + optional CatBoost) was extended after
+the first run revealed that Elastic Net is unstable on the 12-feature SOP set
+and that XGBoost & CatBoost are both gradient-boosted trees, so the ensemble
+diversity is thin. The final lineup spans three paradigms:
+
+| Model | Paradigm | Why it's here |
+|---|---|---|
+| Elastic Net | Penalized linear (L1+L2) | SOP §4.1 baseline; documents the multicollinearity failure mode |
+| **PLS Regression** | Latent-component linear | Handles correlated regressors by construction (chemometrics standard); replaces ElasticNet's intended role |
+| **Random Forest** | Bagging trees | Different bias-variance profile from boosting; the original Severson 2019 paper used RF |
+| XGBoost | Gradient boosting | SOP §4.2 primary tree |
+| CatBoost | Gradient boosting (different impl.) | SOP §4.3 optional comparison |
+| **Gaussian Process** | Bayesian kernel | Native uncertainty estimates — direct prep for SOP §7 conformal-prediction phase |
+
 ## Current results (5-seed average ± std)
 
-From the first end-to-end Colab run (2026-04-26, default settings: EOL @ 0.85, all
-12 SOP features, no VIF pruning, ElasticNet + XGBoost only).
+From the first end-to-end Colab run (2026-04-26, ElasticNet + XGBoost only).
+A new run with the full 6-model lineup is needed to refresh this table.
 
 ```
 dataset  experiment    model        N    MAE                 sMAPE             R²

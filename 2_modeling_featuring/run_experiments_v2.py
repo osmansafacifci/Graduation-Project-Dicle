@@ -55,8 +55,8 @@ RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2"
 
 SEEDS = [42, 123, 456, 789, 1011]
 DEFAULT_WINDOWS = [50, 100]
-DEFAULT_MODELS = ["elastic_net", "xgboost"]
-ALL_MODELS = ["elastic_net", "xgboost", "catboost"]
+ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process"]
+DEFAULT_MODELS = ALL_MODELS  # full lineup
 
 SOP12_FEATURE_COLS = [
     "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
@@ -178,6 +178,111 @@ def fit_xgboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
         "cv_best_iter_per_fold": best_iter_per_fold,
     }
     return final_model, info
+
+
+def fit_pls(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """PLS regression: latent-component projection — multicollinearity-aware
+    linear baseline. Tunes n_components via inner 5-fold CV on MAE.
+    """
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.model_selection import KFold
+
+    n_samples, n_features = X_train_scaled.shape
+    n_folds = max(2, min(5, n_samples - 1))
+    candidates = [c for c in (1, 2, 3, 4, 5, 6, 8, 10, 12) if 1 <= c <= min(n_features, n_samples - 1)]
+
+    best_mae = float("inf")
+    best_n: int = candidates[0]
+    cv_scores: dict[int, float] = {}
+
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
+    folds = list(kf.split(X_train_scaled))
+
+    for n_comp in candidates:
+        fold_maes: list[float] = []
+        for tr_idx, va_idx in folds:
+            X_tr, X_va = X_train_scaled[tr_idx], X_train_scaled[va_idx]
+            y_tr, y_va = y_train[tr_idx], y_train[va_idx]
+            model = PLSRegression(n_components=n_comp, scale=False)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_va).ravel()
+            fold_maes.append(float(np.mean(np.abs(y_va - pred))))
+        cv_mae = float(np.mean(fold_maes))
+        cv_scores[n_comp] = cv_mae
+        if cv_mae < best_mae:
+            best_mae = cv_mae
+            best_n = n_comp
+
+    final = PLSRegression(n_components=best_n, scale=False)
+    final.fit(X_train_scaled, y_train)
+    info = {
+        "n_components": int(best_n),
+        "cv_folds": n_folds,
+        "cv_mae_mean": float(best_mae),
+        "cv_mae_per_n_components": {int(k): float(v) for k, v in cv_scores.items()},
+        "candidates": candidates,
+    }
+    return final, info
+
+
+def fit_random_forest(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """Random Forest: bagging-based ensemble — methodological alternative
+    to gradient boosting. GridSearchCV over depth and leaf size.
+    """
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import GridSearchCV
+
+    n_samples = len(y_train)
+    cv = max(2, min(5, n_samples - 1))
+    base = RandomForestRegressor(
+        n_estimators=500,
+        random_state=seed,
+        n_jobs=-1,
+    )
+    grid = GridSearchCV(
+        base,
+        param_grid={
+            "max_depth": [None, 5, 10, 20],
+            "min_samples_leaf": [1, 2, 5],
+        },
+        cv=cv,
+        scoring="neg_mean_absolute_error",
+        n_jobs=-1,
+    )
+    grid.fit(X_train_scaled, y_train)
+    info = {
+        **grid.best_params_,
+        "n_estimators": 500,
+        "cv_folds": cv,
+        "cv_mae_mean": float(-grid.best_score_),
+    }
+    return grid.best_estimator_, info
+
+
+def fit_gaussian_process(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """Gaussian Process Regression with RBF + White noise kernel.
+    Native uncertainty (useful prep for SOP §7 conformal-prediction phase).
+    Internal kernel hyperparameter optimization makes outer tuning unnecessary.
+    """
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from sklearn.gaussian_process.kernels import ConstantKernel, RBF, WhiteKernel
+
+    kernel = ConstantKernel(1.0, (1e-2, 1e3)) * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e2))
+    kernel = kernel + WhiteKernel(noise_level=1.0, noise_level_bounds=(1e-6, 1e2))
+
+    model = GaussianProcessRegressor(
+        kernel=kernel,
+        normalize_y=True,
+        n_restarts_optimizer=5,
+        random_state=seed,
+    )
+    model.fit(X_train_scaled, y_train)
+    info = {
+        "kernel": str(model.kernel_),
+        "log_marginal_likelihood": float(model.log_marginal_likelihood(model.kernel_.theta)),
+        "n_restarts_optimizer": 5,
+    }
+    return model, info
 
 
 def fit_catboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
@@ -317,6 +422,39 @@ def evaluate_split(
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["elastic_net"] = m
 
+    if "pls" in models:
+        pls_model, pls_info = fit_pls(X_train_s, y_train, seed=seed)
+        pred = pls_model.predict(X_test_s).ravel()
+        m = compute_metrics(y_test, pred)
+        m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["tuning"] = pls_info
+        if len(X_cal_s):
+            cal_pred = pls_model.predict(X_cal_s).ravel()
+            m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
+        out["pls"] = m
+
+    if "random_forest" in models:
+        rf_model, rf_info = fit_random_forest(X_train_s, y_train, seed=seed)
+        pred = rf_model.predict(X_test_s)
+        m = compute_metrics(y_test, pred)
+        m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["tuning"] = rf_info
+        if len(X_cal_s):
+            cal_pred = rf_model.predict(X_cal_s)
+            m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
+        out["random_forest"] = m
+
+    if "gaussian_process" in models:
+        gp_model, gp_info = fit_gaussian_process(X_train_s, y_train, seed=seed)
+        pred = gp_model.predict(X_test_s)
+        m = compute_metrics(y_test, pred)
+        m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["tuning"] = gp_info
+        if len(X_cal_s):
+            cal_pred = gp_model.predict(X_cal_s)
+            m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
+        out["gaussian_process"] = m
+
     if "xgboost" in models:
         xgb_model, xgb_info = fit_xgboost(X_train_s, y_train, seed=seed)
         pred = xgb_model.predict(X_test_s)
@@ -388,6 +526,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    global SOP12_FEATURE_COLS  # may be rewritten if --features-from is used
     args = parse_args()
     if not FEATURES_PATH.exists():
         print(f"[error] {FEATURES_PATH} missing — run build_sop12_features_v2.py first.")
@@ -413,7 +552,6 @@ def main() -> int:
         feature_subset_source = f"loaded from {args.features_from} ({len(feature_cols)} features)"
 
     # Override the module-level constant for evaluate_split() consumers
-    global SOP12_FEATURE_COLS
     SOP12_FEATURE_COLS = feature_cols
 
     results_dir = args.output_dir if args.output_dir is not None else RESULTS_DIR
