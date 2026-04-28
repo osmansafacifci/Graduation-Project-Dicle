@@ -281,6 +281,22 @@ def main() -> int:
     del repl_cells
     gc.collect()
 
+    # tidy per-cycle QD CSV (mirrors hust_cycles_tidy.csv schema). Once committed,
+    # any future feature engineering can run locally without re-reading the pkls.
+    print("\n[tidy] writing matr_cycles_tidy.csv (per-cycle QD for all merged cells)")
+    strict_cells, _ = merge_batches(batch1, batch2, batch3, strict_keep_all=True)
+    tidy_rows = []
+    for cell_id, cell in sorted(strict_cells.items()):
+        qd = np.asarray(cell["summary"]["QD"], dtype=float).ravel()
+        for cycle_idx, q in enumerate(qd, start=1):
+            tidy_rows.append({"cell_id": cell_id, "cycle": cycle_idx, "Q_discharge": float(q)})
+    tidy_df = pd.DataFrame(tidy_rows)
+    tidy_path = OUT_DIR / "matr_cycles_tidy.csv"
+    tidy_df.to_csv(tidy_path, index=False)
+    print(f"[save]  {tidy_path}  ({len(tidy_df):,} rows)")
+    del strict_cells
+    gc.collect()
+
     # retention summary on raw batches (no merge / no exclusion)
     print("\n[summary] per-batch retention (raw batch1 + batch3)")
     df = pd.concat(

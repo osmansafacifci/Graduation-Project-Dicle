@@ -62,11 +62,26 @@ INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 DEFAULT_N_WINDOWS = (50, 100)
 DEFAULT_EOL_FRACTION = 0.85
 
+# Original SOP12 features (12)
 SOP12_FEATURE_COLS = [
     "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
     "variance_Qdis", "range_Qdis", "max_drop", "std_diff",
     "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
 ]
+
+# Extended feature set — additional shape/decay descriptors of the QD curve
+# (12 more). All derived purely from the per-cycle Q_discharge series.
+EXTENDED_FEATURE_COLS = [
+    "poly2_a", "poly2_b", "poly2_c",        # quadratic fit of Q(c) over cycles 2..N
+    "exp_decay_k",                            # exponential fade rate constant
+    "cycle_to_99pct", "cycle_to_98pct", "cycle_to_95pct",  # cycles to reach retention thresholds
+    "slope_first_quarter", "slope_last_quarter",            # multi-scale fade rate
+    "autocorr_lag1",                          # cycle-to-cycle ΔQ memory
+    "knee_cycle",                             # decay knee location
+    "n_capacity_jumps",                       # count of large single-cycle drops
+]
+
+ALL_FEATURE_COLS = SOP12_FEATURE_COLS + EXTENDED_FEATURE_COLS  # 24 total
 
 # Per SOP §2.3: raw-capacity features that should be divided by Q0 when a
 # dataset has a different nominal capacity (so the same model can score across
@@ -118,6 +133,106 @@ def _ols_slope(values: np.ndarray) -> float:
     return float(np.polyfit(x, values, 1)[0])
 
 
+def compute_extended(qd: np.ndarray, n: int, q0: float) -> dict:
+    """Twelve additional QD-only features capturing curve shape and decay dynamics.
+
+    All derived from cycles 2..N of the Q_discharge series; safe defaults when
+    fits fail (no exception escapes).
+    """
+    max_idx = min(n, len(qd))
+    window = qd[1:max_idx]
+    cycles = np.arange(2, max_idx + 1, dtype=float)
+    diffs = np.diff(window) if len(window) > 1 else np.array([0.0])
+
+    # Quadratic polynomial fit: Q(c) = a + b*c + c2*c²
+    try:
+        c2, b, a = np.polyfit(cycles, window, 2)
+    except Exception:
+        a, b, c2 = float("nan"), 0.0, 0.0
+
+    # Exponential fade: Q(c) = q0_fit * exp(-k*c)
+    try:
+        from scipy.optimize import curve_fit  # imported lazily
+
+        def _exp_model(x, q_init, k):
+            return q_init * np.exp(-k * x)
+
+        popt, _ = curve_fit(
+            _exp_model, cycles, window,
+            p0=[max(window[0], 1e-6), 1e-3],
+            maxfev=2000,
+        )
+        exp_decay_k = float(popt[1])
+        if not np.isfinite(exp_decay_k):
+            exp_decay_k = 0.0
+    except Exception:
+        exp_decay_k = 0.0
+
+    # Cycle-to-retention-threshold landmarks (1-indexed cycle number; saturates at N if never crossed)
+    def _cycle_to(thr_frac: float) -> float:
+        thr = thr_frac * q0
+        for i, q in enumerate(window):
+            if np.isfinite(q) and q < thr:
+                return float(i + 2)  # i is 0-indexed within window which starts at cycle 2
+        return float(max_idx)
+
+    cycle_to_99 = _cycle_to(0.99)
+    cycle_to_98 = _cycle_to(0.98)
+    cycle_to_95 = _cycle_to(0.95)
+
+    # Multi-scale slopes
+    quarter = max(2, len(window) // 4)
+    slope_first = _ols_slope_local(window[:quarter])
+    slope_last = _ols_slope_local(window[-quarter:])
+
+    # Lag-1 autocorrelation of cycle-to-cycle ΔQ
+    if len(diffs) > 2:
+        d = diffs - np.mean(diffs)
+        denom = float(np.dot(d, d))
+        autocorr = float(np.dot(d[:-1], d[1:]) / denom) if denom > 1e-12 else 0.0
+        if not np.isfinite(autocorr):
+            autocorr = 0.0
+    else:
+        autocorr = 0.0
+
+    # Knee detection: cycle with maximum perpendicular distance from the
+    # straight line between the first and last point of the window.
+    if len(window) >= 5:
+        x_norm = (cycles - cycles[0]) / max(cycles[-1] - cycles[0], 1e-9)
+        y_norm = (window - np.min(window)) / max(np.max(window) - np.min(window), 1e-9)
+        line_y = y_norm[0] + (y_norm[-1] - y_norm[0]) * x_norm
+        knee_idx = int(np.argmax(np.abs(y_norm - line_y)))
+        knee_cycle = float(cycles[knee_idx])
+    else:
+        knee_cycle = float(cycles[-1])
+
+    # Cycle-to-cycle drops larger than 1% of Q0
+    threshold_jump = 0.01 * q0
+    n_jumps = int(np.sum(diffs < -threshold_jump)) if len(diffs) > 0 else 0
+
+    return {
+        "poly2_a": float(a),
+        "poly2_b": float(b),
+        "poly2_c": float(c2),
+        "exp_decay_k": exp_decay_k,
+        "cycle_to_99pct": cycle_to_99,
+        "cycle_to_98pct": cycle_to_98,
+        "cycle_to_95pct": cycle_to_95,
+        "slope_first_quarter": slope_first,
+        "slope_last_quarter": slope_last,
+        "autocorr_lag1": autocorr,
+        "knee_cycle": knee_cycle,
+        "n_capacity_jumps": float(n_jumps),
+    }
+
+
+def _ols_slope_local(values: np.ndarray) -> float:
+    if len(values) < 2:
+        return 0.0
+    x = np.arange(len(values), dtype=float)
+    return float(np.polyfit(x, values, 1)[0])
+
+
 def compute_sop12(qd: np.ndarray, n: int) -> dict | None:
     """Compute 12 features over cycles 2..N. Returns None if not enough cycles."""
     qd = np.asarray(qd, dtype=float).ravel()
@@ -155,14 +270,29 @@ def compute_sop12(qd: np.ndarray, n: int) -> dict | None:
 
 # ---------- MATR loading ----------
 
-def load_matr_qd_series() -> dict[str, np.ndarray]:
-    """Load batch1+batch2+batch3 pkls, merge continuations, return {cell_id: QD_array}."""
+def load_matr_qd_series_from_tidy() -> dict[str, np.ndarray]:
+    """Read matr_cycles_tidy.csv → {cell_id: QD_array}. Fast path, no pkls needed."""
+    tidy_path = INTERMEDIATE_DIR / "matr_cycles_tidy.csv"
+    if not tidy_path.exists():
+        return {}
+    df = pd.read_csv(tidy_path)
+    qd_by_cell: dict[str, np.ndarray] = {}
+    for cell_id, g in df.groupby("cell_id"):
+        g = g.sort_values("cycle")
+        qd_by_cell[str(cell_id)] = g["Q_discharge"].to_numpy(dtype=float)
+    print(f"[matr] loaded {len(qd_by_cell)} cells from {tidy_path.name}")
+    return qd_by_cell
+
+
+def load_matr_qd_series_from_pkls() -> dict[str, np.ndarray]:
+    """Fallback: load batch1+batch2+batch3 pkls, merge continuations, return {cell_id: QD_array}."""
     paths = {b: RAW_DIR / f"{b}.pkl" for b in ("batch1", "batch2", "batch3")}
     missing = [p for p in paths.values() if not p.exists()]
     if missing:
         raise SystemExit(
-            f"missing MATR pkl files: {[str(p.relative_to(PROJECT_ROOT)) for p in missing]}\n"
-            "Run: python 0_data_prep/download_data.py --only matr"
+            f"missing MATR sources. Either run audit_matr to produce matr_cycles_tidy.csv, "
+            f"or place these pkls under data/raw/: "
+            f"{[str(p.relative_to(PROJECT_ROOT)) for p in missing]}"
         )
     with paths["batch1"].open("rb") as f:
         b1 = pickle.load(f)
@@ -193,6 +323,15 @@ def load_matr_qd_series() -> dict[str, np.ndarray]:
 
     print(f"[matr] merged cells: {len(qd_by_cell)}")
     return qd_by_cell
+
+
+def load_matr_qd_series() -> dict[str, np.ndarray]:
+    """Try the tidy CSV first (fast, no Drive needed); fall back to pkls."""
+    qd = load_matr_qd_series_from_tidy()
+    if qd:
+        return qd
+    print("[matr] matr_cycles_tidy.csv missing, falling back to raw pkls")
+    return load_matr_qd_series_from_pkls()
 
 
 # ---------- HUST loading ----------
@@ -237,6 +376,7 @@ def build_feature_rows(
             feats = compute_sop12(qd, n)
             if feats is None:
                 continue
+            feats.update(compute_extended(qd, n, q0))
             if capacity_normalize and q0 > 0:
                 # Per SOP §2.3: divide raw-capacity features by Q0 to put a
                 # different-nominal-capacity dataset on the same scale.

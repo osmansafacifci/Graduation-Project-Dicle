@@ -64,6 +64,19 @@ SOP12_FEATURE_COLS = [
     "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
 ]
 
+EXTENDED_FEATURE_COLS = [
+    "poly2_a", "poly2_b", "poly2_c", "exp_decay_k",
+    "cycle_to_99pct", "cycle_to_98pct", "cycle_to_95pct",
+    "slope_first_quarter", "slope_last_quarter",
+    "autocorr_lag1", "knee_cycle", "n_capacity_jumps",
+]
+
+# Reserved (non-feature) CSV columns
+META_COLS = {
+    "dataset", "cell_id", "n_cycles", "q0", "cycle_life",
+    "is_censored", "capacity_normalized",
+}
+
 
 # ---------- model helpers ----------
 
@@ -378,6 +391,7 @@ def evaluate_split(
     n_cycles: int,
     models: list[str],
     seed: int,
+    log_target: bool = False,
 ) -> dict:
     """Train on `split['train']`, evaluate on `split['test']`. Returns per-model metrics."""
     subset = df[(df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
@@ -397,6 +411,19 @@ def evaluate_split(
     X_test = test_df[SOP12_FEATURE_COLS].to_numpy()
     y_test = test_df["cycle_life"].to_numpy()
 
+    # Optional log-transform of the target. We fit on log space but always score
+    # in the original cycle space so MAE / sMAPE / R² remain interpretable across
+    # runs with and without --log-target.
+    if log_target:
+        y_train_fit = np.log(y_train)
+        y_cal_fit = np.log(y_cal) if len(y_cal) else y_cal
+    else:
+        y_train_fit = y_train
+        y_cal_fit = y_cal
+
+    def _to_cycles(pred):
+        return np.exp(pred) if log_target else pred
+
     # Z-score: fit on TRAIN, transform cal/test
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
@@ -411,69 +438,69 @@ def evaluate_split(
     }
 
     if "elastic_net" in models:
-        enet = fit_elastic_net(X_train_s, y_train, seed=seed)
-        pred = enet.predict(X_test_s)
+        enet = fit_elastic_net(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(enet.predict(X_test_s))
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["best_alpha"] = float(enet.alpha_)
         m["best_l1_ratio"] = float(enet.l1_ratio_)
         if len(X_cal_s):
-            cal_pred = enet.predict(X_cal_s)
+            cal_pred = _to_cycles(enet.predict(X_cal_s))
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["elastic_net"] = m
 
     if "pls" in models:
-        pls_model, pls_info = fit_pls(X_train_s, y_train, seed=seed)
-        pred = pls_model.predict(X_test_s).ravel()
+        pls_model, pls_info = fit_pls(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(pls_model.predict(X_test_s).ravel())
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = pls_info
         if len(X_cal_s):
-            cal_pred = pls_model.predict(X_cal_s).ravel()
+            cal_pred = _to_cycles(pls_model.predict(X_cal_s).ravel())
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["pls"] = m
 
     if "random_forest" in models:
-        rf_model, rf_info = fit_random_forest(X_train_s, y_train, seed=seed)
-        pred = rf_model.predict(X_test_s)
+        rf_model, rf_info = fit_random_forest(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(rf_model.predict(X_test_s))
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = rf_info
         if len(X_cal_s):
-            cal_pred = rf_model.predict(X_cal_s)
+            cal_pred = _to_cycles(rf_model.predict(X_cal_s))
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["random_forest"] = m
 
     if "gaussian_process" in models:
-        gp_model, gp_info = fit_gaussian_process(X_train_s, y_train, seed=seed)
-        pred = gp_model.predict(X_test_s)
+        gp_model, gp_info = fit_gaussian_process(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(gp_model.predict(X_test_s))
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = gp_info
         if len(X_cal_s):
-            cal_pred = gp_model.predict(X_cal_s)
+            cal_pred = _to_cycles(gp_model.predict(X_cal_s))
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["gaussian_process"] = m
 
     if "xgboost" in models:
-        xgb_model, xgb_info = fit_xgboost(X_train_s, y_train, seed=seed)
-        pred = xgb_model.predict(X_test_s)
+        xgb_model, xgb_info = fit_xgboost(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(xgb_model.predict(X_test_s))
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = xgb_info  # max_depth, learning_rate, n_estimators, CV stats
         if len(X_cal_s):
-            cal_pred = xgb_model.predict(X_cal_s)
+            cal_pred = _to_cycles(xgb_model.predict(X_cal_s))
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["xgboost"] = m
 
     if "catboost" in models:
-        cb_model, cb_info = fit_catboost(X_train_s, y_train, seed=seed)
-        pred = cb_model.predict(X_test_s)
+        cb_model, cb_info = fit_catboost(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(cb_model.predict(X_test_s))
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = cb_info  # depth, learning_rate, iterations, CV stats
         if len(X_cal_s):
-            cal_pred = cb_model.predict(X_cal_s)
+            cal_pred = _to_cycles(cb_model.predict(X_cal_s))
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["catboost"] = m
 
@@ -516,12 +543,17 @@ def parse_args() -> argparse.Namespace:
                              "Optional ablation: add 25.")
     parser.add_argument("--features-from", type=Path, default=None,
                         help="Path to a text file with one feature name per line. "
-                             "If omitted, all 12 SOP features are used. "
+                             "If omitted, every non-metadata column in the CSV is used. "
                              "Use data/intermediate/vif_kept_features.txt for the VIF-pruned ablation.")
     parser.add_argument("--output-dir", type=Path, default=None,
                         help="Directory to write results into. "
                              "Defaults to outputs/results_v2/. Use a separate path "
                              "(e.g. outputs/results_v2_vif_drop/) for ablations.")
+    parser.add_argument("--log-target", action="store_true",
+                        help="Train on log(cycle_life) and report metrics in original cycle space "
+                             "(predictions are exp-transformed before scoring). "
+                             "Often dramatically improves linear models on wide-range targets "
+                             "(MATR cycle_life spans ~150-2300, ~15× ratio).")
     return parser.parse_args()
 
 
@@ -533,17 +565,21 @@ def main() -> int:
         return 1
     df = pd.read_csv(FEATURES_PATH)
 
-    # Resolve feature subset (default = all 12 SOP features)
-    feature_cols: list[str] = list(SOP12_FEATURE_COLS)
-    feature_subset_source = "sop12 (all 12)"
+    # Resolve feature subset.
+    # Default = every numeric column in the CSV that isn't metadata (so when the
+    # feature table is extended, we don't have to update this script).
+    available = [c for c in df.columns if c not in META_COLS]
+    feature_cols: list[str] = list(available)
+    feature_subset_source = f"auto-detected from CSV ({len(feature_cols)} features)"
     if args.features_from is not None:
         if not args.features_from.exists():
             print(f"[error] --features-from {args.features_from} not found.")
             return 1
         listed = [line.strip() for line in args.features_from.read_text().splitlines() if line.strip()]
-        unknown = [f for f in listed if f not in SOP12_FEATURE_COLS]
+        unknown = [f for f in listed if f not in available]
         if unknown:
-            print(f"[error] features-from contains unknown features: {unknown}")
+            print(f"[error] features-from contains columns not in the CSV: {unknown}")
+            print(f"        available columns: {available}")
             return 1
         if not listed:
             print(f"[error] --features-from {args.features_from} is empty.")
@@ -574,6 +610,7 @@ def main() -> int:
             "feature_set": feature_subset_source,
             "feature_columns": list(feature_cols),
             "target": "cycle_life @ 0.85 * Q0 (single-cycle EOL)",
+            "log_target": bool(args.log_target),
             "split_ratios": list((0.70, 0.15, 0.15)),
             "standardization": "z-score, fit on train, transform cal/test",
             "seeds": SEEDS,
@@ -594,7 +631,7 @@ def main() -> int:
             per_window: dict[str, dict] = {}
             for n in args.windows:
                 print(f"  seed={seed} N={n}")
-                result = evaluate_split(sub, split, n_cycles=n, models=args.models, seed=seed)
+                result = evaluate_split(sub, split, n_cycles=n, models=args.models, seed=seed, log_target=args.log_target)
                 per_window[str(n)] = result
             bundle["per_seed"][str(seed)] = per_window
 

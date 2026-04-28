@@ -56,6 +56,12 @@ SOP12_FEATURES = [
     "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
 ]
 
+# Reserved (non-feature) CSV columns; everything else gets a VIF.
+META_COLS = {
+    "dataset", "cell_id", "n_cycles", "q0", "cycle_life",
+    "is_censored", "capacity_normalized",
+}
+
 
 def compute_vif(X: np.ndarray, feature_names: list[str]) -> dict[str, float]:
     """VIF_i = 1 / (1 - R²_i), where i is regressed on all other features."""
@@ -150,6 +156,7 @@ def main() -> int:
         split = json.load(f)
 
     df = pd.read_csv(features_path)
+    feature_cols = [c for c in df.columns if c not in META_COLS]
     matr = df[df["dataset"] == "matr"]
     train_subset = matr[
         (matr["n_cycles"] == args.n_cycles)
@@ -160,14 +167,14 @@ def main() -> int:
         print(f"[error] only {len(train_subset)} train rows at N={args.n_cycles}; need >= 5.")
         return 1
 
-    X = train_subset[SOP12_FEATURES].to_numpy()
+    X = train_subset[feature_cols].to_numpy()
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
     mode = "DROP" if args.drop else "REPORT-ONLY"
     print(f"[vif] mode={mode}, training slice: dataset=matr, seed={args.seed}, "
           f"N={args.n_cycles}, n_train={len(train_subset)} cells, threshold={args.threshold}")
-    initial_vif = compute_vif(X_scaled, SOP12_FEATURES)
+    initial_vif = compute_vif(X_scaled, feature_cols)
 
     print("\n[vif] initial VIF values (sorted desc):")
     flagged: list[str] = []
@@ -198,13 +205,13 @@ def main() -> int:
         "n_cycles": args.n_cycles,
         "threshold": args.threshold,
         "n_train_cells": int(len(train_subset)),
-        "all_features": SOP12_FEATURES,
+        "all_features": feature_cols,
         "initial_vif": {k: (None if not np.isfinite(v) else v) for k, v in initial_vif.items()},
         "flagged_features": flagged,
     }
 
     if args.drop:
-        kept, removed, history = iterative_vif_drop(X_scaled, SOP12_FEATURES, args.threshold)
+        kept, removed, history = iterative_vif_drop(X_scaled, feature_cols, args.threshold)
         print("\n[vif] dropping order (highest VIF first, recomputed each step):")
         for entry in history:
             if entry.get("dropped"):
@@ -223,7 +230,7 @@ def main() -> int:
         print(f"[save] {out_kept}")
     else:
         # report-only: keep all features (the modeling pipeline still uses all 12)
-        payload["kept_features"] = SOP12_FEATURES
+        payload["kept_features"] = feature_cols
         payload["removed_features"] = []
         payload["iterations"] = []
         report_lines.append("")
