@@ -37,6 +37,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.decomposition import PCA
 from sklearn.linear_model import ElasticNetCV
 from sklearn.preprocessing import StandardScaler
 
@@ -392,6 +393,7 @@ def evaluate_split(
     models: list[str],
     seed: int,
     log_target: bool = False,
+    pca_variance: float | None = None,
 ) -> dict:
     """Train on `split['train']`, evaluate on `split['test']`. Returns per-model metrics."""
     subset = df[(df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
@@ -430,12 +432,32 @@ def evaluate_split(
     X_cal_s = scaler.transform(X_cal) if len(X_cal) else X_cal
     X_test_s = scaler.transform(X_test)
 
+    # Optional PCA: fit on TRAIN (z-scored), transform cal/test with same
+    # projection. n_components = float in (0,1) keeps enough PCs to explain
+    # that variance fraction; int >= 1 fixes the component count.
+    pca_info: dict | None = None
+    if pca_variance is not None:
+        n_comp = pca_variance if pca_variance >= 1 else float(pca_variance)
+        pca = PCA(n_components=n_comp, random_state=seed)
+        X_train_s = pca.fit_transform(X_train_s)
+        if len(X_cal_s):
+            X_cal_s = pca.transform(X_cal_s)
+        X_test_s = pca.transform(X_test_s)
+        pca_info = {
+            "n_components_in": int(X_train.shape[1]),
+            "n_components_out": int(pca.n_components_),
+            "explained_variance_ratio_sum": float(pca.explained_variance_ratio_.sum()),
+            "variance_target": float(pca_variance),
+        }
+
     out: dict = {
         "n_cycles": int(n_cycles),
         "train_cells": int(len(train_df)),
         "calibration_cells": int(len(cal_df)),
         "test_cells": int(len(test_df)),
     }
+    if pca_info is not None:
+        out["pca"] = pca_info
 
     if "elastic_net" in models:
         enet = fit_elastic_net(X_train_s, y_train_fit, seed=seed)
@@ -549,6 +571,11 @@ def parse_args() -> argparse.Namespace:
                         help="Directory to write results into. "
                              "Defaults to outputs/results_v2/. Use a separate path "
                              "(e.g. outputs/results_v2_vif_drop/) for ablations.")
+    parser.add_argument("--pca", type=float, default=None,
+                        help="Apply PCA after standardization. Float in (0,1) = "
+                             "explained-variance threshold (e.g. 0.95). "
+                             "Int >= 1 = fixed number of components. "
+                             "Fit on train only; same projection applied to cal/test.")
     parser.add_argument("--log-target", action="store_true",
                         help="Train on log(cycle_life) and report metrics in original cycle space "
                              "(predictions are exp-transformed before scoring). "
@@ -611,6 +638,7 @@ def main() -> int:
             "feature_columns": list(feature_cols),
             "target": "cycle_life @ 0.85 * Q0 (single-cycle EOL)",
             "log_target": bool(args.log_target),
+            "pca_variance": args.pca,
             "split_ratios": list((0.70, 0.15, 0.15)),
             "standardization": "z-score, fit on train, transform cal/test",
             "seeds": SEEDS,
@@ -631,7 +659,7 @@ def main() -> int:
             per_window: dict[str, dict] = {}
             for n in args.windows:
                 print(f"  seed={seed} N={n}")
-                result = evaluate_split(sub, split, n_cycles=n, models=args.models, seed=seed, log_target=args.log_target)
+                result = evaluate_split(sub, split, n_cycles=n, models=args.models, seed=seed, log_target=args.log_target, pca_variance=args.pca)
                 per_window[str(n)] = result
             bundle["per_seed"][str(seed)] = per_window
 

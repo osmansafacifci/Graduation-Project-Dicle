@@ -1,5 +1,8 @@
-retention_ratio
-variance_Qdis
-skewness_Qdis
 slope_ratio
 Qdis_cycle10
+poly2_c
+cycle_to_99pct
+cycle_to_98pct
+slope_first_quarter
+autocorr_lag1
+knee_cycle

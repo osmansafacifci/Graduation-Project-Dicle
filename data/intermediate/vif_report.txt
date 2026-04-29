@@ -4,14 +4,26 @@ n_train_cells=89, threshold=5.0
 feature                    VIF  flag
 ------------------------------------------
 delta_Qdis                 inf  FLAG (>5.0)
+slope_linear               inf  FLAG (>5.0)
 mean_diff                  inf  FLAG (>5.0)
-std_diff             80058.314  FLAG (>5.0)
-max_drop             73511.434  FLAG (>5.0)
-retention_ratio      23412.138  FLAG (>5.0)
-range_Qdis           18287.232  FLAG (>5.0)
-Qdis_N                 876.974  FLAG (>5.0)
-variance_Qdis          693.650  FLAG (>5.0)
-Qdis_cycle10           538.707  FLAG (>5.0)
-slope_linear           446.054  FLAG (>5.0)
-skewness_Qdis           12.727  FLAG (>5.0)
-slope_ratio              1.590  
+poly2_b                    inf  FLAG (>5.0)
+poly2_c                    inf  FLAG (>5.0)
+cycle_to_95pct             inf  FLAG (>5.0)
+exp_decay_k         834698.602  FLAG (>5.0)
+retention_ratio     610846.722  FLAG (>5.0)
+std_diff            190167.052  FLAG (>5.0)
+max_drop            136032.777  FLAG (>5.0)
+range_Qdis          107112.498  FLAG (>5.0)
+variance_Qdis        62395.921  FLAG (>5.0)
+n_capacity_jumps     12873.779  FLAG (>5.0)
+poly2_a              11379.037  FLAG (>5.0)
+Qdis_N                7594.085  FLAG (>5.0)
+cycle_to_98pct        4263.170  FLAG (>5.0)
+Qdis_cycle10          3645.071  FLAG (>5.0)
+slope_first_quarter      82.236  FLAG (>5.0)
+slope_last_quarter      48.213  FLAG (>5.0)
+cycle_to_99pct          47.798  FLAG (>5.0)
+skewness_Qdis           18.622  FLAG (>5.0)
+autocorr_lag1            3.424  
+knee_cycle               2.987  
+slope_ratio              2.596  
