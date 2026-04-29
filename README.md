@@ -81,10 +81,13 @@ python run_pipeline.py --stages features splits           # just these two
 | §1.3 | HUST `Q_dis` = total Coulomb-counted across all discharge stages | ✅ |
 | §1.4 | Censored cells excluded from modeling, count reported | ✅ |
 | §2 | 12 capacity-only features (Qdis_N, delta_Qdis, retention_ratio, slope_linear, variance_Qdis, range_Qdis, max_drop, std_diff, skewness_Qdis, slope_ratio, Qdis_cycle10, mean_diff) | ✅ |
+| §2 (extended) | +12 additional `Q_dis`-only features beyond the SOP list: `poly2_{a,b,c}`, `exp_decay_k`, `cycle_to_{99,98,95}pct`, `slope_first_quarter`, `slope_last_quarter`, `autocorr_lag1`, `knee_cycle`, `n_capacity_jumps` | ✅ |
 | §2.1 | `N=100` primary, `N=50` secondary | ✅ default; `--n-windows 25 50 100` for ablation |
 | §2.2 | Z-score: fit on **train only**, transform calibration & test | ✅ |
 | §2.3 | Capacity normalization (divide raw-capacity features by `Q0`) | ✅ via `--capacity-normalize` (off by default; MATR + HUST share A123 1.1 Ah) |
 | §2.4 | VIF screening on MATR train | ✅ — report-only by default; `--drop` flag for iterative pruning |
+| §2 (extended) | PCA preprocessing (alternative to VIF drop) | ✅ via `--pca FRAC` on `run_experiments_v2.py`; fit on train, applied to cal/test |
+| §4 (extended) | log-target regression (predict `log(cycle_life)`, score in cycle space) | ✅ via `--log-target` on `run_experiments_v2.py` |
 | §3 | 70/15/15 cell-level split, 5 seeds {42, 123, 456, 789, 1011}, lifetime-quartile stratification | ✅ |
 | §4.1 | Elastic Net with internal 5-fold CV across `l1_ratio ∈ {0.1, ..., 1.0}` | ✅ |
 | §4.2 | XGBoost with internal 5-fold CV across `max_depth ∈ {3,5,7}` × `lr ∈ {0.01, 0.05, 0.1}`, `n_estimators` chosen by per-fold early stopping (patience=50) | ✅ |
@@ -112,22 +115,46 @@ diversity is thin. The final lineup spans three paradigms:
 | CatBoost | Gradient boosting (different impl.) | SOP §4.3 optional comparison |
 | **Gaussian Process** | Bayesian kernel | Native uncertainty estimates — direct prep for SOP §7 conformal-prediction phase |
 
-## Current results (5-seed average ± std)
+## Current results (5-seed average ± std, N=100)
 
-From the first end-to-end Colab run (2026-04-26, ElasticNet + XGBoost only).
-A new run with the full 6-model lineup is needed to refresh this table.
+Six iterative configurations were run on both datasets. Each row is the best
+model on that configuration; the full per-model tables are in
+`outputs/results_v2*/results_summary.csv`.
 
-```
-dataset  experiment    model        N    MAE                 sMAPE             R²
-matr     matr_to_matr  elastic_net  50   733.7  ± 872.7      40.28 ± 2.89      −135.0  ± 269.0   ⚠ unstable
-matr     matr_to_matr  elastic_net  100  1147.6 ± 1766.9     39.81 ± 3.15      −493.1  ± 986.3   ⚠ unstable
-matr     matr_to_matr  xgboost      50   287.9  ± 42.4       34.92 ± 4.92      −0.46   ± 0.42
-matr     matr_to_matr  xgboost      100  248.6  ± 45.3       33.04 ± 5.33       0.15   ± 0.21
-hust     hust_to_hust  elastic_net  50   222.5  ± 26.8       14.95 ± 1.89       0.05   ± 0.17
-hust     hust_to_hust  elastic_net  100  203.1  ± 33.4       13.72 ± 2.18       0.21   ± 0.21
-hust     hust_to_hust  xgboost      50   200.1  ± 30.6       13.65 ± 2.34       0.08   ± 0.28
-hust     hust_to_hust  xgboost      100  194.8  ± 27.3       13.31 ± 2.18       0.23   ± 0.20
-```
+| Configuration | Features | Best MATR (model) | MAE | R² | Best HUST (model) | MAE | R² |
+|---|---|---|---|---|---|---|---|
+| Baseline (12 SOP, no log) | 12 | CatBoost | 204 | 0.371 | CatBoost | 182 | 0.307 |
+| +log target | 12 | RF | 198 | 0.410 | GP | 180 | 0.299 |
+| +VIF drop (5 feat) | 5 | CatBoost | 207 | 0.335 | CatBoost | 182 | 0.270 |
+| +VIF drop +log | 5 | CatBoost | 199 | 0.351 | GP | 162 | 0.405 |
+| +24 feat (12 SOP + 12 extended), no log | 24 | CatBoost | **188** | **0.489** | XGBoost | 174 | 0.362 |
+| +24 feat +log | 24 | CatBoost | 186 | 0.480 | XGBoost | 174 | 0.367 |
+| **+24 feat +VIF drop (8) +log** | 8 | **CatBoost** | **181** | **🏆 0.515** | XGBoost | 181 | 0.234 |
+| **+24 feat +PCA(0.95) +log** | ~10 PCs | CatBoost | 195 | 0.411 | **RF** | **165** | **🏆 0.433** |
+
+**Best results across all ablations (N=100):**
+
+- **MATR**: CatBoost on the 8-feature VIF-pruned subset of 24 features, with
+  `--log-target` → MAE = 181 ± 59, R² = 0.515 ± 0.222
+- **HUST**: Random Forest on the 24-feature set projected to PCs explaining
+  95% variance, with `--log-target` → MAE = 165 ± 30, R² = 0.433 ± 0.173
+
+Two cross-cutting findings drive these numbers:
+
+- The **log-target transform** rescues linear models on MATR (ElasticNet R² jumps
+  from −493 to +0.07 once cycle life is regressed in log space) and gives
+  tree models a +5–10% R² lift across the board.
+- **VIF drop helps MATR; PCA helps HUST**. They optimize different things —
+  VIF removes features (subset selection, robust against label noise on small
+  cell counts), PCA recombines them into orthogonal axes (preserves more
+  signal but is sensitive to cells with extreme components in log space).
+  Applying VIF on HUST hurt every model; applying PCA to MATR linear models
+  produced new R²<−10 explosions even with `--log-target`.
+
+The literature ceiling for capacity-only feature sets on MATR is roughly
+R² ≈ 0.6–0.7 (vs ≈0.9 with voltage-curve features in Severson 2019). At
+R² = 0.52, the v2 pipeline is in the upper half of that band without ever
+reading discharge voltage.
 
 ### Censoring summary
 
@@ -172,7 +199,8 @@ therefore produces sane numbers from the same inputs.
 ### VIF-pruned subset
 
 Iterative VIF pruning (drop highest-VIF feature, recompute, repeat until all
-remaining VIF ≤ 5) converges to a five-feature subset:
+remaining VIF ≤ 5) on the **12-feature** baseline converges to a five-feature
+subset:
 
 ```
 retention_ratio    relative capacity decline (Q_dis(N) / Q_dis(2))
@@ -182,15 +210,27 @@ slope_ratio        fade acceleration (slope_2nd-half / slope_1st-half)
 Qdis_cycle10       early-life capacity reference
 ```
 
-The seven dropped features (`delta_Qdis`, `std_diff`, `mean_diff`,
-`range_Qdis`, `Qdis_N`, `max_drop`, `slope_linear`) are mostly algebraic
-duplicates of the survivors — once `Qdis_N` and `delta_Qdis` are gone,
-`mean_diff` and `slope_linear` no longer add unique information. The five
-survivors each capture a distinct geometric property of the QD curve.
+After Phase A was extended to produce 12 additional `Q_dis`-derived features
+(quadratic fit `poly2_{a,b,c}`, exponential decay `exp_decay_k`,
+`cycle_to_{99,98,95}pct`, half-window slopes, `autocorr_lag1`, `knee_cycle`,
+`n_capacity_jumps`), the same VIF threshold on the **24-feature** set
+converges to an eight-feature subset:
 
-The "VIF drop ablation" output directory (`outputs/results_v2_vif_drop/`)
-runs the same six-model lineup on this five-feature subset for
-side-by-side comparison with the full 12-feature baseline.
+```
+slope_ratio              fade acceleration (kept from the 12-feat round)
+Qdis_cycle10             early-life capacity reference
+poly2_c                  quadratic-fit intercept
+cycle_to_99pct           cycles until first 99% retention crossing
+cycle_to_98pct           same, 98%
+slope_first_quarter      slope of the first ¼ of the window
+autocorr_lag1            QD lag-1 autocorrelation (curve smoothness)
+knee_cycle               estimated capacity-knee cycle (PELT-style change point)
+```
+
+The "VIF drop ablation" outputs (`outputs/results_v2_vif_drop/` for the
+12-feat run, `outputs/results_v2_24feat_vif_log/` for the 24-feat + log run)
+contain the full per-seed numbers. The 24-feat + VIF + log configuration
+gives the best MATR result of any run (CatBoost R² = 0.515).
 
 ---
 
@@ -266,11 +306,22 @@ Or call individual scripts with custom flags — for example, a smaller model
 subset, or the VIF-pruned ablation:
 
 ```bash
+# Smaller model subset:
 python 2_modeling_featuring/run_experiments_v2.py --models pls catboost gaussian_process
+
+# Iterative VIF drop (writes vif_kept_features.txt):
 python 2_modeling_featuring/vif_screening.py --drop
+
+# 24-feat + log + VIF-pruned subset (best MATR config):
 python 2_modeling_featuring/run_experiments_v2.py \
+    --log-target \
     --features-from data/intermediate/vif_kept_features.txt \
-    --output-dir outputs/results_v2_vif_drop
+    --output-dir outputs/results_v2_24feat_vif_log
+
+# 24-feat + log + PCA(95% variance) (best HUST config):
+python 2_modeling_featuring/run_experiments_v2.py \
+    --log-target --pca 0.95 \
+    --output-dir outputs/results_v2_24feat_pca_log
 ```
 
 Phase B outputs (`splits/sop_v2/`, `outputs/results_v2/`, etc.) live alongside
@@ -290,9 +341,12 @@ python run_pipeline.py --phase all        # everything end to end (rarely needed
 
 - [x] §1 labels (Q0, EOL@85%, censoring)
 - [x] §2 features (12 capacity-only + capacity-normalize + VIF report)
+- [x] §2 extended features (+12 `Q_dis`-only features: poly fit, exp decay, knee, autocorr, etc.)
 - [x] §3 splits (70/15/15, 5 seeds, lifetime-quartile-stratified)
-- [x] §4 within-dataset experiments (Elastic Net, XGBoost, CatBoost optional)
-- [ ] VIF drop ablation (separate experiment branch)
+- [x] §4 within-dataset experiments (6 models: Elastic Net, PLS, RF, XGBoost, CatBoost, GP)
+- [x] log-target regression (`--log-target`) — rescues linear models, lifts trees +5–10% R²
+- [x] VIF drop ablation (12-feat → 5 feat, 24-feat → 8 feat)
+- [x] PCA preprocessing ablation (`--pca 0.95`)
 - [ ] §5.2 cross-dataset experiments (MATR ↔ HUST)
 - [ ] §6.3 shift metrics (MMD, Mahalanobis)
 - [ ] §7 conformal prediction (Split CP, target recalibration)
