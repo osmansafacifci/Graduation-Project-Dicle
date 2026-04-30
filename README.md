@@ -117,44 +117,72 @@ diversity is thin. The final lineup spans three paradigms:
 
 ## Current results (5-seed average ± std, N=100)
 
-Six iterative configurations were run on both datasets. Each row is the best
-model on that configuration; the full per-model tables are in
-`outputs/results_v2*/results_summary.csv`.
+### Primary configuration
 
-| Configuration | Features | Best MATR (model) | MAE | R² | Best HUST (model) | MAE | R² |
-|---|---|---|---|---|---|---|---|
-| Baseline (12 SOP, no log) | 12 | CatBoost | 204 | 0.371 | CatBoost | 182 | 0.307 |
-| +log target | 12 | RF | 198 | 0.410 | GP | 180 | 0.299 |
-| +VIF drop (5 feat) | 5 | CatBoost | 207 | 0.335 | CatBoost | 182 | 0.270 |
-| +VIF drop +log | 5 | CatBoost | 199 | 0.351 | GP | 162 | 0.405 |
-| +24 feat (12 SOP + 12 extended), no log | 24 | CatBoost | **188** | **0.489** | XGBoost | 174 | 0.362 |
-| +24 feat +log | 24 | CatBoost | 186 | 0.480 | XGBoost | 174 | 0.367 |
-| **+24 feat +VIF drop (8) +log** | 8 | **CatBoost** | **181** | **🏆 0.515** | XGBoost | 181 | 0.234 |
-| **+24 feat +PCA(0.95) +log** | ~10 PCs | CatBoost | 195 | 0.411 | **RF** | **165** | **🏆 0.433** |
+The pipeline reports a single, dataset-agnostic configuration so the same
+code path applies to MATR, HUST, and any future battery dataset without
+per-dataset preprocessing choices:
 
-**Best results across all ablations (N=100):**
+> **24 capacity-only features + `--log-target` + z-score standardization, no
+> further preprocessing.**
 
-- **MATR**: CatBoost on the 8-feature VIF-pruned subset of 24 features, with
-  `--log-target` → MAE = 181 ± 59, R² = 0.515 ± 0.222
-- **HUST**: Random Forest on the 24-feature set projected to PCs explaining
-  95% variance, with `--log-target` → MAE = 165 ± 30, R² = 0.433 ± 0.173
+| Dataset | Best model | MAE | sMAPE | R² |
+|---|---|---|---|---|
+| **MATR** | CatBoost | **186 ± 49** | 25.7 ± 5.4 | **0.480 ± 0.174** |
+| **HUST** | XGBoost | **174 ± 27** | 11.9 ± 2.3 | **0.367 ± 0.169** |
 
-Two cross-cutting findings drive these numbers:
+Full per-model summary (`outputs/results_v2_24feat_log/results_summary.csv`):
 
-- The **log-target transform** rescues linear models on MATR (ElasticNet R² jumps
-  from −493 to +0.07 once cycle life is regressed in log space) and gives
-  tree models a +5–10% R² lift across the board.
-- **VIF drop helps MATR; PCA helps HUST**. They optimize different things —
-  VIF removes features (subset selection, robust against label noise on small
-  cell counts), PCA recombines them into orthogonal axes (preserves more
-  signal but is sensitive to cells with extreme components in log space).
-  Applying VIF on HUST hurt every model; applying PCA to MATR linear models
-  produced new R²<−10 explosions even with `--log-target`.
+| Model | MATR R² | HUST R² |
+|---|---|---|
+| ElasticNet | 0.31 | 0.29 |
+| PLS | 0.31 | 0.24 |
+| Random Forest | 0.48 | 0.34 |
+| XGBoost | 0.41 | **0.37** |
+| **CatBoost** | **0.48** | 0.28 |
+| Gaussian Process | 0.34 | 0.27 |
 
 The literature ceiling for capacity-only feature sets on MATR is roughly
 R² ≈ 0.6–0.7 (vs ≈0.9 with voltage-curve features in Severson 2019). At
-R² = 0.52, the v2 pipeline is in the upper half of that band without ever
+R² = 0.48 the v2 pipeline sits in the middle of that band without ever
 reading discharge voltage.
+
+### Ablation studies (not used as primary results)
+
+Six configurations were run end-to-end. The four below explore preprocessing
+variants but are reported as ablations only — no per-dataset preprocessing
+choice is taken into the final results, since cherry-picking a different
+recipe per dataset would not generalize when a third or fourth dataset is
+added later.
+
+| Configuration | Features | MATR best R² | HUST best R² | Notes |
+|---|---|---|---|---|
+| 12 SOP, no log | 12 | 0.371 | 0.307 | original SOP §2 baseline |
+| 12 SOP + log | 12 | 0.410 | 0.299 | log target rescues ElasticNet |
+| 12 SOP + VIF drop (5) + log | 5 | 0.351 | 0.405 | strongest reduction; HUST gain |
+| **24 feat + log** (primary) | 24 | **0.480** | **0.367** | same pipeline both datasets |
+| 24 feat + VIF drop (8) + log | 8 | 0.515* | 0.234 | best MATR, worst HUST |
+| 24 feat + PCA(0.95) + log | ~10 PCs | 0.411 | 0.433* | best HUST, MATR linears blow up |
+
+\*Best-of-ablation numbers; not used as primary results because the
+preprocessing rule that delivered each one made the *other* dataset worse.
+
+Cross-cutting observations from the ablations:
+
+- The **log-target transform** is dataset-agnostic — rescues linear models
+  on MATR (ElasticNet R² jumps from −493 to +0.07 once cycle life is
+  regressed in log space) and gives tree models a +5–10% R² lift on both
+  datasets. It is therefore part of the primary configuration.
+- **VIF drop and PCA are *not* dataset-agnostic.** VIF removes features
+  (subset selection, robust against label noise on small cell counts);
+  PCA recombines them into orthogonal axes (preserves more signal but is
+  sensitive to cells with extreme components in log space). VIF helps
+  MATR (R² 0.48 → 0.52 on CatBoost) but hurts HUST (R² 0.37 → 0.23 on
+  XGBoost). PCA does the opposite. Neither rule wins on average, so
+  neither is taken as the default.
+- This split is itself a useful finding: *no single preprocessing rule
+  dominates across battery datasets, motivating cross-dataset robustness
+  studies (§5.2).*
 
 ### Censoring summary
 
