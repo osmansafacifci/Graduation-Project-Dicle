@@ -56,8 +56,8 @@ RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2"
 
 SEEDS = [42, 123, 456, 789, 1011]
 DEFAULT_WINDOWS = [50, 100]
-ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process"]
-DEFAULT_MODELS = ALL_MODELS  # full lineup
+ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
+DEFAULT_MODELS = ALL_MODELS  # full lineup (stacking included)
 
 SOP12_FEATURE_COLS = [
     "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
@@ -383,6 +383,67 @@ def fit_catboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
     return final_model, info
 
 
+def fit_stacking(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """Stacking ensemble: CatBoost + Random Forest + XGBoost as base learners,
+    Elastic Net as meta-learner. Base learners are fit on K-fold splits of the
+    training set; their out-of-fold predictions feed the meta-learner. Final
+    base learners are then refit on the full training set so the meta-learner
+    can score new data via base→meta in one pass.
+
+    Lighter base-learner configurations than the standalone protocols above —
+    the diversity gain is what carries stacking, not razor-tuned individual
+    models, and re-running each model's full CV inside StackingRegressor
+    would multiply runtime ~5×.
+    """
+    try:
+        from xgboost import XGBRegressor
+        from catboost import CatBoostRegressor
+    except ImportError as exc:
+        raise SystemExit("xgboost and catboost both required for stacking") from exc
+
+    from sklearn.ensemble import RandomForestRegressor, StackingRegressor
+    from sklearn.model_selection import KFold
+
+    n_samples = len(y_train)
+    n_folds = max(2, min(5, n_samples - 1))
+
+    base = [
+        ("rf", RandomForestRegressor(
+            n_estimators=500, max_depth=None, min_samples_leaf=1,
+            random_state=seed, n_jobs=-1,
+        )),
+        ("xgb", XGBRegressor(
+            n_estimators=400, max_depth=5, learning_rate=0.05,
+            random_state=seed, n_jobs=-1, tree_method="hist",
+            objective="reg:squarederror", verbosity=0,
+        )),
+        ("cat", CatBoostRegressor(
+            iterations=400, depth=6, learning_rate=0.05,
+            loss_function="MAE", random_seed=seed,
+            verbose=False, allow_writing_files=False,
+        )),
+    ]
+    meta = ElasticNetCV(
+        l1_ratio=[0.1, 0.5, 0.9, 1.0], cv=n_folds, max_iter=20000,
+        random_state=seed, n_jobs=-1,
+    )
+    model = StackingRegressor(
+        estimators=base, final_estimator=meta,
+        cv=KFold(n_splits=n_folds, shuffle=True, random_state=seed),
+        n_jobs=1,  # base learners already parallelize; nested n_jobs=-1 thrashes
+        passthrough=False,
+    )
+    model.fit(X_train_scaled, y_train)
+    info = {
+        "base_learners": [name for name, _ in base],
+        "meta_learner": "ElasticNetCV",
+        "cv_folds": n_folds,
+        "meta_alpha": float(model.final_estimator_.alpha_),
+        "meta_l1_ratio": float(model.final_estimator_.l1_ratio_),
+    }
+    return model, info
+
+
 # ---------- per-seed evaluation ----------
 
 def evaluate_split(
@@ -525,6 +586,17 @@ def evaluate_split(
             cal_pred = _to_cycles(cb_model.predict(X_cal_s))
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["catboost"] = m
+
+    if "stacking" in models:
+        st_model, st_info = fit_stacking(X_train_s, y_train_fit, seed=seed)
+        pred = _to_cycles(st_model.predict(X_test_s))
+        m = compute_metrics(y_test, pred)
+        m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["tuning"] = st_info
+        if len(X_cal_s):
+            cal_pred = _to_cycles(st_model.predict(X_cal_s))
+            m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
+        out["stacking"] = m
 
     return out
 

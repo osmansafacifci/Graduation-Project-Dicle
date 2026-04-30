@@ -53,7 +53,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.stats import skew
+from scipy.stats import kurtosis, skew
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
@@ -81,7 +81,21 @@ EXTENDED_FEATURE_COLS = [
     "n_capacity_jumps",                       # count of large single-cycle drops
 ]
 
-ALL_FEATURE_COLS = SOP12_FEATURE_COLS + EXTENDED_FEATURE_COLS  # 24 total
+# Second extended feature set — frequency-domain, second-derivative,
+# information-theoretic and robust-statistic descriptors of the QD curve.
+# Still pure functions of Q_dis(2..N); no voltage, no temperature.
+EXTENDED2_FEATURE_COLS = [
+    "accel_mean", "accel_std", "accel_max_abs",   # second-derivative statistics (fade acceleration)
+    "linearity_r2",                                 # R² of straight-line fit (how non-linear is decay?)
+    "kurtosis_Qdis",                                # tail heaviness of Q_dis distribution
+    "fft_top3_energy_ratio",                        # share of FFT energy in top-3 non-DC bins
+    "spectral_entropy",                             # Shannon entropy of FFT power distribution
+    "sample_entropy",                               # complexity / regularity of QD time series
+    "pos_neg_diff_ratio",                           # ratio of cycles with capacity gain vs loss
+    "mad_Qdis",                                     # median absolute deviation (outlier-robust spread)
+]
+
+ALL_FEATURE_COLS = SOP12_FEATURE_COLS + EXTENDED_FEATURE_COLS + EXTENDED2_FEATURE_COLS  # 34 total
 
 # Per SOP §2.3: raw-capacity features that should be divided by Q0 when a
 # dataset has a different nominal capacity (so the same model can score across
@@ -233,6 +247,126 @@ def _ols_slope_local(values: np.ndarray) -> float:
     return float(np.polyfit(x, values, 1)[0])
 
 
+def _sample_entropy(series: np.ndarray, m: int = 2, r_factor: float = 0.2) -> float:
+    """SampEn(m, r=r_factor*std, N). Pure-numpy implementation suitable for
+    short windows (N=50..100). Returns 0.0 on degenerate input."""
+    series = np.asarray(series, dtype=float).ravel()
+    n = len(series)
+    if n < m + 2:
+        return 0.0
+    sd = float(np.std(series))
+    if sd <= 0:
+        return 0.0
+    r = r_factor * sd
+
+    def _phi(mm: int) -> int:
+        templates = np.array([series[i:i + mm] for i in range(n - mm + 1)])
+        # Chebyshev distance (sup-norm) — count pairs within tolerance
+        count = 0
+        for i in range(len(templates) - 1):
+            d = np.max(np.abs(templates[i + 1:] - templates[i]), axis=1)
+            count += int(np.sum(d <= r))
+        return count
+
+    a = _phi(m + 1)
+    b = _phi(m)
+    if a == 0 or b == 0:
+        return 0.0
+    return float(-np.log(a / b))
+
+
+def compute_extended2(qd: np.ndarray, n: int, q0: float) -> dict:
+    """Ten additional QD-only features beyond compute_extended():
+    second-derivative statistics, frequency-domain descriptors, complexity,
+    and outlier-robust spread. Same robustness contract — exceptions are
+    swallowed and a sensible default is returned."""
+    max_idx = min(n, len(qd))
+    window = qd[1:max_idx]
+
+    if len(window) < 3:
+        return {col: 0.0 for col in EXTENDED2_FEATURE_COLS}
+
+    diffs1 = np.diff(window)                                  # 1st derivative
+    diffs2 = np.diff(diffs1) if len(diffs1) > 1 else np.array([0.0])  # 2nd derivative
+
+    accel_mean = float(np.mean(diffs2)) if len(diffs2) else 0.0
+    accel_std = float(np.std(diffs2)) if len(diffs2) else 0.0
+    accel_max_abs = float(np.max(np.abs(diffs2))) if len(diffs2) else 0.0
+
+    # R² of straight-line fit to Q_dis(2..N)
+    cycles = np.arange(len(window), dtype=float)
+    try:
+        slope, intercept = np.polyfit(cycles, window, 1)
+        pred = slope * cycles + intercept
+        ss_res = float(np.sum((window - pred) ** 2))
+        ss_tot = float(np.sum((window - np.mean(window)) ** 2))
+        linearity_r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 1e-12 else 0.0
+    except Exception:
+        linearity_r2 = 0.0
+
+    # Higher-order shape
+    try:
+        kurt = float(kurtosis(window, fisher=True, bias=False))
+        if not np.isfinite(kurt):
+            kurt = 0.0
+    except Exception:
+        kurt = 0.0
+
+    # Frequency-domain — FFT magnitudes, drop the DC bin (mean component
+    # is captured by Qdis_cycle10 / mean_diff)
+    try:
+        spectrum = np.abs(np.fft.rfft(window - np.mean(window)))
+        if len(spectrum) > 1:
+            mags = spectrum[1:]                                   # drop DC
+            total_energy = float(np.sum(mags ** 2)) + 1e-12
+            top3 = np.sort(mags)[::-1][:3]
+            fft_top3_energy_ratio = float(np.sum(top3 ** 2) / total_energy)
+            # Spectral entropy — Shannon entropy of normalized power
+            p = (mags ** 2) / total_energy
+            p = p[p > 0]
+            spectral_entropy = float(-np.sum(p * np.log(p))) if len(p) else 0.0
+        else:
+            fft_top3_energy_ratio = 0.0
+            spectral_entropy = 0.0
+    except Exception:
+        fft_top3_energy_ratio = 0.0
+        spectral_entropy = 0.0
+
+    # Complexity / regularity of the QD trajectory
+    try:
+        samp_ent = _sample_entropy(window, m=2, r_factor=0.2)
+    except Exception:
+        samp_ent = 0.0
+
+    # Direction balance of cycle-to-cycle deltas
+    if len(diffs1) > 0:
+        n_neg = int(np.sum(diffs1 < 0))
+        n_pos = int(np.sum(diffs1 > 0))
+        pos_neg_ratio = float(n_pos / max(n_neg, 1))
+    else:
+        pos_neg_ratio = 0.0
+
+    # Outlier-robust spread
+    try:
+        med = float(np.median(window))
+        mad = float(np.median(np.abs(window - med)))
+    except Exception:
+        mad = 0.0
+
+    return {
+        "accel_mean": accel_mean,
+        "accel_std": accel_std,
+        "accel_max_abs": accel_max_abs,
+        "linearity_r2": linearity_r2,
+        "kurtosis_Qdis": kurt,
+        "fft_top3_energy_ratio": fft_top3_energy_ratio,
+        "spectral_entropy": spectral_entropy,
+        "sample_entropy": samp_ent,
+        "pos_neg_diff_ratio": pos_neg_ratio,
+        "mad_Qdis": mad,
+    }
+
+
 def compute_sop12(qd: np.ndarray, n: int) -> dict | None:
     """Compute 12 features over cycles 2..N. Returns None if not enough cycles."""
     qd = np.asarray(qd, dtype=float).ravel()
@@ -377,6 +511,7 @@ def build_feature_rows(
             if feats is None:
                 continue
             feats.update(compute_extended(qd, n, q0))
+            feats.update(compute_extended2(qd, n, q0))
             if capacity_normalize and q0 > 0:
                 # Per SOP §2.3: divide raw-capacity features by Q0 to put a
                 # different-nominal-capacity dataset on the same scale.
