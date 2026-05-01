@@ -1,0 +1,80 @@
+Distribution shift between MATR and HUST (capacity-normalized: features in Q0 list divided by q0)
+================================================================================
+
+[fs=12 | N=50 | n_matr=129 n_hust=77]
+  MMD       = 0.6490  (MMD² = 0.4211, σ_RBF = 3.105)
+  Mahalanobis = 4.435  (d² = 19.666, ridge = 1e-06)
+  Top 8 per-feature mean shifts (in pooled-z units):
+    skewness_Qdis              1.279  (μ_MATR= -0.407, μ_HUST= +0.682)
+    Qdis_cycle10               0.201  (μ_MATR= -0.075, μ_HUST= +0.125)
+    max_drop                   0.134  (μ_MATR= +0.050, μ_HUST= -0.084)
+    std_diff                   0.130  (μ_MATR= +0.049, μ_HUST= -0.082)
+    variance_Qdis              0.115  (μ_MATR= +0.043, μ_HUST= -0.072)
+    Qdis_N                     0.111  (μ_MATR= -0.041, μ_HUST= +0.069)
+    slope_ratio                0.081  (μ_MATR= -0.030, μ_HUST= +0.051)
+    range_Qdis                 0.078  (μ_MATR= +0.029, μ_HUST= -0.049)
+
+[fs=12 | N=100 | n_matr=129 n_hust=77]
+  MMD       = 0.5058  (MMD² = 0.2559, σ_RBF = 2.874)
+  Mahalanobis = 3.752  (d² = 14.075, ridge = 1e-06)
+  Top 8 per-feature mean shifts (in pooled-z units):
+    skewness_Qdis              0.580  (μ_MATR= -0.209, μ_HUST= +0.350)
+    slope_ratio                0.230  (μ_MATR= -0.086, μ_HUST= +0.143)
+    Qdis_cycle10               0.201  (μ_MATR= -0.075, μ_HUST= +0.125)
+    mean_diff                  0.195  (μ_MATR= +0.073, μ_HUST= -0.122)
+    delta_Qdis                 0.195  (μ_MATR= +0.073, μ_HUST= -0.122)
+    slope_linear               0.195  (μ_MATR= +0.073, μ_HUST= -0.122)
+    retention_ratio            0.194  (μ_MATR= +0.072, μ_HUST= -0.121)
+    max_drop                   0.136  (μ_MATR= +0.051, μ_HUST= -0.085)
+
+[fs=24 | N=50 | n_matr=129 n_hust=77]
+  MMD       = 0.6121  (MMD² = 0.3747, σ_RBF = 4.194)
+  Mahalanobis = 5.969  (d² = 35.633, ridge = 1e-06)
+  Top 8 per-feature mean shifts (in pooled-z units):
+    knee_cycle                 1.593  (μ_MATR= -0.472, μ_HUST= +0.791)
+    skewness_Qdis              1.279  (μ_MATR= -0.407, μ_HUST= +0.682)
+    autocorr_lag1              0.757  (μ_MATR= +0.266, μ_HUST= -0.446)
+    poly2_c                    0.394  (μ_MATR= +0.145, μ_HUST= -0.243)
+    poly2_b                    0.231  (μ_MATR= -0.086, μ_HUST= +0.144)
+    Qdis_cycle10               0.201  (μ_MATR= -0.075, μ_HUST= +0.125)
+    n_capacity_jumps           0.194  (μ_MATR= +0.072, μ_HUST= -0.121)
+    max_drop                   0.134  (μ_MATR= +0.050, μ_HUST= -0.084)
+
+[fs=24 | N=100 | n_matr=129 n_hust=77]
+  MMD       = 0.4830  (MMD² = 0.2333, σ_RBF = 4.405)
+  Mahalanobis = 5.744  (d² = 32.993, ridge = 1e-06)
+  Top 8 per-feature mean shifts (in pooled-z units):
+    knee_cycle                 0.835  (μ_MATR= -0.290, μ_HUST= +0.486)
+    cycle_to_99pct             0.712  (μ_MATR= +0.252, μ_HUST= -0.422)
+    autocorr_lag1              0.686  (μ_MATR= +0.244, μ_HUST= -0.409)
+    skewness_Qdis              0.580  (μ_MATR= -0.209, μ_HUST= +0.350)
+    slope_first_quarter        0.283  (μ_MATR= -0.105, μ_HUST= +0.176)
+    slope_last_quarter         0.267  (μ_MATR= +0.099, μ_HUST= -0.166)
+    slope_ratio                0.230  (μ_MATR= -0.086, μ_HUST= +0.143)
+    n_capacity_jumps           0.225  (μ_MATR= +0.084, μ_HUST= -0.140)
+
+[fs=34 | N=50 | n_matr=129 n_hust=77]
+  MMD       = 0.5527  (MMD² = 0.3054, σ_RBF = 5.830)
+  Mahalanobis = 7.816  (d² = 61.087, ridge = 1e-06)
+  Top 8 per-feature mean shifts (in pooled-z units):
+    linearity_r2               1.766  (μ_MATR= -0.502, μ_HUST= +0.841)
+    knee_cycle                 1.593  (μ_MATR= -0.472, μ_HUST= +0.791)
+    fft_top3_energy_ratio      1.401  (μ_MATR= -0.434, μ_HUST= +0.727)
+    mad_Qdis                   1.376  (μ_MATR= -0.428, μ_HUST= +0.718)
+    spectral_entropy           1.334  (μ_MATR= +0.419, μ_HUST= -0.703)
+    skewness_Qdis              1.279  (μ_MATR= -0.407, μ_HUST= +0.682)
+    kurtosis_Qdis              1.222  (μ_MATR= +0.394, μ_HUST= -0.659)
+    accel_mean                 1.185  (μ_MATR= -0.385, μ_HUST= +0.645)
+
+[fs=34 | N=100 | n_matr=129 n_hust=77]
+  MMD       = 0.4306  (MMD² = 0.1855, σ_RBF = 5.582)
+  Mahalanobis = 6.714  (d² = 45.071, ridge = 1e-06)
+  Top 8 per-feature mean shifts (in pooled-z units):
+    accel_mean                 1.354  (μ_MATR= -0.424, μ_HUST= +0.710)
+    knee_cycle                 0.835  (μ_MATR= -0.290, μ_HUST= +0.486)
+    linearity_r2               0.793  (μ_MATR= -0.277, μ_HUST= +0.464)
+    cycle_to_99pct             0.712  (μ_MATR= +0.252, μ_HUST= -0.422)
+    autocorr_lag1              0.686  (μ_MATR= +0.244, μ_HUST= -0.409)
+    mad_Qdis                   0.583  (μ_MATR= -0.210, μ_HUST= +0.352)
+    skewness_Qdis              0.580  (μ_MATR= -0.209, μ_HUST= +0.350)
+    fft_top3_energy_ratio      0.496  (μ_MATR= -0.181, μ_HUST= +0.303)

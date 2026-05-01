@@ -100,9 +100,19 @@ ALL_FEATURE_COLS = SOP12_FEATURE_COLS + EXTENDED_FEATURE_COLS + EXTENDED2_FEATUR
 # Per SOP §2.3: raw-capacity features that should be divided by Q0 when a
 # dataset has a different nominal capacity (so the same model can score across
 # datasets with mismatched cell chemistries / sizes).
-# retention_ratio and slope_ratio are already ratios — no normalization needed.
+# retention_ratio, slope_ratio, autocorr_lag1, fft_top3_energy_ratio,
+# spectral_entropy, sample_entropy, pos_neg_diff_ratio, linearity_r2,
+# kurtosis_Qdis, cycle_to_*pct, knee_cycle, n_capacity_jumps are scale-invariant.
 CAPACITY_RAW_FEATURES = [
-    "Qdis_N", "delta_Qdis", "Qdis_cycle10", "max_drop", "mean_diff",
+    # 12 SOP capacity-unit features
+    "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
+    "mean_diff", "std_diff", "range_Qdis", "variance_Qdis",  # variance is Ah² but Q0² scaling is fine
+    # 12 extended capacity-unit features
+    "poly2_a", "poly2_b", "poly2_c",
+    "slope_first_quarter", "slope_last_quarter",
+    # 10 extended² capacity-unit features
+    "accel_mean", "accel_std", "accel_max_abs",
+    "mad_Qdis",
 ]
 
 # Same merge metadata as build_matr_audit.py (kept in sync intentionally)
