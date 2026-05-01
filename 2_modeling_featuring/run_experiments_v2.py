@@ -601,6 +601,109 @@ def evaluate_split(
     return out
 
 
+def evaluate_cross_dataset(
+    source_df: pd.DataFrame,
+    target_df: pd.DataFrame,
+    source_split: dict,
+    *,
+    n_cycles: int,
+    models: list[str],
+    seed: int,
+    log_target: bool = False,
+    pca_variance: float | None = None,
+) -> dict:
+    """Train on `source_split['train']` (cells in source_df), test on the
+    full uncensored target dataset at the same n_cycles window.
+
+    Test set is the entire target dataset (not the seed-specific test split)
+    so transfer numbers reflect generalization to a *new dataset*, not just
+    a held-out fold inside the target. Variability across seeds reflects
+    the source training set; the target test set is fixed.
+    """
+    src_subset = source_df[(source_df["n_cycles"] == n_cycles) & (source_df["is_censored"] == 0)].copy()
+    tgt_subset = target_df[(target_df["n_cycles"] == n_cycles) & (target_df["is_censored"] == 0)].copy()
+
+    train_df = src_subset[src_subset["cell_id"].isin(source_split["train"])]
+    test_df = tgt_subset
+
+    if len(train_df) < 5 or len(test_df) < 2:
+        return {"_skipped": True, "reason": "too few cells",
+                "train_cells": int(len(train_df)), "test_cells": int(len(test_df))}
+
+    X_train = train_df[SOP12_FEATURE_COLS].to_numpy()
+    y_train = train_df["cycle_life"].to_numpy()
+    X_test = test_df[SOP12_FEATURE_COLS].to_numpy()
+    y_test = test_df["cycle_life"].to_numpy()
+
+    if log_target:
+        y_train_fit = np.log(y_train)
+    else:
+        y_train_fit = y_train
+
+    def _to_cycles(pred):
+        return np.exp(pred) if log_target else pred
+
+    scaler = StandardScaler()
+    X_train_s = scaler.fit_transform(X_train)
+    X_test_s = scaler.transform(X_test)
+
+    pca_info: dict | None = None
+    if pca_variance is not None:
+        n_comp = pca_variance if pca_variance >= 1 else float(pca_variance)
+        pca = PCA(n_components=n_comp, random_state=seed)
+        X_train_s = pca.fit_transform(X_train_s)
+        X_test_s = pca.transform(X_test_s)
+        pca_info = {
+            "n_components_in": int(X_train.shape[1]),
+            "n_components_out": int(pca.n_components_),
+            "explained_variance_ratio_sum": float(pca.explained_variance_ratio_.sum()),
+        }
+
+    out: dict = {
+        "n_cycles": int(n_cycles),
+        "train_cells": int(len(train_df)),
+        "test_cells": int(len(test_df)),
+    }
+    if pca_info is not None:
+        out["pca"] = pca_info
+
+    fitters = {
+        "elastic_net": fit_elastic_net,
+        "pls": fit_pls,
+        "random_forest": fit_random_forest,
+        "gaussian_process": fit_gaussian_process,
+        "xgboost": fit_xgboost,
+        "catboost": fit_catboost,
+        "stacking": fit_stacking,
+    }
+
+    for name in models:
+        fit_fn = fitters.get(name)
+        if fit_fn is None:
+            continue
+        result = fit_fn(X_train_s, y_train_fit, seed=seed)
+        if isinstance(result, tuple):
+            model, info = result
+        else:
+            model = result
+            info = None
+
+        raw_pred = model.predict(X_test_s)
+        if hasattr(raw_pred, "ravel"):
+            raw_pred = raw_pred.ravel()
+        pred = _to_cycles(raw_pred)
+        m = compute_metrics(y_test, pred)
+        m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        if name == "elastic_net":
+            m["best_alpha"] = float(model.alpha_)
+            m["best_l1_ratio"] = float(model.l1_ratio_)
+        elif info is not None:
+            m["tuning"] = info
+        out[name] = m
+
+    return out
+
+
 # ---------- aggregation ----------
 
 def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
@@ -648,6 +751,11 @@ def parse_args() -> argparse.Namespace:
                              "explained-variance threshold (e.g. 0.95). "
                              "Int >= 1 = fixed number of components. "
                              "Fit on train only; same projection applied to cal/test.")
+    parser.add_argument("--cross-dataset", action="store_true",
+                        help="Run cross-dataset transfer experiments instead of within-dataset. "
+                             "Trains on each --datasets entry's train split and tests on the FULL "
+                             "uncensored other dataset (one direction per ordered pair). "
+                             "5-seed averaging is over the source training split.")
     parser.add_argument("--log-target", action="store_true",
                         help="Train on log(cycle_life) and report metrics in original cycle space "
                              "(predictions are exp-transformed before scoring). "
@@ -695,6 +803,96 @@ def main() -> int:
     print(f"[setup] output_dir: {results_dir}")
 
     summary_rows: list[dict] = []
+
+    if args.cross_dataset:
+        # Cross-dataset transfer: train on each dataset's train split, test on
+        # the *full* uncensored other dataset. One ordered pair per direction.
+        pairs = [(s, t) for s in args.datasets for t in args.datasets if s != t]
+        if not pairs:
+            print("[error] --cross-dataset needs at least 2 datasets in --datasets.")
+            return 1
+
+        for src, tgt in pairs:
+            src_df = df[df["dataset"] == src]
+            tgt_df = df[df["dataset"] == tgt]
+            if src_df.empty or tgt_df.empty:
+                print(f"[skip] {src}->{tgt}: a dataset is empty")
+                continue
+
+            print(f"\n========== cross {src} -> {tgt} ==========")
+            bundle = {
+                "protocol": "SOP_cross_dataset_v2",
+                "source": src,
+                "target": tgt,
+                "feature_set": feature_subset_source,
+                "feature_columns": list(feature_cols),
+                "target_label": "cycle_life @ 0.85 * Q0 (single-cycle EOL)",
+                "log_target": bool(args.log_target),
+                "pca_variance": args.pca,
+                "test_set": "full uncensored target dataset (fixed across seeds)",
+                "standardization": "z-score, fit on source train, transform target test",
+                "seeds": SEEDS,
+                "windows": args.windows,
+                "models": args.models,
+                "per_seed": {},
+                "averaged": {},
+            }
+
+            for seed in SEEDS:
+                split_path = SPLITS_DIR / f"{src}_{seed}.json"
+                if not split_path.exists():
+                    print(f"[warn] missing split file: {split_path}")
+                    continue
+                with split_path.open() as f:
+                    src_split = json.load(f)
+
+                per_window: dict[str, dict] = {}
+                for n in args.windows:
+                    print(f"  seed={seed} N={n}")
+                    result = evaluate_cross_dataset(
+                        src_df, tgt_df, src_split,
+                        n_cycles=n, models=args.models, seed=seed,
+                        log_target=args.log_target, pca_variance=args.pca,
+                    )
+                    per_window[str(n)] = result
+                bundle["per_seed"][str(seed)] = per_window
+
+            for n in args.windows:
+                for model in args.models:
+                    agg = aggregate_seeds(bundle["per_seed"], model, n)
+                    if agg:
+                        key = f"{src}_to_{tgt}_{model}_N{n}"
+                        bundle["averaged"][key] = agg
+                        summary_rows.append({
+                            "dataset": tgt,         # row labeled by where evaluation happens
+                            "experiment": f"{src}_to_{tgt}",
+                            "model": model,
+                            "n_cycles": n,
+                            **agg,
+                        })
+
+            out_path = results_dir / f"results_cross_{src}_to_{tgt}.json"
+            with out_path.open("w") as f:
+                json.dump(bundle, f, indent=2)
+            print(f"\n[save] {out_path}")
+
+        # combined human-readable summary
+        summary_df = pd.DataFrame(summary_rows)
+        summary_path = results_dir / "results_summary.csv"
+        summary_df.to_csv(summary_path, index=False)
+        print(f"[save] {summary_path}")
+
+        print("\n=== CROSS-DATASET SUMMARY (5-seed source training) ===")
+        print(f"{'experiment':<20} {'model':<16} {'N':>3}   {'MAE':>14}  {'sMAPE':>14}  {'R²':>14}")
+        print("-" * 95)
+        for _, r in summary_df.sort_values(["experiment", "n_cycles", "model"]).iterrows():
+            print(
+                f"{r['experiment']:<20} {r['model']:<16} {int(r['n_cycles']):>3}   "
+                f"{r['MAE_mean']:>7.1f}±{r['MAE_std']:<5.1f}  "
+                f"{r['SMAPE_mean']:>7.2f}±{r['SMAPE_std']:<5.2f}  "
+                f"{r['R2_mean']:>7.3f}±{r['R2_std']:<5.3f}"
+            )
+        return 0
 
     for dataset in args.datasets:
         sub = df[df["dataset"] == dataset]

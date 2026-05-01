@@ -1,0 +1,12 @@
+Qdis_N
+delta_Qdis
+retention_ratio
+slope_linear
+variance_Qdis
+range_Qdis
+max_drop
+std_diff
+skewness_Qdis
+slope_ratio
+Qdis_cycle10
+mean_diff
