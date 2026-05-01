@@ -82,6 +82,7 @@ python run_pipeline.py --stages features splits           # just these two
 | §1.4 | Censored cells excluded from modeling, count reported | ✅ |
 | §2 | 12 capacity-only features (Qdis_N, delta_Qdis, retention_ratio, slope_linear, variance_Qdis, range_Qdis, max_drop, std_diff, skewness_Qdis, slope_ratio, Qdis_cycle10, mean_diff) | ✅ |
 | §2 (extended) | +12 additional `Q_dis`-only features beyond the SOP list: `poly2_{a,b,c}`, `exp_decay_k`, `cycle_to_{99,98,95}pct`, `slope_first_quarter`, `slope_last_quarter`, `autocorr_lag1`, `knee_cycle`, `n_capacity_jumps` | ✅ |
+| §2 (extended²) | +10 entropy/FFT/2nd-derivative `Q_dis`-only features: `accel_{mean,std,max_abs}`, `linearity_r2`, `kurtosis_Qdis`, `fft_top3_energy_ratio`, `spectral_entropy`, `sample_entropy`, `pos_neg_diff_ratio`, `mad_Qdis` | ✅ |
 | §2.1 | `N=100` primary, `N=50` secondary | ✅ default; `--n-windows 25 50 100` for ablation |
 | §2.2 | Z-score: fit on **train only**, transform calibration & test | ✅ |
 | §2.3 | Capacity normalization (divide raw-capacity features by `Q0`) | ✅ via `--capacity-normalize` (off by default; MATR + HUST share A123 1.1 Ah) |
@@ -92,7 +93,7 @@ python run_pipeline.py --stages features splits           # just these two
 | §4.1 | Elastic Net with internal 5-fold CV across `l1_ratio ∈ {0.1, ..., 1.0}` | ✅ |
 | §4.2 | XGBoost with internal 5-fold CV across `max_depth ∈ {3,5,7}` × `lr ∈ {0.01, 0.05, 0.1}`, `n_estimators` chosen by per-fold early stopping (patience=50) | ✅ |
 | §4.3 | CatBoost (optional comparison) | ✅ |
-| **+** | Expanded model lineup beyond §4: PLS Regression (multicollinearity-aware linear), Random Forest (bagging trees, contrast to boosting), Gaussian Process (native uncertainty for §7 prep) | ✅ |
+| **+** | Expanded model lineup beyond §4: PLS Regression (multicollinearity-aware linear), Random Forest (bagging trees, contrast to boosting), Gaussian Process (native uncertainty for §7 prep), Stacking ensemble (RF + XGBoost + CatBoost → ElasticNet meta) | ✅ |
 | §5.2 | Cross-dataset experiments (MATR↔HUST) | ⏳ next phase |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ⏳ next phase |
 | §7 | Conformal prediction | ⏳ later phase |
@@ -123,46 +124,56 @@ The pipeline reports a single, dataset-agnostic configuration so the same
 code path applies to MATR, HUST, and any future battery dataset without
 per-dataset preprocessing choices:
 
-> **24 capacity-only features + `--log-target` + z-score standardization, no
-> further preprocessing.**
+> **34 capacity-only features + `--log-target` + z-score standardization,
+> no further preprocessing.**
+
+(34 = 12 SOP + 12 extended shape/decay features + 10 entropy/FFT/2nd-derivative features.)
 
 | Dataset | Best model | MAE | sMAPE | R² |
 |---|---|---|---|---|
-| **MATR** | CatBoost | **186 ± 49** | 25.7 ± 5.4 | **0.480 ± 0.174** |
-| **HUST** | XGBoost | **174 ± 27** | 11.9 ± 2.3 | **0.367 ± 0.169** |
+| **MATR** | CatBoost | **172 ± 37** | 23.7 ± 4.8 | **0.575 ± 0.118** |
+| **HUST** | Random Forest | **178 ± 28** | 12.2 ± 2.2 | **0.340 ± 0.170** |
 
-Full per-model summary (`outputs/results_v2_24feat_log/results_summary.csv`):
+Full per-model summary (`outputs/results_v2_34feat_log/results_summary.csv`):
 
 | Model | MATR R² | HUST R² |
 |---|---|---|
-| ElasticNet | 0.31 | 0.29 |
-| PLS | 0.31 | 0.24 |
-| Random Forest | 0.48 | 0.34 |
-| XGBoost | 0.41 | **0.37** |
-| **CatBoost** | **0.48** | 0.28 |
-| Gaussian Process | 0.34 | 0.27 |
+| ElasticNet | 0.30 | 0.20 |
+| PLS | 0.43 | 0.19 |
+| Random Forest | 0.52 | **0.34** |
+| XGBoost | 0.53 | 0.29 |
+| **CatBoost** | **0.575** | 0.28 |
+| Gaussian Process | 0.36 | 0.26 |
+| Stacking (RF + XGB + CatBoost → ElasticNet meta) | 0.54 | 0.27 |
 
 The literature ceiling for capacity-only feature sets on MATR is roughly
 R² ≈ 0.6–0.7 (vs ≈0.9 with voltage-curve features in Severson 2019). At
-R² = 0.48 the v2 pipeline sits in the middle of that band without ever
+R² = 0.575 the v2 pipeline is in the upper half of that band without ever
 reading discharge voltage.
+
+HUST's R² is naturally bounded — its lifetimes vary less than MATR's
+(narrower cycle-life spread → smaller SS_tot in the R² formula), so the
+same MAE that yields 0.575 on MATR yields 0.34 on HUST. The MAE/sMAPE
+metrics tell a consistent story across both datasets (HUST sMAPE ≈ 12%
+is in fact lower than MATR's ≈ 24%).
 
 ### Ablation studies (not used as primary results)
 
-Six configurations were run end-to-end. The four below explore preprocessing
-variants but are reported as ablations only — no per-dataset preprocessing
-choice is taken into the final results, since cherry-picking a different
-recipe per dataset would not generalize when a third or fourth dataset is
-added later.
+Seven configurations were run end-to-end. The five below explore feature-set
+size and preprocessing variants but are reported as ablations only — no
+per-dataset preprocessing choice is taken into the final results, since
+cherry-picking a different recipe per dataset would not generalize when a
+third or fourth dataset is added later.
 
 | Configuration | Features | MATR best R² | HUST best R² | Notes |
 |---|---|---|---|---|
 | 12 SOP, no log | 12 | 0.371 | 0.307 | original SOP §2 baseline |
 | 12 SOP + log | 12 | 0.410 | 0.299 | log target rescues ElasticNet |
 | 12 SOP + VIF drop (5) + log | 5 | 0.351 | 0.405 | strongest reduction; HUST gain |
-| **24 feat + log** (primary) | 24 | **0.480** | **0.367** | same pipeline both datasets |
-| 24 feat + VIF drop (8) + log | 8 | 0.515* | 0.234 | best MATR, worst HUST |
-| 24 feat + PCA(0.95) + log | ~10 PCs | 0.411 | 0.433* | best HUST, MATR linears blow up |
+| 24 feat + log | 24 | 0.480 | 0.367 | adds 12 shape/decay features |
+| 24 feat + VIF drop (8) + log | 8 | 0.515* | 0.234 | best MATR (was), worst HUST |
+| 24 feat + PCA(0.95) + log | ~10 PCs | 0.411 | 0.433* | best HUST (was), MATR linears blow up |
+| **34 feat + log** (primary) | 34 | **0.575** | **0.340** | adds 10 entropy/FFT/2nd-derivative features |
 
 \*Best-of-ablation numbers; not used as primary results because the
 preprocessing rule that delivered each one made the *other* dataset worse.
@@ -370,8 +381,9 @@ python run_pipeline.py --phase all        # everything end to end (rarely needed
 - [x] §1 labels (Q0, EOL@85%, censoring)
 - [x] §2 features (12 capacity-only + capacity-normalize + VIF report)
 - [x] §2 extended features (+12 `Q_dis`-only features: poly fit, exp decay, knee, autocorr, etc.)
+- [x] §2 extended² features (+10 `Q_dis`-only features: 2nd-derivative stats, FFT energy, spectral & sample entropy, MAD, kurtosis)
 - [x] §3 splits (70/15/15, 5 seeds, lifetime-quartile-stratified)
-- [x] §4 within-dataset experiments (6 models: Elastic Net, PLS, RF, XGBoost, CatBoost, GP)
+- [x] §4 within-dataset experiments (7 models: Elastic Net, PLS, RF, XGBoost, CatBoost, GP, Stacking)
 - [x] log-target regression (`--log-target`) — rescues linear models, lifts trees +5–10% R²
 - [x] VIF drop ablation (12-feat → 5 feat, 24-feat → 8 feat)
 - [x] PCA preprocessing ablation (`--pca 0.95`)
