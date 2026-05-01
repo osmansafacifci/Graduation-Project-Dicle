@@ -195,6 +195,88 @@ Cross-cutting observations from the ablations:
   dominates across battery datasets, motivating cross-dataset robustness
   studies (§5.2).*
 
+### Cross-dataset transfer (§5.2)
+
+Trained on each dataset's training split, tested on the *full* uncensored
+other dataset. Three feature-set ablations × two directions × seven models
+× five seeds × two windows. Best per direction at N=100:
+
+| Direction | Feature set | Best model | MAE | R² |
+|---|---|---|---|---|
+| MATR → HUST | 12 | Gaussian Process | 782 | **−8.13** |
+| MATR → HUST | 24 | Gaussian Process | 781 | −8.13 |
+| MATR → HUST | 34 | Gaussian Process | 781 | −8.13 |
+| HUST → MATR | 12 | Random Forest | **518** | **−1.53** |
+| HUST → MATR | 24 | Random Forest | 552 | −1.80 |
+| HUST → MATR | 34 | Gaussian Process | 569 | −2.05 |
+
+Three observations:
+
+1. **All transfers fail catastrophically.** R² < 0 means the model is worse
+   than predicting the mean cycle-life of the target. This holds across all
+   feature-set sizes and all seven models.
+2. **Asymmetry.** HUST → MATR (R² ≈ −1.5) is salvageable in absolute terms;
+   MATR → HUST (R² ≈ −8) is not. MATR has wider lifetime spread and can
+   absorb the HUST training signal as a coarse prior; HUST is too narrow.
+3. **More features hurt transfer.** The 34-feature set is the primary
+   within-dataset config (MATR R² = 0.575) but transfers worse than the
+   12-feature SOP set. The extra entropy/FFT/2nd-derivative features capture
+   MATR-specific signal that does not generalize. *Within-dataset accuracy
+   and transferability trade off in opposite directions.*
+
+This transfer failure is consistent with literature — Severson 2019 never
+attempted cross-dataset; BatteryML benchmark reports the same R² < 0 on
+naïve MATR↔HUST; Tab2KT (Hsu 2022) only reports cross-batch transfer within
+MATR. A target-side recalibration step (SOP §7) is needed to recover
+useful predictions; see roadmap below.
+
+### Distribution shift quantification (§6.3)
+
+Two summary statistics on z-scored features (z-score fit on the *pooled*
+MATR + HUST training cells), computed via `2_modeling_featuring/shift_metrics.py`:
+
+| Setting | Feature set | MMD | Mahalanobis |
+|---|---|---|---|
+| Raw features | 12 | 0.71 | 13.1 |
+| Raw features | 24 | 0.64 | 15.3 |
+| Raw features | 34 | 0.57 | 16.0 |
+| Q0-normalized (`--capacity-normalize`) | 12 | 0.51 | **3.75** |
+| Q0-normalized | 24 | 0.48 | 5.74 |
+| Q0-normalized | 34 | 0.43 | 6.71 |
+
+The **smoking gun** in the per-feature attribution: `Qdis_cycle10` alone
+contributes **10.84 σ** of pooled-z mean shift. MATR Q0 ≈ 1.07 Ah,
+HUST Q0 ≈ 1.20 Ah, and at cycle 10 cells haven't lost much capacity, so
+the within-dataset variance is tiny relative to the between-dataset gap.
+
+Capacity normalization (SOP §2.3) reduces the centroid distance by 71%
+(Mahalanobis 13.1 → 3.75) and the kernel discrepancy by 28% (MMD 0.71 →
+0.51) on the 12-feature set.
+
+**But — and this is the surprising part — closing the geometric shift does
+not translate into better transfer.** Re-running the cross-dataset
+experiments on the capacity-normalized features gives:
+
+| Direction | Feature set | Raw R² | Capnorm R² |
+|---|---|---|---|
+| MATR → HUST (best model) | 12 | −8.13 | −8.11 |
+| MATR → HUST | 24 | −8.13 | −8.10 |
+| MATR → HUST | 34 | −8.13 | −7.94 |
+| HUST → MATR (best model) | 12 | **−1.53** | **−3.82** |
+| HUST → MATR | 24 | −1.80 | −4.16 |
+| HUST → MATR | 34 | −2.05 | −3.60 |
+
+Geometric alignment without prediction alignment. The classical distinction
+between **covariate shift** and **concept shift** in ML literature: the
+absolute-capacity gap, while geometrically distorting the feature space,
+encoded dataset-identity information that the regressor leaned on. Removing
+the gap (covariate alignment) breaks that implicit predictor without
+fixing the underlying cycle-life distribution mismatch (concept alignment).
+
+The remedy is target-side calibration (rescale predictions to match the
+target's marginal distribution, e.g. via a small target-labeled
+calibration set), which is what SOP §7 conformal recalibration provides.
+
 ### Censoring summary
 
 | Dataset | Cells | Censored at 0.85 × Q0 | Modeling cells |
@@ -387,9 +469,9 @@ python run_pipeline.py --phase all        # everything end to end (rarely needed
 - [x] log-target regression (`--log-target`) — rescues linear models, lifts trees +5–10% R²
 - [x] VIF drop ablation (12-feat → 5 feat, 24-feat → 8 feat)
 - [x] PCA preprocessing ablation (`--pca 0.95`)
-- [ ] §5.2 cross-dataset experiments (MATR ↔ HUST)
-- [ ] §6.3 shift metrics (MMD, Mahalanobis)
-- [ ] §7 conformal prediction (Split CP, target recalibration)
+- [x] §5.2 cross-dataset experiments (MATR ↔ HUST, three feature-set ablations, raw + capacity-normalized)
+- [x] §6.3 shift metrics (MMD with RBF + median-bandwidth, Mahalanobis with pooled covariance, per-feature attribution)
+- [ ] §7 conformal prediction (Split CP, target recalibration) — primary remedy for the covariate-vs-concept-shift gap surfaced above
 
 ---
 
