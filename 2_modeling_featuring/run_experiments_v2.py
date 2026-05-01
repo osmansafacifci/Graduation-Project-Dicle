@@ -641,11 +641,22 @@ def evaluate_cross_dataset(
         y_train_fit = y_train
 
     def _to_cycles(pred):
-        return np.exp(pred) if log_target else pred
+        out = np.exp(pred) if log_target else pred
+        # Cross-dataset guard: linear models (ElasticNet, PLS) can produce wild
+        # log-space predictions when target features are far outside training
+        # distribution; exp() then overflows to inf. Clip to a finite band that
+        # spans every plausible cycle_life value (still records "very bad" so
+        # MAE stays interpretable, just doesn't crash sklearn metrics).
+        return np.clip(np.nan_to_num(out, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
 
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
     X_test_s = scaler.transform(X_test)
+
+    # Same guard on the inputs — extreme target features (e.g. spectral entropy
+    # = 0 on a saturated signal) can produce inf/nan after scaling.
+    X_train_s = np.clip(np.nan_to_num(X_train_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
+    X_test_s = np.clip(np.nan_to_num(X_test_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
 
     pca_info: dict | None = None
     if pca_variance is not None:
