@@ -1,18 +1,19 @@
 """
-End-to-end pipeline runner: raw data → MATR + HUST audit CSVs.
+End-to-end SOPv2 pipeline runner for extraction, modeling, and analysis.
 
 This runner is built around the supervisor's reference notebooks
 (Cell_Audit_MATR_Provided_vs_Recomputed_EOL.ipynb,
  HUST_Standalone_Preprocess_and_Audit.ipynb), faithfully ported into
- 0_data_prep/build_matr_audit.py and 0_data_prep/build_hust_audit.py.
+ 0_data/build_matr_audit.py and 0_data/build_hust_audit.py.
 It is independent of the student's existing build_raw_label_table.py /
 build_sop12_features.py path (which has known issues with Q0, feature
 naming, and batch3 source).
 
 Quick start:
     pip install -r requirements.txt
-    python run_pipeline.py                        # download + audits
-    python run_pipeline.py --skip-download        # data already on disk
+    python run_pipeline.py --phase extract        # download + audits + features
+    python run_pipeline.py --phase model          # splits + VIF + headline experiments
+    python run_pipeline.py --phase analysis       # shift + concept diagnostics + rescaling
     python run_pipeline.py --stages audit_matr    # only one stage
     python run_pipeline.py --status               # which outputs exist
 
@@ -28,13 +29,13 @@ Stages:
                   -> data/intermediate/hust_cycles_tidy.csv
                   -> data/intermediate/hust_threshold_audit.csv
                   -> data/intermediate/hust_threshold_summary.csv
-    features      build the corrected SOP12 (capacity-only) feature table
+    features      build the corrected 34-feature capacity-only table
                   -> data/intermediate/features_sop12_{matr,hust,combined}.csv
     splits        70/15/15 lifetime-stratified splits (5 seeds × 2 datasets)
                   -> splits/sop_v2/{matr,hust}_{seed}.json
-    experiments   within-dataset Elastic Net + XGBoost (MAE / sMAPE / R² / 95% CI)
-                  -> outputs/results_v2/results_within_{matr,hust}.json
-                  -> outputs/results_v2/results_summary.csv
+    experiments   headline within-dataset protocol: 34 features + log-target
+                  -> outputs/results_v2_34feat_log/results_within_{matr,hust}.json
+                  -> outputs/results_v2_34feat_log/results_summary.csv
 """
 
 from __future__ import annotations
@@ -69,7 +70,7 @@ def _run(cmd: list[str], cwd: Path = PROJECT_ROOT) -> int:
 
 
 def stage_download() -> int:
-    return _run([PYTHON, "0_data_prep/download_data.py"])
+    return _run([PYTHON, "0_data/download_data.py"])
 
 
 def stage_audit_matr() -> int:
@@ -79,7 +80,7 @@ def stage_audit_matr() -> int:
         print(f"[skip] audit_matr: missing inputs: {[str(m.relative_to(PROJECT_ROOT)) for m in missing]}")
         print("       run download stage first.")
         return 1
-    return _run([PYTHON, "0_data_prep/build_matr_audit.py"])
+    return _run([PYTHON, "0_data/build_matr_audit.py"])
 
 
 def stage_audit_hust() -> int:
@@ -87,7 +88,7 @@ def stage_audit_hust() -> int:
         print(f"[skip] audit_hust: no HUST .pkl files at {HUST_DIR.relative_to(PROJECT_ROOT)}")
         print("       run download stage first.")
         return 1
-    return _run([PYTHON, "0_data_prep/build_hust_audit.py"])
+    return _run([PYTHON, "0_data/build_hust_audit.py"])
 
 
 def stage_features() -> int:
@@ -100,7 +101,7 @@ def stage_features() -> int:
     if not hust_tidy.exists():
         print(f"[skip] features: missing {hust_tidy.relative_to(PROJECT_ROOT)} — run audit_hust first.")
         return 1
-    return _run([PYTHON, "1_feature_engineering/build_sop12_features_v2.py"])
+    return _run([PYTHON, "1_features/build_features.py"])
 
 
 def stage_splits() -> int:
@@ -108,7 +109,7 @@ def stage_splits() -> int:
     if not combined.exists():
         print(f"[skip] splits: missing {combined.relative_to(PROJECT_ROOT)} — run features first.")
         return 1
-    return _run([PYTHON, "2_modeling_featuring/generate_sop_splits_v2.py"])
+    return _run([PYTHON, "2_models/generate_splits.py"])
 
 
 def stage_vif() -> int:
@@ -121,7 +122,7 @@ def stage_vif() -> int:
         print(f"[skip] vif: missing {splits_root.relative_to(PROJECT_ROOT)} — run splits first.")
         return 1
     # Default = report-only per supervisor's request.
-    return _run([PYTHON, "2_modeling_featuring/vif_screening.py"])
+    return _run([PYTHON, "2_models/vif_screening.py"])
 
 
 def stage_experiments() -> int:
@@ -129,7 +130,42 @@ def stage_experiments() -> int:
     if not splits_root.exists() or not any(splits_root.glob("*.json")):
         print(f"[skip] experiments: missing splits at {splits_root.relative_to(PROJECT_ROOT)} — run splits first.")
         return 1
-    return _run([PYTHON, "2_modeling_featuring/run_experiments_v2.py"])
+    return _run([
+        PYTHON,
+        "2_models/run_experiments.py",
+        "--log-target",
+        "--output-dir",
+        "outputs/results_v2_34feat_log",
+    ])
+
+
+def stage_shift() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    if not combined.exists():
+        print(f"[skip] shift: missing {combined.relative_to(PROJECT_ROOT)} — run features first.")
+        return 1
+    rc = _run([PYTHON, "3_analysis/shift_metrics.py"])
+    if rc != 0:
+        return rc
+    return _run([PYTHON, "3_analysis/shift_metrics.py", "--capacity-normalize"])
+
+
+def stage_concept_shift() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not combined.exists() or not splits_root.exists():
+        print("[skip] concept_shift: missing features or splits.")
+        return 1
+    return _run([PYTHON, "3_analysis/concept_shift_diagnostics.py"])
+
+
+def stage_target_rescale() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not combined.exists() or not splits_root.exists():
+        print("[skip] target_rescale: missing features or splits.")
+        return 1
+    return _run([PYTHON, "3_analysis/target_rescaling.py"])
 
 
 STAGES: dict[str, Stage] = {
@@ -166,7 +202,7 @@ STAGES: dict[str, Stage] = {
     ),
     "features": Stage(
         name="features",
-        description="Build corrected SOP12 capacity-only feature table for MATR and HUST",
+        description="Build corrected 34-feature capacity-only table for MATR and HUST",
         run=stage_features,
         outputs=[
             INTERMEDIATE_DIR / "features_sop12_matr.csv",
@@ -191,17 +227,44 @@ STAGES: dict[str, Stage] = {
     ),
     "experiments": Stage(
         name="experiments",
-        description="Within-dataset Elastic Net + XGBoost (MAE/sMAPE/R²/95% CI, z-score)",
+        description="Headline within-dataset experiments — 34 features + log-target",
         run=stage_experiments,
         outputs=[
-            PROJECT_ROOT / "outputs" / "results_v2" / "results_within_matr.json",
-            PROJECT_ROOT / "outputs" / "results_v2" / "results_within_hust.json",
-            PROJECT_ROOT / "outputs" / "results_v2" / "results_summary.csv",
+            PROJECT_ROOT / "outputs" / "results_v2_34feat_log" / "results_within_matr.json",
+            PROJECT_ROOT / "outputs" / "results_v2_34feat_log" / "results_within_hust.json",
+            PROJECT_ROOT / "outputs" / "results_v2_34feat_log" / "results_summary.csv",
+        ],
+    ),
+    "shift": Stage(
+        name="shift",
+        description="Distribution-shift quantification: MMD + Mahalanobis + per-feature attribution",
+        run=stage_shift,
+        outputs=[
+            INTERMEDIATE_DIR / "shift_metrics.json",
+            INTERMEDIATE_DIR / "shift_metrics_capnorm.json",
+        ],
+    ),
+    "concept_shift": Stage(
+        name="concept_shift",
+        description="Concept-shift diagnostics: KS test + per-cell residual constant-bias decomposition",
+        run=stage_concept_shift,
+        outputs=[INTERMEDIATE_DIR / "concept_shift_diagnostics.json"],
+    ),
+    "target_rescale": Stage(
+        name="target_rescale",
+        description="Target-mean rescaling baseline (k=5/10/20 calibration cells)",
+        run=stage_target_rescale,
+        outputs=[
+            PROJECT_ROOT / "outputs" / "results_v2_target_rescale" / "results_summary.csv",
         ],
     ),
 }
 
-DEFAULT_ORDER = ["download", "audit_matr", "audit_hust", "features", "splits", "vif", "experiments"]
+DEFAULT_ORDER = [
+    "download", "audit_matr", "audit_hust", "features",
+    "splits", "vif", "experiments",
+    "shift", "concept_shift", "target_rescale",
+]
 
 # Phase shortcuts. Two-phase workflow:
 #   extract: heavy I/O — reads raw .pkl from Drive, produces feature CSVs.
@@ -209,9 +272,10 @@ DEFAULT_ORDER = ["download", "audit_matr", "audit_hust", "features", "splits", "
 #   model:   CPU-only — reads the feature CSVs that extract produced and
 #            runs everything downstream. Run this locally; iterate freely.
 PHASES: dict[str, list[str]] = {
-    "extract": ["download", "audit_matr", "audit_hust", "features"],
-    "model":   ["splits", "vif", "experiments"],
-    "all":     DEFAULT_ORDER,
+    "extract":  ["download", "audit_matr", "audit_hust", "features"],
+    "model":    ["splits", "vif", "experiments"],
+    "analysis": ["shift", "concept_shift", "target_rescale"],
+    "all":      DEFAULT_ORDER,
 }
 
 

@@ -187,12 +187,12 @@ the fix only needs ~20 labeled cells. This is a 50× to 500× MSE reduction.
 | Deviation | Reason | Documented? |
 |---|---|---|
 | EOL threshold raised from 0.80 → 0.85 | Supervisor email — MATR batch1+3 not enough cells reach 0.80 | README + commit log |
-| Feature set expanded from 12 to 34 | First 12 + 12 shape/decay + 10 entropy/FFT/2nd-deriv. All still capacity-only (no voltage curves). | README, build_sop12_features_v2.py |
+| Feature set expanded from 12 to 34 | First 12 + 12 shape/decay + 10 entropy/FFT/2nd-deriv. All still capacity-only (no voltage curves). | README, `1_features/build_features.py` |
 | Model lineup expanded from 3 to 7 | SOP §4 had Elastic Net, XGBoost, CatBoost. We added PLS (multicollinearity-aware linear), Random Forest, GP (uncertainty), Stacking (ensemble). | README "Model lineup" |
-| log-target transform | Not in SOP §4. Rescues linear models on MATR (R² −493 → 0.07) and lifts trees ~5% R². Predictions are exp-transformed back so metrics stay in cycle space. | run_experiments_v2.py `--log-target`, README |
+| log-target transform | Not in SOP §4. Rescues linear models on MATR (R² −493 → 0.07) and lifts trees ~5% R². Predictions are exp-transformed back so metrics stay in cycle space. | `2_models/run_experiments.py`, README |
 | §7 conformal not done | Time. Target-mean rescaling baseline is in place as precursor; full Split CP recalibration is one extra step. | README roadmap |
 | XAI / SHAP not done | Not in SOPv2 spec. Could be added if needed for thesis defense. | not implemented |
-| `--capacity-normalize` defaults off | MATR and HUST share A123 1.1 Ah cells, so it's not needed within-dataset. We turned it on only for the cross-dataset capnorm ablation. | build_sop12_features_v2.py, README |
+| `--capacity-normalize` defaults off | MATR and HUST share A123 1.1 Ah cells, so it's not needed within-dataset. We turned it on only for the cross-dataset capnorm ablation. | `1_features/build_features.py`, README |
 
 ---
 
@@ -343,25 +343,25 @@ git add data/intermediate && git commit && git push     # commit feature CSVs
 python run_pipeline.py --phase model
 
 # Reproduce ablations
-python 2_modeling_featuring/run_experiments_v2.py --log-target \
+python 2_models/run_experiments.py --log-target \
     --features-from data/intermediate/feature_set_sop12.txt \
     --output-dir outputs/results_v2_12_log
-python 2_modeling_featuring/run_experiments_v2.py --log-target --pca 0.95 \
+python 2_models/run_experiments.py --log-target --pca 0.95 \
     --output-dir outputs/results_v2_pca_log
 
 # Cross-dataset transfer
-python 2_modeling_featuring/run_experiments_v2.py --cross-dataset --log-target \
+python 2_models/run_experiments.py --cross-dataset --log-target \
     --output-dir outputs/results_v2_cross_34
 
 # Distribution shift quantification
-python 2_modeling_featuring/shift_metrics.py
-python 2_modeling_featuring/shift_metrics.py --capacity-normalize
+python 3_analysis/shift_metrics.py
+python 3_analysis/shift_metrics.py --capacity-normalize
 
 # Concept-shift diagnostics
-python 2_modeling_featuring/concept_shift_diagnostics.py
+python 3_analysis/concept_shift_diagnostics.py
 
 # Target-mean rescaling
-python 2_modeling_featuring/target_rescaling.py
+python 3_analysis/target_rescaling.py
 ```
 
 All output JSONs and summary CSVs are committed under `outputs/results_v2*/`
@@ -374,15 +374,15 @@ in this document modulo the random seed used in the CV / fold splits.
 
 | Path | Role |
 |---|---|
-| `0_data_prep/build_matr_audit.py` | MATR audit (Q0, EOL, censoring, tidy CSV) |
-| `0_data_prep/build_hust_audit.py` | HUST audit (Coulomb counting → tidy CSV) |
-| `1_feature_engineering/build_sop12_features_v2.py` | 34 capacity-only features |
-| `2_modeling_featuring/generate_sop_splits_v2.py` | 70/15/15 lifetime-stratified splits, 5 seeds |
-| `2_modeling_featuring/vif_screening.py` | §2.4 VIF report + iterative drop |
-| `2_modeling_featuring/run_experiments_v2.py` | Within + cross-dataset experiments, 7 models |
-| `2_modeling_featuring/shift_metrics.py` | §6.3 MMD + Mahalanobis + per-feature attribution |
-| `2_modeling_featuring/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
-| `2_modeling_featuring/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
+| `0_data/build_matr_audit.py` | MATR audit (Q0, EOL, censoring, tidy CSV) |
+| `0_data/build_hust_audit.py` | HUST audit (Coulomb counting → tidy CSV) |
+| `1_features/build_features.py` | 34 capacity-only features |
+| `2_models/generate_splits.py` | 70/15/15 lifetime-stratified splits, 5 seeds |
+| `2_models/vif_screening.py` | §2.4 VIF report + iterative drop |
+| `2_models/run_experiments.py` | Within + cross-dataset experiments, 7 models |
+| `3_analysis/shift_metrics.py` | §6.3 MMD + Mahalanobis + per-feature attribution |
+| `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
+| `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
 | `notebooks/run_pipeline_colab.ipynb` | Phase A Colab runner |
 | `data/intermediate/*.csv` / `*.json` / `*.txt` | All audit, feature, VIF, shift outputs |
 | `outputs/results_v2*` | All experiment results, JSON + summary CSV per ablation |
