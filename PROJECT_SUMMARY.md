@@ -76,10 +76,14 @@ the SOP12 capacity-only features.
 
 ### Within-dataset (primary configuration: 34-feat + log-target)
 
-| Dataset | Best model | MAE | sMAPE | R² |
+Fixed protocol: 5 seeds, N=100, best model selected by mean R². Bootstrap
+intervals are averaged across the 5 seed-specific test-cell bootstrap
+intervals.
+
+| Dataset | Best model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] |
 |---|---|---|---|---|
-| MATR | CatBoost | **172 ± 37** | 23.7 ± 4.8 | **0.575 ± 0.118** |
-| HUST | XGBoost | **174 ± 27** | 11.9 ± 2.3 | **0.367 ± 0.169** |
+| MATR | CatBoost | **171.7 [110.4, 243.2]** | 23.7 [15.5, 33.5] | **0.575 [0.256, 0.732]** |
+| HUST | Random Forest | **178.0 [112.1, 253.7]** | 12.2 [7.7, 17.3] | **0.340 [-0.579, 0.690]** |
 
 Reference points:
 - Severson 2019 (voltage-curve features, MATR): R² ≈ 0.85–0.92

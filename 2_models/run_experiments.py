@@ -720,23 +720,51 @@ def evaluate_cross_dataset(
 
 def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
     mae, smape, r2 = [], [], []
+    ci_bounds = {
+        "MAE": {"lower": [], "upper": []},
+        "SMAPE": {"lower": [], "upper": []},
+        "R2": {"lower": [], "upper": []},
+    }
     for seed, seed_block in per_seed.items():
         model_block = seed_block.get(str(n_cycles), {}).get(model)
         if isinstance(model_block, dict) and "MAE" in model_block:
             mae.append(model_block["MAE"])
             smape.append(model_block["SMAPE"])
             r2.append(model_block["R2"])
+            boot = model_block.get("bootstrap_95_ci", {})
+            for metric in ci_bounds:
+                metric_ci = boot.get(metric, {})
+                if "lower" in metric_ci and "upper" in metric_ci:
+                    ci_bounds[metric]["lower"].append(metric_ci["lower"])
+                    ci_bounds[metric]["upper"].append(metric_ci["upper"])
     if not mae:
         return {}
-    return {
+    # Each seed has its own test-cell bootstrap interval. The summary reports
+    # the mean lower/upper bounds across seeds so docs can cite one interval
+    # while keeping seed-to-seed standard deviation as a separate quantity.
+    def add_ci(out: dict, metric: str) -> None:
+        bounds = ci_bounds[metric]
+        if bounds["lower"] and bounds["upper"]:
+            out[f"{metric}_ci95_lower"] = float(np.mean(bounds["lower"]))
+            out[f"{metric}_ci95_upper"] = float(np.mean(bounds["upper"]))
+
+    out = {
         "MAE_mean": float(np.mean(mae)),
         "MAE_std": float(np.std(mae)),
+    }
+    add_ci(out, "MAE")
+    out.update({
         "SMAPE_mean": float(np.mean(smape)),
         "SMAPE_std": float(np.std(smape)),
+    })
+    add_ci(out, "SMAPE")
+    out.update({
         "R2_mean": float(np.mean(r2)),
         "R2_std": float(np.std(r2)),
-        "n_seeds": len(mae),
-    }
+    })
+    add_ci(out, "R2")
+    out["n_seeds"] = len(mae)
+    return out
 
 
 # ---------- main ----------

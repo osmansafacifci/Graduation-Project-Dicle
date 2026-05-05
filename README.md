@@ -16,12 +16,16 @@ transfer of capacity-only features.
 ## Headline numbers
 
 **Within-dataset (primary configuration: 34 capacity-only features + log-target,
-5-seed × 2-window × 7-model average; N=100):**
+5 seeds, N=100, best model by mean R² within the fixed protocol):**
 
-| Dataset | Best model | MAE | sMAPE | R² |
+| Dataset | Best model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] |
 |---|---|---|---|---|
-| MATR | CatBoost | **172 ± 37** | 23.7 ± 4.8 | **0.575 ± 0.118** |
-| HUST | XGBoost | **174 ± 27** | 11.9 ± 2.3 | **0.367 ± 0.169** |
+| MATR | CatBoost | **171.7 [110.4, 243.2]** | 23.7 [15.5, 33.5] | **0.575 [0.256, 0.732]** |
+| HUST | Random Forest | **178.0 [112.1, 253.7]** | 12.2 [7.7, 17.3] | **0.340 [-0.579, 0.690]** |
+
+Bootstrap intervals are averaged across the 5 seed-specific test-cell
+bootstrap intervals; seed-to-seed standard deviations remain in
+`outputs/results_v2_34feat_log/results_summary.csv`.
 
 **Cross-dataset transfer (best per direction across all feature-set ablations):**
 
@@ -156,14 +160,14 @@ python 3_analysis/target_rescaling.py
 ### Within-dataset
 
 Primary configuration: 34 features + `--log-target` + z-score (no further
-preprocessing). 5-seed × 2-window × 7-model averages, N=100:
+preprocessing). Mean R² across 5 seeds at N=100:
 
 | Model | MATR R² | HUST R² |
 |---|---|---|
 | Elastic Net | 0.30 | 0.20 |
 | PLS | 0.43 | 0.19 |
 | Random Forest | 0.52 | **0.34** |
-| XGBoost | 0.53 | **0.37** |
+| XGBoost | 0.53 | 0.29 |
 | **CatBoost** | **0.58** | 0.28 |
 | Gaussian Process | 0.36 | 0.26 |
 | Stacking (RF + XGB + CatBoost → Elastic Net meta) | 0.54 | 0.27 |
@@ -184,9 +188,9 @@ MATR's (≈24%) — absolute error is in fact smaller in relative terms.
 | 12 SOP + log | 0.410 | 0.299 | log target rescues Elastic Net |
 | 12 SOP + VIF drop (5) + log | 0.351 | 0.405 | strongest reduction |
 | 24 feat + log | 0.480 | 0.367 | + 12 shape/decay features |
-| 24 feat + VIF drop (8) + log | 0.515 | 0.234 | best MATR (was), worst HUST |
-| 24 feat + PCA(0.95) + log | 0.411 | 0.433 | best HUST (was), MATR linears blow up |
-| **34 feat + log** (primary) | **0.575** | **0.367** | adds 10 entropy/FFT/2nd-deriv features |
+| 24 feat + VIF drop (8) + log | 0.515 | 0.234 | strong MATR ablation, worst HUST |
+| 24 feat + PCA(0.95) + log | 0.411 | 0.433 | best HUST ablation, MATR linears blow up |
+| **34 feat + log** (primary) | **0.575** | **0.340** | adds 10 entropy/FFT/2nd-deriv features |
 
 VIF and PCA results are reported as ablations only — applying them per-dataset
 would amount to cherry-picking. The primary configuration uses the same recipe
@@ -310,7 +314,7 @@ Every reported number can be recomputed from the committed feature CSVs in
 files are needed once Phase A has produced these.
 
 ```bash
-# Within-dataset primary (MATR R² = 0.575, HUST R² = 0.367)
+# Within-dataset primary (MATR R² = 0.575, HUST R² = 0.340)
 python 2_models/run_experiments.py --log-target \
     --output-dir outputs/results_v2_34feat_log
 
