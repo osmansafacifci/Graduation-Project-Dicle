@@ -8,8 +8,8 @@ transfer of capacity-only features.
 > **Status**
 > Within-dataset, cross-dataset, distribution-shift quantification,
 > concept-shift diagnostics, and target-side recalibration baselines are all
-> in place. Conformal recalibration (interval-valid extension of the
-> rescaling baseline) is documented as the next step.
+> in place. Standard split conformal prediction is implemented with MAPIE in
+> `3_analysis/conformal_prediction.py`; run it to generate §7 interval tables.
 
 ---
 
@@ -59,8 +59,11 @@ correction fit on a small target labeled set recovers the bulk of the loss.
 │   └── metrics_utils.py
 ├── 3_analysis/              # shift quantification, recalibration
 │   ├── shift_metrics.py
+│   ├── feature_transfer_stability.py
 │   ├── concept_shift_diagnostics.py
-│   └── target_rescaling.py
+│   ├── target_rescaling.py
+│   ├── conformal_prediction.py
+│   └── summarize_conformal_results.py
 ├── notebooks/
 │   └── run_pipeline_colab.ipynb     # Phase A (Drive-mounted, heavy I/O)
 ├── data/
@@ -111,7 +114,7 @@ Unzip into `data/intermediate/` locally and commit.
 pip install -r requirements.txt
 python run_pipeline.py --status                  # show what's done / missing
 python run_pipeline.py --phase model             # splits + VIF + within-dataset experiments
-python run_pipeline.py --phase analysis          # shift + concept diagnostics + rescaling
+python run_pipeline.py --phase analysis          # shift + concept diagnostics + rescaling + CP
 ```
 
 Or call individual scripts:
@@ -131,10 +134,15 @@ python 2_models/run_experiments.py --cross-dataset --log-target \
 # Distribution shift quantification
 python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
+python 3_analysis/feature_transfer_stability.py
 
 # Concept-shift diagnostics + target-mean rescaling
 python 3_analysis/concept_shift_diagnostics.py
 python 3_analysis/target_rescaling.py
+
+# Standard split conformal prediction (MAPIE)
+python 3_analysis/conformal_prediction.py
+python 3_analysis/summarize_conformal_results.py
 ```
 
 ---
@@ -149,9 +157,10 @@ python 3_analysis/target_rescaling.py
 | §4 | 7-model within-dataset lineup (Elastic Net, PLS, Random Forest, XGBoost, CatBoost, Gaussian Process, Stacking); `--log-target`, `--pca`, `--features-from` flags | `2_models/run_experiments.py` | `outputs/results_v2*/...` |
 | §5.2 | Cross-dataset transfer (MATR ↔ HUST), three feature-set ablations × two directions | `2_models/run_experiments.py --cross-dataset` | `outputs/results_v2_cross_*/...` |
 | §6.3 | Distribution shift: MMD with RBF + median bandwidth, Mahalanobis with pooled covariance, per-feature attribution | `3_analysis/shift_metrics.py` | `data/intermediate/shift_metrics*.json`, `shift_report*.txt` |
+| **§6.3+** | Feature transfer/stability: per-feature shift, correlation stability, univariate transfer, residual-mean-adapted transfer | `3_analysis/feature_transfer_stability.py` | `data/intermediate/feature_transfer_stability*` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
-| §7 | Conformal prediction (Split-CP, target recalibration) | not implemented | extends the rescaling baseline above |
+| §7 | Standard split conformal prediction with MAPIE (within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...` |
 
 ---
 
@@ -234,6 +243,24 @@ Three observations:
 ≈ 1.07 Ah, HUST Q0 ≈ 1.20 Ah; tight within-dataset clustering at cycle 10).
 SOP §2.3 capacity normalization closes 71% of the geometric gap.
 
+### Feature Transfer/Stability
+
+Feature-level analysis combines covariate shift, Spearman relationship
+stability, univariate within-dataset usefulness, and residual-mean-adapted
+univariate cross transfer. The most fragile features are the absolute-capacity
+scale features:
+
+| Feature | Raw shift σ | Q0-normalized shift σ | Class |
+|---|---:|---:|---|
+| `Qdis_cycle10` | 10.84 | 0.20 | scale-shift fragile |
+| `poly2_a` | 10.67 | 0.21 | scale-shift fragile |
+| `Qdis_N` | 8.21 | 0.09 | scale-shift fragile |
+
+Least-fragile candidates include `cycle_to_98pct`, `exp_decay_k`,
+`slope_linear`, `linearity_r2`, and `cycle_to_99pct`. This is the bridge to
+SHAP/XAI: separate features that are important within-domain from features
+whose distributions and target relationships remain stable across datasets.
+
 ### Geometric alignment is not prediction alignment
 
 Re-running cross-dataset with capacity-normalized features:
@@ -293,6 +320,24 @@ cells — a 50× to 500× MSE reduction. R² ≈ 0 means the rescaled model now
 matches the target's marginal-mean predictor, consistent with the 91.5% /
 74.2% constant-bias share found in the residual decomposition.
 
+### Conformal Prediction
+
+Primary policy: 90% MAPIE split CP, N=100, CatBoost + Random Forest. Target
+rows use `k_target=20`; adapted rows use residual-mean `k_adapter=20` on a
+disjoint target subset before CP calibration.
+
+| Scenario | Coverage | Median width | R² | Interpretation |
+|---|---:|---:|---:|---|
+| Within-dataset CP | 0.86–0.97 | 919–1119 | 0.28–0.58 | CP behaves normally within dataset |
+| Source-calibrated cross CP | 0.15–0.31 | 919–1119 | −10.93 to −2.40 | Source CP under-covers under shift |
+| Target-domain CP, no adapter | 0.89–0.91 | 1904–2568 | −11.09 to −2.37 | Coverage restored, intervals huge |
+| Residual-mean target-adapted CP | 0.91 | 999–1302 | −0.41 to −0.02 | Center repaired, intervals much narrower |
+
+At `k_adapter=20`, `k_target=20`, residual-mean adaptation reduces median
+interval width by 33–60% and MAE by 55–71% relative to target-domain CP
+without the adapter. Paper-ready outputs are in
+`outputs/results_v2_conformal/paper_cp_summary.*`.
+
 ---
 
 ## Censoring
@@ -321,12 +366,20 @@ python 2_models/run_experiments.py --log-target \
 # Distribution shift (MMD = 0.71, Mahalanobis = 13.1; capnorm: 0.51, 3.75)
 python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
+python 3_analysis/feature_transfer_stability.py
 
 # Constant-bias decomposition (91.5% / 74.2% finding)
 python 3_analysis/concept_shift_diagnostics.py
 
 # Target-mean rescaling (R² = -10 → -0.02 with k=20)
 python 3_analysis/target_rescaling.py
+
+# Standard split conformal prediction (MAPIE)
+python 3_analysis/conformal_prediction.py
+python 3_analysis/summarize_conformal_results.py
+
+# Optional sensitivity: include the two-parameter linear target adapter
+python 3_analysis/conformal_prediction.py --adapter-types residual_mean linear
 ```
 
 Each script writes a JSON with the per-seed numbers and a summary CSV.
@@ -343,9 +396,10 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §4 Within-dataset experiments (7 models, log-target, optional PCA, optional VIF subset)
 - [x] §5.2 Cross-dataset experiments (raw + capacity-normalized, three feature-set ablations)
 - [x] §6.3 Shift metrics (MMD, Mahalanobis, per-feature attribution)
+- [x] §6.3+ Feature transfer/stability analysis
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
 - [x] §7− Target-mean rescaling baseline (k = 5 / 10 / 20)
-- [ ] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
+- [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 
 ---
 

@@ -13,7 +13,7 @@ Quick start:
     pip install -r requirements.txt
     python run_pipeline.py --phase extract        # download + audits + features
     python run_pipeline.py --phase model          # splits + VIF + headline experiments
-    python run_pipeline.py --phase analysis       # shift + concept diagnostics + rescaling
+    python run_pipeline.py --phase analysis       # shift + feature transfer + concept + rescaling + CP
     python run_pipeline.py --stages audit_matr    # only one stage
     python run_pipeline.py --status               # which outputs exist
 
@@ -36,6 +36,11 @@ Stages:
     experiments   headline within-dataset protocol: 34 features + log-target
                   -> outputs/results_v2_34feat_log/results_within_{matr,hust}.json
                   -> outputs/results_v2_34feat_log/results_summary.csv
+    transfer      feature-level transfer/stability analysis
+                  -> data/intermediate/feature_transfer_stability.csv
+    conformal     MAPIE split CP for within, naive cross, target CP, and
+                  target-adapted CP
+                  -> outputs/results_v2_conformal/results_summary.csv
 """
 
 from __future__ import annotations
@@ -159,6 +164,15 @@ def stage_concept_shift() -> int:
     return _run([PYTHON, "3_analysis/concept_shift_diagnostics.py"])
 
 
+def stage_feature_transfer() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not combined.exists() or not splits_root.exists():
+        print("[skip] feature_transfer: missing features or splits.")
+        return 1
+    return _run([PYTHON, "3_analysis/feature_transfer_stability.py"])
+
+
 def stage_target_rescale() -> int:
     combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
     splits_root = PROJECT_ROOT / "splits" / "sop_v2"
@@ -166,6 +180,18 @@ def stage_target_rescale() -> int:
         print("[skip] target_rescale: missing features or splits.")
         return 1
     return _run([PYTHON, "3_analysis/target_rescaling.py"])
+
+
+def stage_conformal() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not combined.exists() or not splits_root.exists():
+        print("[skip] conformal: missing features or splits.")
+        return 1
+    rc = _run([PYTHON, "3_analysis/conformal_prediction.py"])
+    if rc != 0:
+        return rc
+    return _run([PYTHON, "3_analysis/summarize_conformal_results.py"])
 
 
 STAGES: dict[str, Stage] = {
@@ -250,6 +276,15 @@ STAGES: dict[str, Stage] = {
         run=stage_concept_shift,
         outputs=[INTERMEDIATE_DIR / "concept_shift_diagnostics.json"],
     ),
+    "feature_transfer": Stage(
+        name="feature_transfer",
+        description="Feature-level transfer/stability analysis",
+        run=stage_feature_transfer,
+        outputs=[
+            INTERMEDIATE_DIR / "feature_transfer_stability.csv",
+            INTERMEDIATE_DIR / "feature_transfer_stability_report.txt",
+        ],
+    ),
     "target_rescale": Stage(
         name="target_rescale",
         description="Target-mean rescaling baseline (k=5/10/20 calibration cells)",
@@ -258,12 +293,22 @@ STAGES: dict[str, Stage] = {
             PROJECT_ROOT / "outputs" / "results_v2_target_rescale" / "results_summary.csv",
         ],
     ),
+    "conformal": Stage(
+        name="conformal",
+        description="MAPIE split CP intervals (within + cross + target-adapted)",
+        run=stage_conformal,
+        outputs=[
+            PROJECT_ROOT / "outputs" / "results_v2_conformal" / "results_summary.csv",
+            PROJECT_ROOT / "outputs" / "results_v2_conformal" / "results_conformal.json",
+            PROJECT_ROOT / "outputs" / "results_v2_conformal" / "paper_cp_summary.csv",
+        ],
+    ),
 }
 
 DEFAULT_ORDER = [
     "download", "audit_matr", "audit_hust", "features",
     "splits", "vif", "experiments",
-    "shift", "concept_shift", "target_rescale",
+    "shift", "feature_transfer", "concept_shift", "target_rescale", "conformal",
 ]
 
 # Phase shortcuts. Two-phase workflow:
@@ -274,7 +319,7 @@ DEFAULT_ORDER = [
 PHASES: dict[str, list[str]] = {
     "extract":  ["download", "audit_matr", "audit_hust", "features"],
     "model":    ["splits", "vif", "experiments"],
-    "analysis": ["shift", "concept_shift", "target_rescale"],
+    "analysis": ["shift", "feature_transfer", "concept_shift", "target_rescale", "conformal"],
     "all":      DEFAULT_ORDER,
 }
 

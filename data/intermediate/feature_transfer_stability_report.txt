@@ -1,0 +1,30 @@
+Feature transfer/stability analysis (N=100)
+================================================================================
+
+Least-fragile transfer candidates:
+  cycle_to_98pct           score=+0.504 shift_z=0.12 rho(M,H)=(+0.21,+0.20) adapted_R2=-0.046 class=weak_or_mixed
+  exp_decay_k              score=+0.463 shift_z=0.19 rho(M,H)=(-0.11,-0.12) adapted_R2=-0.038 class=weak_or_mixed
+  slope_linear             score=+0.454 shift_z=0.25 rho(M,H)=(+0.11,+0.09) adapted_R2=-0.053 class=weak_or_mixed
+  slope_ratio              score=+0.422 shift_z=0.23 rho(M,H)=(-0.27,-0.36) adapted_R2=-0.257 class=weak_or_mixed
+  linearity_r2             score=+0.390 shift_z=0.79 rho(M,H)=(-0.30,-0.40) adapted_R2=-0.040 class=stable_candidate
+  cycle_to_99pct           score=+0.357 shift_z=0.71 rho(M,H)=(+0.29,+0.10) adapted_R2=-0.094 class=stable_candidate
+  autocorr_lag1            score=+0.356 shift_z=0.69 rho(M,H)=(+0.07,+0.15) adapted_R2=-0.097 class=weak_or_mixed
+  kurtosis_Qdis            score=+0.348 shift_z=0.49 rho(M,H)=(+0.14,+0.30) adapted_R2=-3.100 class=weak_or_mixed
+  knee_cycle               score=+0.292 shift_z=0.83 rho(M,H)=(-0.27,-0.09) adapted_R2=-0.078 class=weak_or_mixed
+  mad_Qdis                 score=+0.285 shift_z=0.71 rho(M,H)=(-0.39,-0.08) adapted_R2=-0.025 class=weak_or_mixed
+  variance_Qdis            score=+0.237 shift_z=0.12 rho(M,H)=(-0.57,-0.08) adapted_R2=-0.075 class=weak_or_mixed
+  poly2_c                  score=+0.147 shift_z=0.26 rho(M,H)=(+0.66,+0.03) adapted_R2=-0.276 class=weak_or_mixed
+
+Most fragile by raw mean shift:
+  Qdis_cycle10             shift_z=10.84 capnorm_z=0.20 adapted_R2=-0.130 class=scale_shift_fragile
+  poly2_a                  shift_z=10.67 capnorm_z=0.21 adapted_R2=-0.099 class=scale_shift_fragile
+  Qdis_N                   shift_z=8.21 capnorm_z=0.09 adapted_R2=-0.072 class=scale_shift_fragile
+  accel_mean               shift_z=1.23 capnorm_z=1.35 adapted_R2=-1.100 class=relationship_unstable
+  knee_cycle               shift_z=0.83 capnorm_z=0.83 adapted_R2=-0.078 class=weak_or_mixed
+  linearity_r2             shift_z=0.79 capnorm_z=0.79 adapted_R2=-0.040 class=stable_candidate
+  mad_Qdis                 shift_z=0.71 capnorm_z=0.58 adapted_R2=-0.025 class=weak_or_mixed
+  cycle_to_99pct           shift_z=0.71 capnorm_z=0.71 adapted_R2=-0.094 class=stable_candidate
+  autocorr_lag1            shift_z=0.69 capnorm_z=0.69 adapted_R2=-0.097 class=weak_or_mixed
+  skewness_Qdis            shift_z=0.58 capnorm_z=0.58 adapted_R2=-0.102 class=relationship_unstable
+  fft_top3_energy_ratio    shift_z=0.50 capnorm_z=0.50 adapted_R2=-0.150 class=relationship_unstable
+  kurtosis_Qdis            shift_z=0.49 capnorm_z=0.49 adapted_R2=-3.100 class=weak_or_mixed
