@@ -1,7 +1,7 @@
 # Project Summary — Battery Lifetime Prediction (Dicle Çoban Thesis)
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
-> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, SHAP/XAI attribution, and standard MAPIE split conformal prediction.
+> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, SHAP/XAI attribution, survival/censoring sensitivity, and standard MAPIE split conformal prediction.
 > **Last updated**: 2026-05-06
 
 ---
@@ -20,8 +20,9 @@ The pipeline runs in two phases:
 - **Phase A (Colab)** — reads raw `.pkl` files from Google Drive (~15-20 GB),
   runs MATR + HUST audits, builds 34-feature CSVs (~500 KB).
 - **Phase B (laptop)** — splits, VIF, experiments, shift metrics,
-  feature-transfer/XAI diagnostics, target rescaling, and conformal
-  prediction. Pure CPU, seconds-to-minutes per light experiment.
+  feature-transfer/XAI diagnostics, survival/censoring sensitivity, target
+  rescaling, and conformal prediction. Pure CPU, seconds-to-minutes per
+  light experiment.
 
 Phase A is run only when feature definitions change. Phase B is iterated freely
 on the committed CSVs without ever re-touching the raw data.
@@ -70,6 +71,7 @@ the SOP12 capacity-only features.
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
 | **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
+| **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: within, naive cross, target-calibrated, residual-mean target-adapted; linear adapter is sensitivity |
 
 ---
@@ -157,6 +159,27 @@ This is useful for the manuscript because it prevents a vague "black-box
 transfer failed" explanation. The models learn real within-domain signal, but
 many of their most important features are not semantically stable across MATR
 and HUST.
+
+### Survival/censoring sensitivity
+
+MATR has 6/135 cells censored at the 0.85 × Q0 EOL threshold; HUST has none.
+The primary regressions still exclude censored cells because MAE/sMAPE/R² need
+observed event times. As a robustness check, Kaplan-Meier analysis treats
+those six MATR cells as right-censored at their last observed cycle.
+
+| Quantity | MATR | HUST |
+|---|---:|---:|
+| Cells / events / censored | 135 / 129 / 6 | 77 / 77 / 0 |
+| KM median survival | 773 cycles | 1513 cycles |
+| RMST to 2024 cycles | 809 cycles | 1490 cycles |
+| Event-only mean | 778 cycles | 1490 cycles |
+| Lower-bound mean with censored MATR cells imputed at censoring time | 802 cycles | 1490 cycles |
+
+The two-sample log-rank test remains decisive (χ² = 61.2, p = 5.2e-15).
+The original KS test on observed event times was D = 0.827, p = 3.6e-34;
+with censored MATR cells imputed at their earliest possible failure times, it
+is still D = 0.818, p = 6.5e-34. So censoring is not the reason HUST appears
+longer-lived.
 
 ### The covariate-vs-concept finding
 
@@ -251,6 +274,7 @@ point calibration repairs the center; CP repairs uncertainty.
 | Model lineup expanded from 3 to 7 | SOP §4 had Elastic Net, XGBoost, CatBoost. We added PLS (multicollinearity-aware linear), Random Forest, GP (uncertainty), Stacking (ensemble). | README "Model lineup" |
 | log-target transform | Not in SOP §4. Rescues linear models on MATR (R² −493 → 0.07) and lifts trees ~5% R². Predictions are exp-transformed back so metrics stay in cycle space. | `2_models/run_experiments.py`, README |
 | XAI / SHAP added | Not in SOPv2 spec, but useful for explaining why within-domain signal does not necessarily transfer. | `3_analysis/shap_feature_importance.py`, README |
+| Survival/censoring sensitivity added | Not in SOPv2 spec, but closes the methodological caveat created by 6 censored MATR cells. | `3_analysis/survival_censoring.py`, README |
 | `--capacity-normalize` defaults off | MATR and HUST share A123 1.1 Ah cells, so it's not needed within-dataset. We turned it on only for the cross-dataset capnorm ablation. | `1_features/build_features.py`, README |
 
 ---
@@ -330,15 +354,17 @@ domain study — it suits applied-ML venues better than pure mech-eng venues.
    and least-fragile candidates; use this as the SHAP/XAI bridge.
 6. **SHAP/XAI bridge** — show that several high-attribution within-domain
    features are scale-shift fragile or relationship-unstable.
-7. **Geometric alignment fails** — capacity normalization closes the gap
+7. **Censoring sensitivity** — Kaplan-Meier/log-rank analysis shows the
+   six censored MATR cells do not explain the MATR-vs-HUST lifetime gap.
+8. **Geometric alignment fails** — capacity normalization closes the gap
    but does not improve transfer. **The headline result.**
-8. **Concept-shift evidence** — KS test on y, per-cell residual
+9. **Concept-shift evidence** — KS test on y, per-cell residual
    constant-bias decomposition.
-9. **Target-side rescaling works** — k=20 label fix recovers R² from
+10. **Target-side rescaling works** — k=20 label fix recovers R² from
    −10 to −0.05.
-10. **Conformal prediction** — source CP fails under shift; target-domain CP
+11. **Conformal prediction** — source CP fails under shift; target-domain CP
    restores coverage; residual-mean target adaptation narrows intervals.
-11. **Practical recommendation** — quantify shift, take a small target
+12. **Practical recommendation** — quantify shift, take a small target
    sample, recalibrate. No need for voltage curves, no need for
    adversarial domain adaptation.
 
@@ -368,15 +394,12 @@ of the others; pick by appetite:
    This is the strongest standalone paper extension. ~6–8 weeks of work
    to port loaders, run experiments, analyze.
 
-2. **Q_CV/Q_CC novel feature** (also from BİLGEM project). Add as a
-   34-feature ablation across the multi-dataset benchmark; show whether
-   it transfers better than the entropy/FFT features. Electrochemically
-   motivated, novel to the literature, single-author potential.
-
-3. **Survival analysis for censored cells**. MATR has 6/135 censored
-   cells we currently throw away. Random Survival Forest / Cox PH would
-   keep them and explicitly model the censoring; methodologically cleaner
-   for the thesis even if it doesn't move R² much.
+2. **Q_CV/Q_CC novel feature** (also from BİLGEM project). Use only as a
+   secondary ablation on datasets with comparable charge-stage data and
+   compatible CC/CV protocols; keep the universal 34 capacity-only feature
+   set as the main transfer benchmark. Electrochemically motivated,
+   potentially novel, but not suitable as a required feature for every
+   dataset.
 
 ---
 
@@ -411,6 +434,7 @@ python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
 python 3_analysis/shap_feature_importance.py
+python 3_analysis/survival_censoring.py
 
 # Concept-shift diagnostics
 python 3_analysis/concept_shift_diagnostics.py
@@ -442,6 +466,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/shift_metrics.py` | §6.3 MMD + Mahalanobis + per-feature attribution |
 | `3_analysis/feature_transfer_stability.py` | feature-level transfer/stability analysis and SHAP bridge |
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
+| `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
 | `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |

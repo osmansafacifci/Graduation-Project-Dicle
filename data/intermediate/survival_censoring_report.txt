@@ -1,0 +1,21 @@
+Survival/censoring sensitivity analysis
+================================================================================
+Protocol: N=100 cell table; uncensored cells are EOL events; censored MATR cells are right-censored at last observed cycle.
+
+Dataset summaries:
+  HUST: n=77, events=77, censored=0, KM median=1513, RMST(tau=2024)=1490, event mean=1490, lower-bound mean=1490
+  MATR: n=135, events=129, censored=6, KM median=773, RMST(tau=2024)=809, event mean=778, lower-bound mean=802
+
+Log-rank MATR vs HUST: chi2=61.19, p=5.184e-15.
+KS on observed event times only: D=0.827, p=3.639e-34.
+KS with censored MATR imputed at lower-bound censor times: D=0.818, p=6.506e-34.
+
+Censored MATR cells:
+  matr_b1c8: censored >= 878 cycles, last retention=88.8%, min positive retention=88.8%
+  matr_b1c22: censored >= 890 cycles, last retention=89.1%, min positive retention=89.1%
+  matr_b1c13: censored >= 896 cycles, last retention=85.4%, min positive retention=85.4%
+  matr_b1c10: censored >= 905 cycles, last retention=89.3%, min positive retention=89.3%
+  matr_b3c23: censored >= 2189 cycles, last retention=87.8%, min positive retention=87.8%
+  matr_b3c32: censored >= 2237 cycles, last retention=90.7%, min positive retention=90.7%
+
+Interpretation: properly accounting for the six censored MATR cells does not weaken the cross-dataset lifetime-shift conclusion; HUST remains markedly longer-lived.

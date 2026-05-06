@@ -7,9 +7,9 @@ transfer of capacity-only features.
 
 > **Status**
 > Within-dataset, cross-dataset, distribution-shift quantification,
-> feature-transfer/XAI diagnostics, concept-shift diagnostics, target-side
-> recalibration baselines, and standard MAPIE split conformal prediction are
-> all in place.
+> feature-transfer/XAI diagnostics, survival/censoring sensitivity,
+> concept-shift diagnostics, target-side recalibration baselines, and standard
+> MAPIE split conformal prediction are all in place.
 
 ---
 
@@ -61,6 +61,7 @@ correction fit on a small target labeled set recovers the bulk of the loss.
 │   ├── shift_metrics.py
 │   ├── feature_transfer_stability.py
 │   ├── shap_feature_importance.py
+│   ├── survival_censoring.py
 │   ├── concept_shift_diagnostics.py
 │   ├── target_rescaling.py
 │   ├── conformal_prediction.py
@@ -115,7 +116,7 @@ Unzip into `data/intermediate/` locally and commit.
 pip install -r requirements.txt
 python run_pipeline.py --status                  # show what's done / missing
 python run_pipeline.py --phase model             # splits + VIF + within-dataset experiments
-python run_pipeline.py --phase analysis          # shift + XAI + concept diagnostics + rescaling + CP
+python run_pipeline.py --phase analysis          # shift + XAI + survival + concept + rescaling + CP
 ```
 
 Or call individual scripts:
@@ -137,6 +138,7 @@ python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
 python 3_analysis/shap_feature_importance.py
+python 3_analysis/survival_censoring.py
 
 # Concept-shift diagnostics + target-mean rescaling
 python 3_analysis/concept_shift_diagnostics.py
@@ -161,6 +163,7 @@ python 3_analysis/summarize_conformal_results.py
 | §6.3 | Distribution shift: MMD with RBF + median bandwidth, Mahalanobis with pooled covariance, per-feature attribution | `3_analysis/shift_metrics.py` | `data/intermediate/shift_metrics*.json`, `shift_report*.txt` |
 | **§6.3+** | Feature transfer/stability: per-feature shift, correlation stability, univariate transfer, residual-mean-adapted transfer | `3_analysis/feature_transfer_stability.py` | `data/intermediate/feature_transfer_stability*` |
 | **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability classes | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `outputs/results_v2_shap/...` |
+| **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
 | §7 | Standard split conformal prediction with MAPIE (within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...` |
@@ -369,6 +372,13 @@ without the adapter. Paper-ready outputs are in
 Censored cells are kept in the feature table with `cycle_life = NaN`;
 experiments drop them.
 
+Survival sensitivity analysis keeps those six MATR cells as right-censored
+observations. Kaplan-Meier/log-rank results still show a large MATR-vs-HUST
+lifetime gap: MATR KM median 773 cycles vs HUST 1513 cycles, log-rank
+χ² = 61.2, p = 5.2e-15. Even the conservative lower-bound imputation
+where censored MATR cells fail at their censoring times moves the MATR mean
+only from 778 to 802 cycles; HUST remains 1490 cycles.
+
 ---
 
 ## Reproducing a single number
@@ -387,6 +397,7 @@ python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
 python 3_analysis/shap_feature_importance.py
+python 3_analysis/survival_censoring.py
 
 # Constant-bias decomposition (91.5% / 74.2% finding)
 python 3_analysis/concept_shift_diagnostics.py
@@ -418,6 +429,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §6.3 Shift metrics (MMD, Mahalanobis, per-feature attribution)
 - [x] §6.3+ Feature transfer/stability analysis
 - [x] §6.3++ SHAP/XAI attribution joined to transfer-stability classes
+- [x] §6+ Survival/censoring sensitivity analysis
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
 - [x] §7− Target-mean rescaling baseline (k = 5 / 10 / 20)
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)

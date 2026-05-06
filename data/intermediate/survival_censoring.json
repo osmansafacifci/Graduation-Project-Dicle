@@ -1,0 +1,131 @@
+{
+  "protocol": "survival_censoring_sensitivity_v1",
+  "n_cycles": 100,
+  "rmst_tau": 2024.0,
+  "logrank": {
+    "group_a": "matr",
+    "group_b": "hust",
+    "observed_minus_expected_group_a": 51.22311279982479,
+    "variance": 42.88021333847007,
+    "chi2": 61.1892311307514,
+    "p_value": 5.184433061982012e-15
+  },
+  "ks_uncensored_events_only": {
+    "statistic": 0.8267391523205476,
+    "p_value": 3.6387035271422176e-34
+  },
+  "ks_matr_censored_as_lower_bound": {
+    "statistic": 0.8184704184704185,
+    "p_value": 6.506165284357942e-34
+  },
+  "summary": [
+    {
+      "dataset": "hust",
+      "n_cells": 77,
+      "n_events": 77,
+      "n_censored": 0,
+      "event_mean_cycles": 1489.5584415584415,
+      "event_median_cycles": 1513.0,
+      "lower_bound_mean_cycles": 1489.5584415584415,
+      "lower_bound_median_cycles": 1513.0,
+      "km_median_cycles": 1513.0,
+      "rmst_tau_cycles": 2024.0,
+      "rmst_cycles": 1489.5584415584426,
+      "survival_at_1000": 0.974025974025974,
+      "survival_at_1500": 0.5064935064935063,
+      "survival_at_2000": 0.025974025974025965,
+      "max_time_cycles": 2024.0
+    },
+    {
+      "dataset": "matr",
+      "n_cells": 135,
+      "n_events": 129,
+      "n_censored": 6,
+      "event_mean_cycles": 777.5348837209302,
+      "event_median_cycles": 740.0,
+      "lower_bound_mean_cycles": 802.2,
+      "lower_bound_median_cycles": 773.0,
+      "km_median_cycles": 773.0,
+      "rmst_tau_cycles": 2024.0,
+      "rmst_cycles": 809.4186391042199,
+      "survival_at_1000": 0.23554694229112777,
+      "survival_at_1500": 0.08122308354866477,
+      "survival_at_2000": 0.024366925064599428,
+      "max_time_cycles": 2237.0
+    }
+  ],
+  "censored_cells": [
+    {
+      "dataset": "matr",
+      "cell_id": "matr_b1c8",
+      "censor_time_cycles": 878.0,
+      "q0": 1.0916926999999998,
+      "last_positive_cycle": 878.0,
+      "last_positive_qdis": 0.96902454,
+      "last_positive_retention": 0.8876348994547643,
+      "min_positive_cycle": 878.0,
+      "min_positive_qdis": 0.96902454,
+      "min_positive_retention": 0.8876348994547643
+    },
+    {
+      "dataset": "matr",
+      "cell_id": "matr_b1c22",
+      "censor_time_cycles": 890.0,
+      "q0": 1.08099815,
+      "last_positive_cycle": 890.0,
+      "last_positive_qdis": 0.96327895,
+      "last_positive_retention": 0.8911013862512159,
+      "min_positive_cycle": 890.0,
+      "min_positive_qdis": 0.96327895,
+      "min_positive_retention": 0.8911013862512159
+    },
+    {
+      "dataset": "matr",
+      "cell_id": "matr_b1c13",
+      "censor_time_cycles": 896.0,
+      "q0": 1.0814757,
+      "last_positive_cycle": 896.0,
+      "last_positive_qdis": 0.92313582,
+      "last_positive_retention": 0.8535890542894308,
+      "min_positive_cycle": 896.0,
+      "min_positive_qdis": 0.92313582,
+      "min_positive_retention": 0.8535890542894308
+    },
+    {
+      "dataset": "matr",
+      "cell_id": "matr_b1c10",
+      "censor_time_cycles": 905.0,
+      "q0": 1.07650055,
+      "last_positive_cycle": 905.0,
+      "last_positive_qdis": 0.96101874,
+      "last_positive_retention": 0.8927248016733479,
+      "min_positive_cycle": 905.0,
+      "min_positive_qdis": 0.96101874,
+      "min_positive_retention": 0.8927248016733479
+    },
+    {
+      "dataset": "matr",
+      "cell_id": "matr_b3c23",
+      "censor_time_cycles": 2189.0,
+      "q0": 1.06678165,
+      "last_positive_cycle": 2189.0,
+      "last_positive_qdis": 0.93701142,
+      "last_positive_retention": 0.8783535224851309,
+      "min_positive_cycle": 2189.0,
+      "min_positive_qdis": 0.93701142,
+      "min_positive_retention": 0.8783535224851309
+    },
+    {
+      "dataset": "matr",
+      "cell_id": "matr_b3c32",
+      "censor_time_cycles": 2237.0,
+      "q0": 1.0734176,
+      "last_positive_cycle": 2237.0,
+      "last_positive_qdis": 0.97388279,
+      "last_positive_retention": 0.9072729849035455,
+      "min_positive_cycle": 2237.0,
+      "min_positive_qdis": 0.97388279,
+      "min_positive_retention": 0.9072729849035455
+    }
+  ]
+}

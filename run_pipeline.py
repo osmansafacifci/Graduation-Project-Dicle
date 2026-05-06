@@ -40,6 +40,8 @@ Stages:
                   -> data/intermediate/feature_transfer_stability.csv
     shap          SHAP/XAI attribution for the primary within-dataset models
                   -> data/intermediate/shap_feature_importance.csv
+    survival      right-censoring sensitivity analysis for MATR censored cells
+                  -> data/intermediate/survival_censoring_summary.csv
     conformal     MAPIE split CP for within, naive cross, target CP, and
                   target-adapted CP
                   -> outputs/results_v2_conformal/results_summary.csv
@@ -184,6 +186,16 @@ def stage_shap() -> int:
     return _run([PYTHON, "3_analysis/shap_feature_importance.py"])
 
 
+def stage_survival() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    matr_cycles = INTERMEDIATE_DIR / "matr_cycles_tidy.csv"
+    hust_cycles = INTERMEDIATE_DIR / "hust_cycles_tidy.csv"
+    if not combined.exists() or not matr_cycles.exists() or not hust_cycles.exists():
+        print("[skip] survival: missing features or tidy cycle tables.")
+        return 1
+    return _run([PYTHON, "3_analysis/survival_censoring.py"])
+
+
 def stage_target_rescale() -> int:
     combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
     splits_root = PROJECT_ROOT / "splits" / "sop_v2"
@@ -305,6 +317,15 @@ STAGES: dict[str, Stage] = {
             INTERMEDIATE_DIR / "shap_feature_importance_report.txt",
         ],
     ),
+    "survival": Stage(
+        name="survival",
+        description="Right-censoring sensitivity analysis for MATR censored cells",
+        run=stage_survival,
+        outputs=[
+            INTERMEDIATE_DIR / "survival_censoring_summary.csv",
+            INTERMEDIATE_DIR / "survival_censoring_report.txt",
+        ],
+    ),
     "target_rescale": Stage(
         name="target_rescale",
         description="Target-mean rescaling baseline (k=5/10/20 calibration cells)",
@@ -328,7 +349,7 @@ STAGES: dict[str, Stage] = {
 DEFAULT_ORDER = [
     "download", "audit_matr", "audit_hust", "features",
     "splits", "vif", "experiments",
-    "shift", "feature_transfer", "shap", "concept_shift", "target_rescale", "conformal",
+    "shift", "feature_transfer", "shap", "survival", "concept_shift", "target_rescale", "conformal",
 ]
 
 # Phase shortcuts. Two-phase workflow:
@@ -339,7 +360,7 @@ DEFAULT_ORDER = [
 PHASES: dict[str, list[str]] = {
     "extract":  ["download", "audit_matr", "audit_hust", "features"],
     "model":    ["splits", "vif", "experiments"],
-    "analysis": ["shift", "feature_transfer", "shap", "concept_shift", "target_rescale", "conformal"],
+    "analysis": ["shift", "feature_transfer", "shap", "survival", "concept_shift", "target_rescale", "conformal"],
     "all":      DEFAULT_ORDER,
 }
 
