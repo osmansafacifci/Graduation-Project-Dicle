@@ -38,6 +38,8 @@ Stages:
                   -> outputs/results_v2_34feat_log/results_summary.csv
     transfer      feature-level transfer/stability analysis
                   -> data/intermediate/feature_transfer_stability.csv
+    shap          SHAP/XAI attribution for the primary within-dataset models
+                  -> data/intermediate/shap_feature_importance.csv
     conformal     MAPIE split CP for within, naive cross, target CP, and
                   target-adapted CP
                   -> outputs/results_v2_conformal/results_summary.csv
@@ -173,6 +175,15 @@ def stage_feature_transfer() -> int:
     return _run([PYTHON, "3_analysis/feature_transfer_stability.py"])
 
 
+def stage_shap() -> int:
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    splits_root = PROJECT_ROOT / "splits" / "sop_v2"
+    if not combined.exists() or not splits_root.exists():
+        print("[skip] shap: missing features or splits.")
+        return 1
+    return _run([PYTHON, "3_analysis/shap_feature_importance.py"])
+
+
 def stage_target_rescale() -> int:
     combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
     splits_root = PROJECT_ROOT / "splits" / "sop_v2"
@@ -208,7 +219,7 @@ STAGES: dict[str, Stage] = {
     ),
     "audit_matr": Stage(
         name="audit_matr",
-        description="MATR cell-level audit (notebook port: provided vs recomputed 80% Q0 EOL)",
+        description="MATR cell-level audit (notebook port + 85% Q0 modeling audit)",
         run=stage_audit_matr,
         outputs=[
             INTERMEDIATE_DIR / "matr_cell_audit_strict.csv",
@@ -285,6 +296,15 @@ STAGES: dict[str, Stage] = {
             INTERMEDIATE_DIR / "feature_transfer_stability_report.txt",
         ],
     ),
+    "shap": Stage(
+        name="shap",
+        description="SHAP/XAI attribution for primary within-dataset models",
+        run=stage_shap,
+        outputs=[
+            INTERMEDIATE_DIR / "shap_feature_importance.csv",
+            INTERMEDIATE_DIR / "shap_feature_importance_report.txt",
+        ],
+    ),
     "target_rescale": Stage(
         name="target_rescale",
         description="Target-mean rescaling baseline (k=5/10/20 calibration cells)",
@@ -308,7 +328,7 @@ STAGES: dict[str, Stage] = {
 DEFAULT_ORDER = [
     "download", "audit_matr", "audit_hust", "features",
     "splits", "vif", "experiments",
-    "shift", "feature_transfer", "concept_shift", "target_rescale", "conformal",
+    "shift", "feature_transfer", "shap", "concept_shift", "target_rescale", "conformal",
 ]
 
 # Phase shortcuts. Two-phase workflow:
@@ -319,7 +339,7 @@ DEFAULT_ORDER = [
 PHASES: dict[str, list[str]] = {
     "extract":  ["download", "audit_matr", "audit_hust", "features"],
     "model":    ["splits", "vif", "experiments"],
-    "analysis": ["shift", "feature_transfer", "concept_shift", "target_rescale", "conformal"],
+    "analysis": ["shift", "feature_transfer", "shap", "concept_shift", "target_rescale", "conformal"],
     "all":      DEFAULT_ORDER,
 }
 

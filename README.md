@@ -7,9 +7,9 @@ transfer of capacity-only features.
 
 > **Status**
 > Within-dataset, cross-dataset, distribution-shift quantification,
-> concept-shift diagnostics, and target-side recalibration baselines are all
-> in place. Standard split conformal prediction is implemented with MAPIE in
-> `3_analysis/conformal_prediction.py`; run it to generate §7 interval tables.
+> feature-transfer/XAI diagnostics, concept-shift diagnostics, target-side
+> recalibration baselines, and standard MAPIE split conformal prediction are
+> all in place.
 
 ---
 
@@ -60,6 +60,7 @@ correction fit on a small target labeled set recovers the bulk of the loss.
 ├── 3_analysis/              # shift quantification, recalibration
 │   ├── shift_metrics.py
 │   ├── feature_transfer_stability.py
+│   ├── shap_feature_importance.py
 │   ├── concept_shift_diagnostics.py
 │   ├── target_rescaling.py
 │   ├── conformal_prediction.py
@@ -114,7 +115,7 @@ Unzip into `data/intermediate/` locally and commit.
 pip install -r requirements.txt
 python run_pipeline.py --status                  # show what's done / missing
 python run_pipeline.py --phase model             # splits + VIF + within-dataset experiments
-python run_pipeline.py --phase analysis          # shift + concept diagnostics + rescaling + CP
+python run_pipeline.py --phase analysis          # shift + XAI + concept diagnostics + rescaling + CP
 ```
 
 Or call individual scripts:
@@ -135,6 +136,7 @@ python 2_models/run_experiments.py --cross-dataset --log-target \
 python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
+python 3_analysis/shap_feature_importance.py
 
 # Concept-shift diagnostics + target-mean rescaling
 python 3_analysis/concept_shift_diagnostics.py
@@ -158,6 +160,7 @@ python 3_analysis/summarize_conformal_results.py
 | §5.2 | Cross-dataset transfer (MATR ↔ HUST), three feature-set ablations × two directions | `2_models/run_experiments.py --cross-dataset` | `outputs/results_v2_cross_*/...` |
 | §6.3 | Distribution shift: MMD with RBF + median bandwidth, Mahalanobis with pooled covariance, per-feature attribution | `3_analysis/shift_metrics.py` | `data/intermediate/shift_metrics*.json`, `shift_report*.txt` |
 | **§6.3+** | Feature transfer/stability: per-feature shift, correlation stability, univariate transfer, residual-mean-adapted transfer | `3_analysis/feature_transfer_stability.py` | `data/intermediate/feature_transfer_stability*` |
+| **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability classes | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `outputs/results_v2_shap/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
 | §7 | Standard split conformal prediction with MAPIE (within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...` |
@@ -260,6 +263,22 @@ Least-fragile candidates include `cycle_to_98pct`, `exp_decay_k`,
 `slope_linear`, `linearity_r2`, and `cycle_to_99pct`. This is the bridge to
 SHAP/XAI: separate features that are important within-domain from features
 whose distributions and target relationships remain stable across datasets.
+
+### SHAP/XAI bridge
+
+Primary SHAP analysis explains the within-dataset champion models at N=100:
+MATR CatBoost and HUST Random Forest, across the five official splits. SHAP
+values are in log-cycle prediction space; model metrics are reported in cycle
+space and match the headline table.
+
+| Dataset/model | Most important SHAP features | Transfer interpretation |
+|---|---|---|
+| HUST Random Forest | `Qdis_N`, `linearity_r2`, `Qdis_cycle10`, `poly2_a`, `slope_ratio` | The top feature is useful within HUST but scale-shift fragile; `Qdis_cycle10` and `poly2_a` also fail by scale shift. |
+| MATR CatBoost | `accel_mean`, `poly2_c`, `slope_last_quarter`, `range_Qdis`, `variance_Qdis` | Several top MATR signals are relationship-unstable across datasets, especially `accel_mean`, `slope_last_quarter`, and `range_Qdis`. |
+
+This strengthens the transfer story: the models do learn meaningful
+within-domain signals, but many high-attribution features are exactly the
+features that do not carry stable cross-dataset semantics.
 
 ### Geometric alignment is not prediction alignment
 
@@ -367,6 +386,7 @@ python 2_models/run_experiments.py --log-target \
 python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
+python 3_analysis/shap_feature_importance.py
 
 # Constant-bias decomposition (91.5% / 74.2% finding)
 python 3_analysis/concept_shift_diagnostics.py
@@ -397,6 +417,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §5.2 Cross-dataset experiments (raw + capacity-normalized, three feature-set ablations)
 - [x] §6.3 Shift metrics (MMD, Mahalanobis, per-feature attribution)
 - [x] §6.3+ Feature transfer/stability analysis
+- [x] §6.3++ SHAP/XAI attribution joined to transfer-stability classes
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
 - [x] §7− Target-mean rescaling baseline (k = 5 / 10 / 20)
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)

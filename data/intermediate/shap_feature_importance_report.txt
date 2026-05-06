@@ -1,0 +1,44 @@
+SHAP feature attribution summary
+================================================================================
+Protocol: 34 features, N=100 default, log-target models, SHAP in log-cycle space.
+
+Model check across explained splits:
+  N=100 HUST random_forest: MAE=178.0, sMAPE=12.2, R2=+0.340 (5 seeds)
+  N=100 MATR catboost: MAE=171.7, sMAPE=23.7, R2=+0.575 (5 seeds)
+
+N=100 HUST random_forest top SHAP features:
+  Qdis_N                   rank=1.2 rel=28.2% shift_z=8.21 class=scale_shift_fragile
+  linearity_r2             rank=2.8 rel=14.3% shift_z=0.79 class=stable_candidate
+  Qdis_cycle10             rank=4.6 rel=10.6% shift_z=10.84 class=scale_shift_fragile
+  poly2_a                  rank=3.8 rel=6.7% shift_z=10.67 class=scale_shift_fragile
+  slope_ratio              rank=5.0 rel=5.2% shift_z=0.23 class=weak_or_mixed
+  kurtosis_Qdis            rank=10.6 rel=3.4% shift_z=0.49 class=weak_or_mixed
+  sample_entropy           rank=8.0 rel=3.2% shift_z=0.35 class=relationship_unstable
+  spectral_entropy         rank=11.0 rel=2.4% shift_z=0.33 class=relationship_unstable
+  range_Qdis               rank=12.4 rel=2.3% shift_z=0.06 class=relationship_unstable
+  max_drop                 rank=10.0 rel=2.2% shift_z=0.13 class=relationship_unstable
+
+N=100 HUST random_forest important but transfer-fragile:
+  Qdis_N                   rank=1.2 shift_z=8.21 rho(M,H)=(-0.04,+0.62) class=scale_shift_fragile
+  poly2_a                  rank=3.8 shift_z=10.67 rho(M,H)=(-0.17,+0.62) class=scale_shift_fragile
+  Qdis_cycle10             rank=4.6 shift_z=10.84 rho(M,H)=(-0.18,+0.65) class=scale_shift_fragile
+  sample_entropy           rank=8.0 shift_z=0.35 rho(M,H)=(-0.02,+0.25) class=relationship_unstable
+  max_drop                 rank=10.0 shift_z=0.13 rho(M,H)=(-0.07,+0.15) class=relationship_unstable
+
+N=100 MATR catboost top SHAP features:
+  accel_mean               rank=2.6 rel=11.5% shift_z=1.23 class=relationship_unstable
+  poly2_c                  rank=2.6 rel=10.7% shift_z=0.26 class=weak_or_mixed
+  slope_last_quarter       rank=4.6 rel=7.1% shift_z=0.37 class=relationship_unstable
+  range_Qdis               rank=6.0 rel=7.4% shift_z=0.06 class=relationship_unstable
+  variance_Qdis            rank=6.8 rel=6.5% shift_z=0.12 class=weak_or_mixed
+  mad_Qdis                 rank=5.8 rel=5.9% shift_z=0.71 class=weak_or_mixed
+  sample_entropy           rank=7.8 rel=4.2% shift_z=0.35 class=relationship_unstable
+  knee_cycle               rank=9.4 rel=4.0% shift_z=0.83 class=weak_or_mixed
+  accel_max_abs            rank=11.2 rel=3.5% shift_z=0.13 class=relationship_unstable
+  linearity_r2             rank=14.4 rel=2.5% shift_z=0.79 class=stable_candidate
+
+N=100 MATR catboost important but transfer-fragile:
+  accel_mean               rank=2.6 shift_z=1.23 rho(M,H)=(+0.49,-0.16) class=relationship_unstable
+  slope_last_quarter       rank=4.6 shift_z=0.37 rho(M,H)=(+0.48,-0.07) class=relationship_unstable
+  range_Qdis               rank=6.0 shift_z=0.06 rho(M,H)=(-0.53,+0.17) class=relationship_unstable
+  sample_entropy           rank=7.8 shift_z=0.35 rho(M,H)=(-0.02,+0.25) class=relationship_unstable
