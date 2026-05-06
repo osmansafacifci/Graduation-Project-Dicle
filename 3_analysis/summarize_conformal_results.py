@@ -2,7 +2,7 @@
 Build paper-facing summaries from MAPIE conformal prediction outputs.
 
 Primary manuscript policy:
-  - confidence level: 90%
+  - confidence levels: 90% and 95% if present
   - target-domain CP k_target = 20
   - target-adapted CP uses residual_mean adapter
   - adapter set size k_adapter = 20
@@ -85,6 +85,8 @@ def select_primary(summary: pd.DataFrame, k_target: int, k_adapter: int) -> pd.D
     primary["scenario_label"] = primary["scenario"].map(SCENARIO_LABELS)
     primary["direction"] = primary["source"].str.upper() + " -> " + primary["target"].str.upper()
     primary.loc[primary["scenario"].eq("within_split_cp"), "direction"] = primary["target"].str.upper()
+    if "confidence_level" not in primary.columns:
+        primary["confidence_level"] = 0.90
     return primary
 
 
@@ -97,6 +99,7 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
             adapted["source"].eq(base["source"])
             & adapted["target"].eq(base["target"])
             & adapted["model"].eq(base["model"])
+            & adapted["confidence_level"].eq(base["confidence_level"])
         ]
         if match.empty:
             continue
@@ -105,6 +108,7 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
             {
                 "direction": f"{str(base['source']).upper()} -> {str(base['target']).upper()}",
                 "model": base["model"],
+                "confidence_level": base["confidence_level"],
                 "coverage_no_adapter": base["coverage_mean"],
                 "coverage_adapted": row["coverage_mean"],
                 "median_width_no_adapter": base["median_width_mean"],
@@ -118,6 +122,9 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
                 "winkler_no_adapter": base["winkler_mean_mean"],
                 "winkler_adapted": row["winkler_mean_mean"],
                 "winkler_reduction_pct": 100.0 * (1.0 - row["winkler_mean_mean"] / base["winkler_mean_mean"]),
+                "short_life_coverage_adapted": row.get("coverage_short_life_mean", float("nan")),
+                "long_life_coverage_adapted": row.get("coverage_long_life_mean", float("nan")),
+                "short_long_coverage_gap_adapted": row.get("short_long_coverage_gap_mean", float("nan")),
             }
         )
     return pd.DataFrame(rows)
@@ -126,32 +133,64 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
 def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> None:
     cols = [
         "scenario_label",
+        "confidence_level",
         "direction",
         "model",
         "coverage_mean",
+        "coverage_wilson95_lower_mean",
+        "coverage_wilson95_upper_mean",
+        "coverage_short_life_mean",
+        "coverage_long_life_mean",
+        "short_long_coverage_gap_mean",
         "median_width_mean",
+        "winkler_mean_mean",
         "MAE_mean",
         "SMAPE_mean",
         "R2_mean",
         "n_runs",
     ]
+    cols = [c for c in cols if c in primary.columns]
     table = primary[cols].copy()
-    table.columns = ["Scenario", "Direction", "Model", "Coverage", "Median width", "MAE", "sMAPE", "R2", "Runs"]
-    for col in ["Coverage", "R2"]:
-        table[col] = table[col].map(lambda x: fmt(x, 3))
-    for col in ["Median width", "MAE", "sMAPE"]:
-        table[col] = table[col].map(lambda x: fmt(x, 1))
-    table["Runs"] = table["Runs"].astype(int)
+    table.columns = [
+        "Scenario",
+        "Confidence",
+        "Direction",
+        "Model",
+        "Coverage",
+        "Wilson low",
+        "Wilson high",
+        "Short-life cov.",
+        "Long-life cov.",
+        "Short/long gap",
+        "Median width",
+        "Winkler",
+        "MAE",
+        "sMAPE",
+        "R2",
+        "Runs",
+    ][: len(table.columns)]
+    for col in ["Confidence", "Coverage", "Wilson low", "Wilson high", "Short-life cov.", "Long-life cov.", "Short/long gap", "R2"]:
+        if col in table.columns:
+            table[col] = table[col].map(lambda x: fmt(x, 3))
+    for col in ["Median width", "Winkler", "MAE", "sMAPE"]:
+        if col in table.columns:
+            table[col] = table[col].map(lambda x: fmt(x, 1))
+    if "Runs" in table.columns:
+        table["Runs"] = table["Runs"].astype(int)
+
+    table = table.sort_values(["Confidence", "Scenario", "Direction", "Model"])
 
     lines = ["# Paper CP Summary", ""]
-    lines.append("Primary policy: 90% MAPIE split CP; target rows use k_target=20; adapted rows use residual-mean k_adapter=20.")
+    lines.append("Primary policy: MAPIE split CP at 90% and 95% if present; target rows use k_target=20; adapted rows use residual-mean k_adapter=20.")
+    lines.append("Wilson columns are 95% Wilson score intervals for empirical coverage; short/long coverage splits each test set by observed lifetime.")
     lines.append("")
     lines.append(dataframe_to_markdown(table))
     lines.append("")
     if not delta.empty:
         d = delta.copy()
-        for col in ["coverage_no_adapter", "coverage_adapted", "R2_no_adapter", "R2_adapted"]:
-            d[col] = d[col].map(lambda x: fmt(x, 3))
+        for col in ["confidence_level", "coverage_no_adapter", "coverage_adapted", "R2_no_adapter", "R2_adapted", "short_life_coverage_adapted", "long_life_coverage_adapted", "short_long_coverage_gap_adapted"]:
+            if col in d.columns:
+                d[col] = d[col].map(lambda x: fmt(x, 3))
         for col in [
             "median_width_no_adapter",
             "median_width_adapted",
@@ -163,18 +202,24 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
             "winkler_adapted",
             "winkler_reduction_pct",
         ]:
-            d[col] = d[col].map(lambda x: fmt(x, 1))
+            if col in d.columns:
+                d[col] = d[col].map(lambda x: fmt(x, 1))
         lines.append("## Adapter Improvement Over Target-Only CP")
         lines.append("")
-        lines.append(dataframe_to_markdown(d))
+        lines.append(dataframe_to_markdown(d.sort_values(["confidence_level", "direction", "model"])))
         lines.append("")
     path.write_text("\n".join(lines))
 
 
-def maybe_write_plot(primary: pd.DataFrame, path: Path) -> None:
+def maybe_write_plot(primary: pd.DataFrame, path: Path, confidence_level: float) -> None:
     try:
         import matplotlib.pyplot as plt
     except ImportError:
+        return
+
+    if "confidence_level" in primary.columns:
+        primary = primary[primary["confidence_level"].round(6).eq(round(confidence_level, 6))].copy()
+    if primary.empty:
         return
 
     cross = primary[primary["scenario"].isin([
@@ -205,7 +250,7 @@ def maybe_write_plot(primary: pd.DataFrame, path: Path) -> None:
         wid = [sub.loc[label, "median_width_mean"] if label in sub.index else float("nan") for label in labels]
         axes[0].bar([i + offsets[protocol] for i in x], cov, width=width, label=protocol, color=colors[protocol])
         axes[1].bar([i + offsets[protocol] for i in x], wid, width=width, label=protocol, color=colors[protocol])
-    axes[0].axhline(0.9, color="#333333", linestyle="--", linewidth=1)
+    axes[0].axhline(confidence_level, color="#333333", linestyle="--", linewidth=1)
     axes[0].set_ylabel("Empirical coverage")
     axes[0].set_ylim(0, 1.05)
     axes[1].set_ylabel("Median interval width (cycles)")
@@ -217,11 +262,30 @@ def maybe_write_plot(primary: pd.DataFrame, path: Path) -> None:
     plt.close(fig)
 
 
+def write_stratified_summary(primary: pd.DataFrame, path: Path) -> None:
+    cols = [
+        "scenario_label",
+        "confidence_level",
+        "direction",
+        "model",
+        "coverage_mean",
+        "coverage_short_life_mean",
+        "coverage_long_life_mean",
+        "short_long_coverage_gap_mean",
+        "coverage_wilson95_lower_mean",
+        "coverage_wilson95_upper_mean",
+        "n_runs",
+    ]
+    cols = [c for c in cols if c in primary.columns]
+    primary[cols].to_csv(path, index=False)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--k-target", type=int, default=20)
     parser.add_argument("--k-adapter", type=int, default=20)
+    parser.add_argument("--plot-confidence-level", type=float, default=0.90)
     return parser.parse_args()
 
 
@@ -238,16 +302,19 @@ def main() -> int:
 
     out_summary = args.results_dir / "paper_cp_summary.csv"
     out_delta = args.results_dir / "paper_cp_delta_summary.csv"
+    out_stratified = args.results_dir / "paper_cp_stratified_coverage.csv"
     out_md = args.results_dir / "paper_cp_summary.md"
     out_png = args.results_dir / "paper_cp_coverage_width.png"
 
     primary.to_csv(out_summary, index=False)
     delta.to_csv(out_delta, index=False)
+    write_stratified_summary(primary, out_stratified)
     write_markdown(primary, delta, out_md)
-    maybe_write_plot(primary, out_png)
+    maybe_write_plot(primary, out_png, args.plot_confidence_level)
 
     print(f"[save] {out_summary}")
     print(f"[save] {out_delta}")
+    print(f"[save] {out_stratified}")
     print(f"[save] {out_md}")
     if out_png.exists():
         print(f"[save] {out_png}")

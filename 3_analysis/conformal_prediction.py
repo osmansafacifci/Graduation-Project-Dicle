@@ -46,6 +46,7 @@ Usage:
     python 3_analysis/conformal_prediction.py --models catboost --seeds 42
     python 3_analysis/conformal_prediction.py --target-k-values 10 15 20
     python 3_analysis/conformal_prediction.py --adapter-k-values 10 15 20
+    python 3_analysis/conformal_prediction.py --confidence-levels 0.90 0.95
 """
 
 from __future__ import annotations
@@ -57,6 +58,7 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import NormalDist
 
 import numpy as np
 import pandas as pd
@@ -103,6 +105,7 @@ DEFAULT_DATASETS = ["matr", "hust"]
 DEFAULT_WINDOWS = [100]
 DEFAULT_TARGET_KS = [10, 15, 20]
 DEFAULT_TARGET_REPEATS = 20
+DEFAULT_CONFIDENCE_LEVELS = [0.90, 0.95]
 ALL_ADAPTER_TYPES = ["residual_mean", "linear"]
 DEFAULT_ADAPTER_TYPES = ["residual_mean"]
 
@@ -284,6 +287,30 @@ def winkler_score(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray, alph
     return score
 
 
+def wilson_interval(successes: int, n: int, confidence_level: float = 0.95) -> tuple[float, float]:
+    if n <= 0:
+        return float("nan"), float("nan")
+    z = NormalDist().inv_cdf(0.5 + confidence_level / 2.0)
+    phat = successes / n
+    denom = 1.0 + (z**2 / n)
+    center = (phat + (z**2 / (2.0 * n))) / denom
+    half = z * math.sqrt((phat * (1.0 - phat) / n) + (z**2 / (4.0 * n**2))) / denom
+    return float(max(0.0, center - half)), float(min(1.0, center + half))
+
+
+def coverage_stats(covered: np.ndarray) -> dict[str, float | int]:
+    n = int(len(covered))
+    successes = int(np.sum(covered)) if n else 0
+    lo, hi = wilson_interval(successes, n)
+    return {
+        "n": n,
+        "covered_count": successes,
+        "coverage": float(successes / n) if n else float("nan"),
+        "coverage_wilson95_lower": lo,
+        "coverage_wilson95_upper": hi,
+    }
+
+
 def stratified_coverage(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> dict[str, float | int]:
     if len(y_true) < 3:
         return {
@@ -306,6 +333,45 @@ def stratified_coverage(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray
         n = int(mask.sum())
         out[f"n_{label}"] = n
         out[f"coverage_{label}"] = float(np.mean(covered[mask])) if n else float("nan")
+    return out
+
+
+def size_stratified_coverage(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> dict[str, float | int]:
+    """Coverage on shorter-lived vs longer-lived halves of the evaluation set."""
+    y_true = np.asarray(y_true, dtype=float)
+    covered = (y_true >= lower) & (y_true <= upper)
+    if len(y_true) < 2:
+        return {
+            "n_short_life": 0,
+            "n_long_life": 0,
+            "coverage_short_life": float("nan"),
+            "coverage_long_life": float("nan"),
+            "coverage_short_life_wilson95_lower": float("nan"),
+            "coverage_short_life_wilson95_upper": float("nan"),
+            "coverage_long_life_wilson95_lower": float("nan"),
+            "coverage_long_life_wilson95_upper": float("nan"),
+            "short_long_coverage_gap": float("nan"),
+            "lifetime_split_threshold": float("nan"),
+        }
+
+    order = np.argsort(y_true)
+    split = len(y_true) // 2
+    short_idx = order[:split]
+    long_idx = order[split:]
+
+    out: dict[str, float | int] = {}
+    for label, idx in {"short_life": short_idx, "long_life": long_idx}.items():
+        stats = coverage_stats(covered[idx])
+        out[f"n_{label}"] = stats["n"]
+        out[f"coverage_{label}"] = stats["coverage"]
+        out[f"coverage_{label}_wilson95_lower"] = stats["coverage_wilson95_lower"]
+        out[f"coverage_{label}_wilson95_upper"] = stats["coverage_wilson95_upper"]
+    out["short_long_coverage_gap"] = (
+        float(abs(out["coverage_short_life"] - out["coverage_long_life"]))
+        if not pd.isna(out["coverage_short_life"]) and not pd.isna(out["coverage_long_life"])
+        else float("nan")
+    )
+    out["lifetime_split_threshold"] = float(y_true[long_idx[0]]) if len(long_idx) else float("nan")
     return out
 
 
@@ -341,6 +407,7 @@ def evaluate_interval(
     width = upper - lower
     wis = winkler_score(y_test, lower, upper, alpha)
     point_metrics = compute_metrics(y_test, pred_test)
+    cov = coverage_stats(covered)
 
     row = {
         "scenario": scenario,
@@ -365,7 +432,11 @@ def evaluate_interval(
         "quantile_rank": int(quantile_rank),
         "q_hat": float(q_hat),
         "finite_q": bool(finite_q),
-        "coverage": float(np.mean(covered)) if len(covered) else float("nan"),
+        "covered_count": int(cov["covered_count"]),
+        "coverage": cov["coverage"],
+        "coverage_gap": float(abs(confidence_level - cov["coverage"])) if not pd.isna(cov["coverage"]) else float("nan"),
+        "coverage_wilson95_lower": cov["coverage_wilson95_lower"],
+        "coverage_wilson95_upper": cov["coverage_wilson95_upper"],
         "mean_width": float(np.mean(width)) if len(width) else float("nan"),
         "median_width": float(np.median(width)) if len(width) else float("nan"),
         "winkler_mean": float(np.mean(wis)) if len(wis) else float("nan"),
@@ -374,6 +445,7 @@ def evaluate_interval(
         "R2": point_metrics["R2"],
     }
     row.update(stratified_coverage(y_test, lower, upper))
+    row.update(size_stratified_coverage(y_test, lower, upper))
     return row
 
 
@@ -409,7 +481,7 @@ def within_split_cp(
     windows: list[int],
     models: list[str],
     seeds: list[int],
-    confidence_level: float,
+    confidence_levels: list[float],
     log_target: bool,
 ) -> list[dict]:
     rows: list[dict] = []
@@ -430,40 +502,41 @@ def within_split_cp(
                         seed=seed,
                         log_target=log_target,
                     )
-                    pred_test, lower, upper, q_hat, finite_q, quantile_rank = mapie_split_interval(
-                        predictor,
-                        cal_df,
-                        test_df,
-                        confidence_level,
-                    )
-                    rows.append(
-                        evaluate_interval(
-                            scenario="within_split_cp",
-                            source=dataset,
-                            target=dataset,
-                            calibration_domain=dataset,
-                            model=model_name,
-                            n_cycles=n_cycles,
-                            seed=seed,
-                            repeat=None,
-                            k_target=None,
-                            k_adapter=None,
-                            n_train=len(train_df),
-                            n_adapter=0,
-                            n_calibration=len(cal_df),
-                            adapter_type="none",
-                            adapter_slope=None,
-                            adapter_intercept=None,
-                            y_test=test_df["cycle_life"].to_numpy(dtype=float),
-                            pred_test=pred_test,
-                            lower=lower,
-                            upper=upper,
-                            q_hat=q_hat,
-                            finite_q=finite_q,
-                            quantile_rank=quantile_rank,
-                            confidence_level=confidence_level,
+                    for confidence_level in confidence_levels:
+                        pred_test, lower, upper, q_hat, finite_q, quantile_rank = mapie_split_interval(
+                            predictor,
+                            cal_df,
+                            test_df,
+                            confidence_level,
                         )
-                    )
+                        rows.append(
+                            evaluate_interval(
+                                scenario="within_split_cp",
+                                source=dataset,
+                                target=dataset,
+                                calibration_domain=dataset,
+                                model=model_name,
+                                n_cycles=n_cycles,
+                                seed=seed,
+                                repeat=None,
+                                k_target=None,
+                                k_adapter=None,
+                                n_train=len(train_df),
+                                n_adapter=0,
+                                n_calibration=len(cal_df),
+                                adapter_type="none",
+                                adapter_slope=None,
+                                adapter_intercept=None,
+                                y_test=test_df["cycle_life"].to_numpy(dtype=float),
+                                pred_test=pred_test,
+                                lower=lower,
+                                upper=upper,
+                                q_hat=q_hat,
+                                finite_q=finite_q,
+                                quantile_rank=quantile_rank,
+                                confidence_level=confidence_level,
+                            )
+                        )
     return rows
 
 
@@ -475,7 +548,7 @@ def cross_cp(
     windows: list[int],
     models: list[str],
     seeds: list[int],
-    confidence_level: float,
+    confidence_levels: list[float],
     log_target: bool,
     target_k_values: list[int],
     adapter_k_values: list[int],
@@ -503,41 +576,41 @@ def cross_cp(
                         log_target=log_target,
                     )
                     target_y = tgt_sub["cycle_life"].to_numpy(dtype=float)
-                    src_pred_test, src_lower, src_upper, src_q_hat, src_finite_q, src_quantile_rank = mapie_split_interval(
-                        predictor,
-                        src_cal,
-                        tgt_sub,
-                        confidence_level,
-                    )
-
-                    rows.append(
-                        evaluate_interval(
-                            scenario="cross_source_calibrated_cp",
-                            source=src,
-                            target=tgt,
-                            calibration_domain=src,
-                            model=model_name,
-                            n_cycles=n_cycles,
-                            seed=seed,
-                            repeat=None,
-                            k_target=None,
-                            k_adapter=None,
-                            n_train=len(src_train),
-                            n_adapter=0,
-                            n_calibration=len(src_cal),
-                            adapter_type="none",
-                            adapter_slope=None,
-                            adapter_intercept=None,
-                            y_test=target_y,
-                            pred_test=src_pred_test,
-                            lower=src_lower,
-                            upper=src_upper,
-                            q_hat=src_q_hat,
-                            finite_q=src_finite_q,
-                            quantile_rank=src_quantile_rank,
-                            confidence_level=confidence_level,
+                    for confidence_level in confidence_levels:
+                        src_pred_test, src_lower, src_upper, src_q_hat, src_finite_q, src_quantile_rank = mapie_split_interval(
+                            predictor,
+                            src_cal,
+                            tgt_sub,
+                            confidence_level,
                         )
-                    )
+                        rows.append(
+                            evaluate_interval(
+                                scenario="cross_source_calibrated_cp",
+                                source=src,
+                                target=tgt,
+                                calibration_domain=src,
+                                model=model_name,
+                                n_cycles=n_cycles,
+                                seed=seed,
+                                repeat=None,
+                                k_target=None,
+                                k_adapter=None,
+                                n_train=len(src_train),
+                                n_adapter=0,
+                                n_calibration=len(src_cal),
+                                adapter_type="none",
+                                adapter_slope=None,
+                                adapter_intercept=None,
+                                y_test=target_y,
+                                pred_test=src_pred_test,
+                                lower=src_lower,
+                                upper=src_upper,
+                                q_hat=src_q_hat,
+                                finite_q=src_finite_q,
+                                quantile_rank=src_quantile_rank,
+                                confidence_level=confidence_level,
+                            )
+                        )
 
                     n_target = len(tgt_sub)
                     target_indices = np.arange(n_target)
@@ -550,47 +623,48 @@ def cross_cp(
                             test_idx = np.setdiff1d(target_indices, cal_idx)
                             target_cal_df = tgt_sub.iloc[cal_idx]
                             target_test_df = tgt_sub.iloc[test_idx]
-                            (
-                                tgt_pred_test,
-                                tgt_lower,
-                                tgt_upper,
-                                tgt_q_hat,
-                                tgt_finite_q,
-                                tgt_quantile_rank,
-                            ) = mapie_split_interval(
-                                predictor,
-                                target_cal_df,
-                                target_test_df,
-                                confidence_level,
-                            )
-                            rows.append(
-                                evaluate_interval(
-                                    scenario="cross_target_calibrated_cp",
-                                    source=src,
-                                    target=tgt,
-                                    calibration_domain=tgt,
-                                    model=model_name,
-                                    n_cycles=n_cycles,
-                                    seed=seed,
-                                    repeat=repeat,
-                                    k_target=k,
-                                    k_adapter=None,
-                                    n_train=len(src_train),
-                                    n_adapter=0,
-                                    n_calibration=len(target_cal_df),
-                                    adapter_type="none",
-                                    adapter_slope=None,
-                                    adapter_intercept=None,
-                                    y_test=target_y[test_idx],
-                                    pred_test=tgt_pred_test,
-                                    lower=tgt_lower,
-                                    upper=tgt_upper,
-                                    q_hat=tgt_q_hat,
-                                    finite_q=tgt_finite_q,
-                                    quantile_rank=tgt_quantile_rank,
-                                    confidence_level=confidence_level,
+                            for confidence_level in confidence_levels:
+                                (
+                                    tgt_pred_test,
+                                    tgt_lower,
+                                    tgt_upper,
+                                    tgt_q_hat,
+                                    tgt_finite_q,
+                                    tgt_quantile_rank,
+                                ) = mapie_split_interval(
+                                    predictor,
+                                    target_cal_df,
+                                    target_test_df,
+                                    confidence_level,
                                 )
-                            )
+                                rows.append(
+                                    evaluate_interval(
+                                        scenario="cross_target_calibrated_cp",
+                                        source=src,
+                                        target=tgt,
+                                        calibration_domain=tgt,
+                                        model=model_name,
+                                        n_cycles=n_cycles,
+                                        seed=seed,
+                                        repeat=repeat,
+                                        k_target=k,
+                                        k_adapter=None,
+                                        n_train=len(src_train),
+                                        n_adapter=0,
+                                        n_calibration=len(target_cal_df),
+                                        adapter_type="none",
+                                        adapter_slope=None,
+                                        adapter_intercept=None,
+                                        y_test=target_y[test_idx],
+                                        pred_test=tgt_pred_test,
+                                        lower=tgt_lower,
+                                        upper=tgt_upper,
+                                        q_hat=tgt_q_hat,
+                                        finite_q=tgt_finite_q,
+                                        quantile_rank=tgt_quantile_rank,
+                                        confidence_level=confidence_level,
+                                    )
+                                )
 
                     for adapter_type in adapter_types:
                         for k_adapter in adapter_k_values:
@@ -626,48 +700,49 @@ def cross_cp(
                                         target_adapter_df["cycle_life"].to_numpy(dtype=float),
                                         adapter_type=adapter_type,
                                     )
-                                    (
-                                        adapted_pred_test,
-                                        adapted_lower,
-                                        adapted_upper,
-                                        adapted_q_hat,
-                                        adapted_finite_q,
-                                        adapted_quantile_rank,
-                                    ) = mapie_split_interval(
-                                        predictor,
-                                        target_cal_df,
-                                        target_test_df,
-                                        confidence_level,
-                                        target_adapter=target_adapter,
-                                    )
-                                    rows.append(
-                                        evaluate_interval(
-                                            scenario="cross_target_adapted_cp",
-                                            source=src,
-                                            target=tgt,
-                                            calibration_domain=tgt,
-                                            model=model_name,
-                                            n_cycles=n_cycles,
-                                            seed=seed,
-                                            repeat=repeat,
-                                            k_target=k_cp,
-                                            k_adapter=k_adapter,
-                                            n_train=len(src_train),
-                                            n_adapter=len(target_adapter_df),
-                                            n_calibration=len(target_cal_df),
-                                            adapter_type=target_adapter.adapter_type,
-                                            adapter_slope=target_adapter.slope,
-                                            adapter_intercept=target_adapter.intercept,
-                                            y_test=target_y[test_idx],
-                                            pred_test=adapted_pred_test,
-                                            lower=adapted_lower,
-                                            upper=adapted_upper,
-                                            q_hat=adapted_q_hat,
-                                            finite_q=adapted_finite_q,
-                                            quantile_rank=adapted_quantile_rank,
-                                            confidence_level=confidence_level,
+                                    for confidence_level in confidence_levels:
+                                        (
+                                            adapted_pred_test,
+                                            adapted_lower,
+                                            adapted_upper,
+                                            adapted_q_hat,
+                                            adapted_finite_q,
+                                            adapted_quantile_rank,
+                                        ) = mapie_split_interval(
+                                            predictor,
+                                            target_cal_df,
+                                            target_test_df,
+                                            confidence_level,
+                                            target_adapter=target_adapter,
                                         )
-                                    )
+                                        rows.append(
+                                            evaluate_interval(
+                                                scenario="cross_target_adapted_cp",
+                                                source=src,
+                                                target=tgt,
+                                                calibration_domain=tgt,
+                                                model=model_name,
+                                                n_cycles=n_cycles,
+                                                seed=seed,
+                                                repeat=repeat,
+                                                k_target=k_cp,
+                                                k_adapter=k_adapter,
+                                                n_train=len(src_train),
+                                                n_adapter=len(target_adapter_df),
+                                                n_calibration=len(target_cal_df),
+                                                adapter_type=target_adapter.adapter_type,
+                                                adapter_slope=target_adapter.slope,
+                                                adapter_intercept=target_adapter.intercept,
+                                                y_test=target_y[test_idx],
+                                                pred_test=adapted_pred_test,
+                                                lower=adapted_lower,
+                                                upper=adapted_upper,
+                                                q_hat=adapted_q_hat,
+                                                finite_q=adapted_finite_q,
+                                                quantile_rank=adapted_quantile_rank,
+                                                confidence_level=confidence_level,
+                                            )
+                                        )
     return rows
 
 
@@ -682,12 +757,16 @@ def summarize(rows: list[dict]) -> pd.DataFrame:
         "calibration_domain",
         "model",
         "n_cycles",
+        "confidence_level",
         "adapter_type",
         "k_adapter",
         "k_target",
     ]
     numeric_cols = [
         "coverage",
+        "coverage_gap",
+        "coverage_wilson95_lower",
+        "coverage_wilson95_upper",
         "mean_width",
         "median_width",
         "winkler_mean",
@@ -701,10 +780,20 @@ def summarize(rows: list[dict]) -> pd.DataFrame:
         "coverage_short",
         "coverage_mid",
         "coverage_long",
+        "coverage_short_life",
+        "coverage_long_life",
+        "coverage_short_life_wilson95_lower",
+        "coverage_short_life_wilson95_upper",
+        "coverage_long_life_wilson95_lower",
+        "coverage_long_life_wilson95_upper",
+        "short_long_coverage_gap",
+        "lifetime_split_threshold",
         "n_train",
         "n_adapter",
         "n_calibration",
         "n_test",
+        "n_short_life",
+        "n_long_life",
     ]
     agg_spec = {}
     for col in numeric_cols:
@@ -746,7 +835,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     parser.add_argument("--features-from", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--confidence-level", type=float, default=0.90)
+    parser.add_argument(
+        "--confidence-levels",
+        type=float,
+        nargs="+",
+        default=DEFAULT_CONFIDENCE_LEVELS,
+        help="One or more conformal confidence levels. Default: 0.90 0.95.",
+    )
+    parser.add_argument(
+        "--confidence-level",
+        type=float,
+        default=None,
+        help="Backward-compatible single confidence level; overrides --confidence-levels if provided.",
+    )
     parser.add_argument("--log-target", action="store_true", default=True)
     parser.add_argument("--no-log-target", action="store_false", dest="log_target")
     parser.add_argument("--target-k-values", type=int, nargs="+", default=DEFAULT_TARGET_KS)
@@ -796,6 +897,12 @@ def main() -> int:
     if not FEATURES_PATH.exists():
         print(f"[error] {FEATURES_PATH} missing — run build_features.py first.")
         return 1
+    confidence_levels = [float(args.confidence_level)] if args.confidence_level is not None else args.confidence_levels
+    confidence_levels = sorted(dict.fromkeys(confidence_levels))
+    bad_conf = [c for c in confidence_levels if c <= 0.0 or c >= 1.0]
+    if bad_conf:
+        print(f"[error] confidence levels must be in (0, 1): {bad_conf}")
+        return 1
 
     df = pd.read_csv(FEATURES_PATH)
     feature_cols, feature_source = resolve_features(df, args.features_from)
@@ -806,7 +913,7 @@ def main() -> int:
     print(f"[setup] output_dir: {out_dir}")
     print(f"[setup] models={args.models}, windows={args.windows}, seeds={args.seeds}")
     print(
-        f"[setup] confidence_level={args.confidence_level}, "
+        f"[setup] confidence_levels={confidence_levels}, "
         f"target_k={args.target_k_values}, adapter_k={args.adapter_k_values}, "
         f"adapter_types={args.adapter_types}, repeats={args.target_repeats}"
     )
@@ -822,7 +929,7 @@ def main() -> int:
                 windows=args.windows,
                 models=args.models,
                 seeds=args.seeds,
-                confidence_level=args.confidence_level,
+                confidence_levels=confidence_levels,
                 log_target=args.log_target,
             )
         )
@@ -836,7 +943,7 @@ def main() -> int:
                 windows=args.windows,
                 models=args.models,
                 seeds=args.seeds,
-                confidence_level=args.confidence_level,
+                confidence_levels=confidence_levels,
                 log_target=args.log_target,
                 target_k_values=args.target_k_values,
                 adapter_k_values=args.adapter_k_values,
@@ -860,7 +967,7 @@ def main() -> int:
         "sklearn_version": sklearn.__version__,
         "feature_set": feature_source,
         "feature_columns": feature_cols,
-        "confidence_level": args.confidence_level,
+        "confidence_levels": confidence_levels,
         "log_target": bool(args.log_target),
         "datasets": args.datasets,
         "windows": args.windows,
@@ -876,7 +983,9 @@ def main() -> int:
             "cross_target_calibrated_cp is standard split CP with a labeled target-domain calibration set.",
             "cross_target_adapted_cp fits a target-domain point adapter on k_adapter target labels, then conformalizes on disjoint k_target target labels.",
             "residual_mean is the default scientific adapter; linear is available via --adapter-types as a sensitivity check.",
-            "For 90% CP, very small calibration sets can produce infinite finite-sample intervals; finite_q records this explicitly.",
+            "Very small calibration sets can produce infinite exact finite-sample intervals; finite_q records this explicitly.",
+            "Coverage Wilson intervals are 95% Wilson score confidence intervals for empirical coverage.",
+            "Size-stratified coverage splits each evaluation set into shorter-lived and longer-lived halves by observed target lifetime.",
         ],
         "summary": json_clean(summary_df.to_dict(orient="records")),
     }
@@ -897,7 +1006,12 @@ def main() -> int:
             "adapter_type",
             "k_adapter",
             "k_target",
+            "confidence_level",
             "coverage_mean",
+            "coverage_wilson95_lower_mean",
+            "coverage_wilson95_upper_mean",
+            "coverage_short_life_mean",
+            "coverage_long_life_mean",
             "median_width_mean",
             "winkler_mean_mean",
             "finite_q_mean",

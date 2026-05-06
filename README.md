@@ -166,7 +166,7 @@ python 3_analysis/summarize_conformal_results.py
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
-| §7 | Standard split conformal prediction with MAPIE (within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...` |
+| §7 | Standard split conformal prediction with MAPIE (90%/95%; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...` |
 
 ---
 
@@ -344,21 +344,26 @@ matches the target's marginal-mean predictor, consistent with the 91.5% /
 
 ### Conformal Prediction
 
-Primary policy: 90% MAPIE split CP, N=100, CatBoost + Random Forest. Target
-rows use `k_target=20`; adapted rows use residual-mean `k_adapter=20` on a
-disjoint target subset before CP calibration.
+Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
+Forest. Target rows use `k_target=20`; adapted rows use residual-mean
+`k_adapter=20` on a disjoint target subset before CP calibration. Outputs now
+include 95% Wilson score intervals for empirical coverage and short-/long-life
+stratified coverage.
 
 | Scenario | Coverage | Median width | R² | Interpretation |
 |---|---:|---:|---:|---|
-| Within-dataset CP | 0.86–0.97 | 919–1119 | 0.28–0.58 | CP behaves normally within dataset |
-| Source-calibrated cross CP | 0.15–0.31 | 919–1119 | −10.93 to −2.40 | Source CP under-covers under shift |
-| Target-domain CP, no adapter | 0.89–0.91 | 1904–2568 | −11.09 to −2.37 | Coverage restored, intervals huge |
-| Residual-mean target-adapted CP | 0.91 | 999–1302 | −0.41 to −0.02 | Center repaired, intervals much narrower |
+| Within-dataset CP, 90% | 0.86–0.97 | 919–1119 | 0.28–0.58 | CP behaves normally within dataset |
+| Source-calibrated cross CP, 90% | 0.15–0.31 | 919–1119 | −10.93 to −2.40 | Source CP under-covers under shift |
+| Target-domain CP, no adapter, 90% | 0.89–0.91 | 1904–2568 | −11.09 to −2.37 | Coverage restored, intervals huge |
+| Residual-mean target-adapted CP, 90% | 0.91 | 999–1302 | −0.41 to −0.02 | Center repaired, intervals much narrower |
+| Residual-mean target-adapted CP, 95% | 0.95–0.96 | 1167–1840 | −0.41 to −0.02 | Higher nominal coverage holds with wider intervals |
 
 At `k_adapter=20`, `k_target=20`, residual-mean adaptation reduces median
 interval width by 33–60% and MAE by 55–71% relative to target-domain CP
-without the adapter. Paper-ready outputs are in
-`outputs/results_v2_conformal/paper_cp_summary.*`.
+without the adapter at 90%. At 95%, adapted CP remains close to nominal
+coverage while preserving the same point-prediction repair. Paper-ready
+outputs are in `outputs/results_v2_conformal/paper_cp_summary.*` and
+`outputs/results_v2_conformal/paper_cp_stratified_coverage.csv`.
 
 ---
 

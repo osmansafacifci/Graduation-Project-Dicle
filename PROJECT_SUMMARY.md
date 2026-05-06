@@ -72,7 +72,7 @@ the SOP12 capacity-only features.
 | **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
-| §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: within, naive cross, target-calibrated, residual-mean target-adapted; linear adapter is sensitivity |
+| §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; linear adapter is sensitivity |
 
 ---
 
@@ -247,21 +247,26 @@ the fix only needs ~20 labeled cells. This is a 50× to 500× MSE reduction.
 
 ### Conformal prediction (§7)
 
-Primary policy: 90% MAPIE split CP, N=100, CatBoost + Random Forest. Target
-rows use `k_target=20`; adapted rows use residual-mean `k_adapter=20` on a
-disjoint target subset before CP calibration.
+Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
+Forest. Target rows use `k_target=20`; adapted rows use residual-mean
+`k_adapter=20` on a disjoint target subset before CP calibration. Outputs
+include 95% Wilson score intervals for empirical coverage and short-/long-life
+stratified coverage.
 
 | Scenario | Coverage | Median width | R² | Interpretation |
 |---|---:|---:|---:|---|
-| Within-dataset CP | 0.86–0.97 | 919–1119 | 0.28–0.58 | Standard CP works within dataset |
-| Source-calibrated cross CP | 0.15–0.31 | 919–1119 | −10.93 to −2.40 | Source CP fails under dataset shift |
-| Target-domain CP, no adapter | 0.89–0.91 | 1904–2568 | −11.09 to −2.37 | Coverage restored, intervals huge |
-| Residual-mean target-adapted CP | ≈0.91 | 999–1302 | −0.41 to −0.02 | Center repaired, useful intervals |
+| Within-dataset CP, 90% | 0.86–0.97 | 919–1119 | 0.28–0.58 | Standard CP works within dataset |
+| Source-calibrated cross CP, 90% | 0.15–0.31 | 919–1119 | −10.93 to −2.40 | Source CP fails under dataset shift |
+| Target-domain CP, no adapter, 90% | 0.89–0.91 | 1904–2568 | −11.09 to −2.37 | Coverage restored, intervals huge |
+| Residual-mean target-adapted CP, 90% | ≈0.91 | 999–1302 | −0.41 to −0.02 | Center repaired, useful intervals |
+| Residual-mean target-adapted CP, 95% | 0.95–0.96 | 1167–1840 | −0.41 to −0.02 | Higher nominal coverage holds with wider intervals |
 
 At `k_adapter=20`, `k_target=20`, residual-mean adaptation reduces median
 interval width by 33–60% and MAE by 55–71% relative to target-domain CP
-without the adapter. This completes the uncertainty leg of the thesis arc:
-point calibration repairs the center; CP repairs uncertainty.
+without the adapter at 90%. At 95%, adapted CP stays close to nominal
+coverage while preserving the same point-prediction repair. This completes
+the uncertainty leg of the thesis arc: point calibration repairs the center;
+CP repairs uncertainty.
 
 ---
 
@@ -469,8 +474,8 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
 | `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
-| `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
-| `3_analysis/summarize_conformal_results.py` | paper-facing CP tables and coverage/width figure |
+| `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
+| `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, stratified coverage table, and coverage/width figure |
 | `notebooks/run_pipeline_colab.ipynb` | Phase A Colab runner |
 | `data/intermediate/*.csv` / `*.json` / `*.txt` | All audit, feature, VIF, shift outputs |
 | `outputs/results_v2*` | All experiment results, JSON + summary CSV per ablation |
