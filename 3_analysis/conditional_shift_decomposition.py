@@ -4,11 +4,14 @@ Conditional-shift decomposition for the MATR <-> HUST study.
 This script adds two reviewer-facing diagnostics to the existing concept-shift
 analysis:
 
-  1. Per-feature slope/intercept comparison:
-       Within each dataset, z-score every feature and fit
-           log(cycle_life) = intercept + slope * z_feature
-       Compare HUST - MATR intercept and slope differences with bootstrap
-       confidence intervals and Benjamini-Hochberg FDR correction.
+  1. Per-feature slope comparison:
+       Within each dataset, z-score every feature, center log(cycle_life), and
+       fit
+           centered_log_life = intercept + slope * z_feature
+       Compare HUST - MATR slope differences with bootstrap confidence
+       intervals and Benjamini-Hochberg FDR correction. The universal
+       HUST-MATR log-life offset is reported separately so it is not mistaken
+       for a feature-specific intercept shift.
 
   2. Alpha/beta source-prediction calibration:
        For every source -> target direction, fit the source model, predict the
@@ -25,8 +28,10 @@ Inputs:
 Outputs:
     data/intermediate/conditional_shift_feature_slopes.csv
     data/intermediate/conditional_shift_alpha_beta.csv
+    data/intermediate/conditional_shift_alpha_beta_predictions.csv
     data/intermediate/conditional_shift_summary.json
     data/intermediate/conditional_shift_report.txt
+    outputs/results_v2_conditional_shift/conditional_shift_alpha_beta_scatter_seed42.png
 
 Usage:
     python 3_analysis/conditional_shift_decomposition.py
@@ -44,6 +49,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.linear_model import HuberRegressor, TheilSenRegressor
 
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
@@ -66,6 +72,7 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 FEATURES_PATH = PROJECT_ROOT / "data" / "intermediate" / "features_sop12_combined.csv"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_conditional_shift"
 
 ALL_MODELS = [
     "elastic_net",
@@ -117,12 +124,18 @@ def bootstrap_p_value(samples: np.ndarray) -> float:
     return float(min(1.0, max(p, 1.0 / (len(samples) + 1))))
 
 
-def fit_univariate_log_slope(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
-    x = np.asarray(x, dtype=float)
+def center_log_life(y: np.ndarray) -> tuple[np.ndarray, float]:
     y_log = np.log(np.asarray(y, dtype=float))
+    mean_log = float(np.mean(y_log)) if len(y_log) else float("nan")
+    return y_log - mean_log, mean_log
+
+
+def fit_univariate_centered_log_slope(x: np.ndarray, y_centered_log: np.ndarray) -> tuple[float, float]:
+    x = np.asarray(x, dtype=float)
+    y_centered_log = np.asarray(y_centered_log, dtype=float)
     if len(x) == 0 or np.std(x) < 1e-12:
-        return float(np.mean(y_log)) if len(y_log) else float("nan"), 0.0
-    slope, intercept = np.polyfit(x, y_log, 1)
+        return float(np.mean(y_centered_log)) if len(y_centered_log) else float("nan"), 0.0
+    slope, intercept = np.polyfit(x, y_centered_log, 1)
     return float(intercept), float(slope)
 
 
@@ -150,25 +163,26 @@ def feature_slope_table(
     for feature in feature_cols:
         x_m = within_dataset_zscore(matr[feature].to_numpy(dtype=float))
         y_m = matr["cycle_life"].to_numpy(dtype=float)
+        y_m_centered, mean_log_m = center_log_life(y_m)
         x_h = within_dataset_zscore(hust[feature].to_numpy(dtype=float))
         y_h = hust["cycle_life"].to_numpy(dtype=float)
+        y_h_centered, mean_log_h = center_log_life(y_h)
 
-        intercept_m, slope_m = fit_univariate_log_slope(x_m, y_m)
-        intercept_h, slope_h = fit_univariate_log_slope(x_h, y_h)
+        intercept_m, slope_m = fit_univariate_centered_log_slope(x_m, y_m_centered)
+        intercept_h, slope_h = fit_univariate_centered_log_slope(x_h, y_h_centered)
 
-        boot_delta_intercept = []
         boot_delta_slope = []
         m_idx = np.arange(len(y_m))
         h_idx = np.arange(len(y_h))
         for _ in range(n_boot):
             bm = rng.choice(m_idx, size=len(m_idx), replace=True)
             bh = rng.choice(h_idx, size=len(h_idx), replace=True)
-            bi_m, bs_m = fit_univariate_log_slope(x_m[bm], y_m[bm])
-            bi_h, bs_h = fit_univariate_log_slope(x_h[bh], y_h[bh])
-            boot_delta_intercept.append(bi_h - bi_m)
+            ybm_centered, _ = center_log_life(y_m[bm])
+            ybh_centered, _ = center_log_life(y_h[bh])
+            _, bs_m = fit_univariate_centered_log_slope(x_m[bm], ybm_centered)
+            _, bs_h = fit_univariate_centered_log_slope(x_h[bh], ybh_centered)
             boot_delta_slope.append(bs_h - bs_m)
 
-        bdi = np.asarray(boot_delta_intercept, dtype=float)
         bds = np.asarray(boot_delta_slope, dtype=float)
         rows.append(
             {
@@ -176,12 +190,12 @@ def feature_slope_table(
                 "n_cycles": int(n_cycles),
                 "n_matr": int(len(y_m)),
                 "n_hust": int(len(y_h)),
-                "intercept_matr": intercept_m,
-                "intercept_hust": intercept_h,
-                "delta_intercept_hust_minus_matr": intercept_h - intercept_m,
-                "delta_intercept_ci95_low": float(np.percentile(bdi, 2.5)),
-                "delta_intercept_ci95_high": float(np.percentile(bdi, 97.5)),
-                "delta_intercept_boot_p": bootstrap_p_value(bdi),
+                "mean_log_life_matr": mean_log_m,
+                "mean_log_life_hust": mean_log_h,
+                "universal_log_life_offset_hust_minus_matr": mean_log_h - mean_log_m,
+                "centered_intercept_matr": intercept_m,
+                "centered_intercept_hust": intercept_h,
+                "delta_centered_intercept_hust_minus_matr": intercept_h - intercept_m,
                 "slope_matr": slope_m,
                 "slope_hust": slope_h,
                 "delta_slope_hust_minus_matr": slope_h - slope_m,
@@ -192,30 +206,16 @@ def feature_slope_table(
         )
 
     out = pd.DataFrame(rows)
-    out["delta_intercept_fdr_bh"] = bh_fdr(out["delta_intercept_boot_p"].to_numpy(dtype=float))
     out["delta_slope_fdr_bh"] = bh_fdr(out["delta_slope_boot_p"].to_numpy(dtype=float))
 
-    intercept_sig = (
-        out["delta_intercept_fdr_bh"].lt(0.05)
-        & ((out["delta_intercept_ci95_low"] > 0.0) | (out["delta_intercept_ci95_high"] < 0.0))
-    )
     slope_sig = (
         out["delta_slope_fdr_bh"].lt(0.05)
         & ((out["delta_slope_ci95_low"] > 0.0) | (out["delta_slope_ci95_high"] < 0.0))
     )
-    out["intercept_shift_significant"] = intercept_sig
     out["slope_shift_significant"] = slope_sig
-    out["shift_class"] = np.select(
-        [
-            intercept_sig & slope_sig,
-            intercept_sig & ~slope_sig,
-            ~intercept_sig & slope_sig,
-        ],
-        ["both_intercept_and_slope", "intercept_only", "slope_only"],
-        default="stable_or_uncertain",
-    )
+    out["shift_class"] = np.where(slope_sig, "slope_shifted", "slope_stable")
     return out.sort_values(
-        ["shift_class", "delta_slope_fdr_bh", "delta_intercept_fdr_bh", "feature"],
+        ["shift_class", "delta_slope_fdr_bh", "feature"],
         ignore_index=True,
     )
 
@@ -250,7 +250,7 @@ def fit_source_predict_target(
     seed: int,
     n_cycles: int,
     log_target: bool,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     from sklearn.preprocessing import StandardScaler
 
     src = df[(df["dataset"] == source) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
@@ -263,6 +263,7 @@ def fit_source_predict_target(
     y_train_fit = np.log(y_train) if log_target else y_train
     x_target = tgt[feature_cols].to_numpy(dtype=float)
     y_target = tgt["cycle_life"].to_numpy(dtype=float)
+    target_cell_ids = tgt["cell_id"].to_numpy()
 
     scaler = StandardScaler()
     x_train_s = scaler.fit_transform(x_train)
@@ -273,7 +274,7 @@ def fit_source_predict_target(
     result = FITTERS[model_name](x_train_s, y_train_fit, seed=seed)
     model = result[0] if isinstance(result, tuple) else result
     y_pred = to_cycles(safe_pred(model, x_target_s), log_target=log_target)
-    return y_target, y_pred
+    return target_cell_ids, y_target, y_pred
 
 
 def fit_alpha_beta(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float]:
@@ -281,6 +282,38 @@ def fit_alpha_beta(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float
         return 1.0, float(np.mean(y_true - y_pred))
     alpha, beta = np.polyfit(y_pred, y_true, 1)
     return float(alpha), float(beta)
+
+
+def fit_robust_alpha_beta(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    *,
+    method: str,
+    seed: int,
+) -> tuple[float, float, float]:
+    if len(y_true) < 2 or np.std(y_pred) < 1e-12:
+        beta = float(np.mean(y_true - y_pred))
+        pred = y_pred + beta
+        return 1.0, beta, compute_metrics(y_true, pred)["R2"]
+
+    x = np.asarray(y_pred, dtype=float).reshape(-1, 1)
+    y = np.asarray(y_true, dtype=float)
+    try:
+        if method == "theil_sen":
+            reg = TheilSenRegressor(random_state=seed, max_subpopulation=10000)
+        elif method == "huber":
+            reg = HuberRegressor(max_iter=1000)
+        else:
+            raise ValueError(f"unknown robust method: {method}")
+        reg.fit(x, y)
+        alpha = float(reg.coef_[0])
+        beta = float(reg.intercept_)
+        pred = np.clip(alpha * y_pred + beta, 1.0, 1e9)
+        return alpha, beta, compute_metrics(y_true, pred)["R2"]
+    except Exception:
+        alpha, beta = fit_alpha_beta(y_true, y_pred)
+        pred = np.clip(alpha * y_pred + beta, 1.0, 1e9)
+        return alpha, beta, compute_metrics(y_true, pred)["R2"]
 
 
 def alpha_beta_table(
@@ -293,13 +326,14 @@ def alpha_beta_table(
     n_boot: int,
     seed: int,
     log_target: bool,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     rng = np.random.default_rng(seed + 991)
     rows = []
+    pred_rows = []
     for source, target in [("matr", "hust"), ("hust", "matr")]:
         for model_name in models:
             for split_seed in seeds:
-                y_true, y_pred = fit_source_predict_target(
+                cell_ids, y_true, y_pred = fit_source_predict_target(
                     df,
                     feature_cols,
                     source=source,
@@ -310,10 +344,31 @@ def alpha_beta_table(
                     log_target=log_target,
                 )
                 alpha, beta = fit_alpha_beta(y_true, y_pred)
+                ts_alpha, ts_beta, ts_r2 = fit_robust_alpha_beta(
+                    y_true, y_pred, method="theil_sen", seed=split_seed
+                )
+                huber_alpha, huber_beta, huber_r2 = fit_robust_alpha_beta(
+                    y_true, y_pred, method="huber", seed=split_seed
+                )
                 constant_bias = float(np.mean(y_true - y_pred))
                 raw = compute_metrics(y_true, y_pred)
                 constant = compute_metrics(y_true, y_pred + constant_bias)
                 linear = compute_metrics(y_true, np.clip(alpha * y_pred + beta, 1.0, 1e9))
+
+                for cell_id, actual, pred in zip(cell_ids, y_true, y_pred, strict=False):
+                    pred_rows.append(
+                        {
+                            "source": source,
+                            "target": target,
+                            "direction": f"{source.upper()} -> {target.upper()}",
+                            "model": model_name,
+                            "seed": int(split_seed),
+                            "cell_id": cell_id,
+                            "cycle_life": float(actual),
+                            "source_prediction": float(pred),
+                            "residual": float(actual - pred),
+                        }
+                    )
 
                 boot_alpha = []
                 boot_beta = []
@@ -350,6 +405,12 @@ def alpha_beta_table(
                         "beta": beta,
                         "beta_ci95_low": float(np.percentile(bb, 2.5)),
                         "beta_ci95_high": float(np.percentile(bb, 97.5)),
+                        "theil_sen_alpha": ts_alpha,
+                        "theil_sen_beta": ts_beta,
+                        "theil_sen_R2": ts_r2,
+                        "huber_alpha": huber_alpha,
+                        "huber_beta": huber_beta,
+                        "huber_R2": huber_r2,
                         "constant_bias": constant_bias,
                         "constant_share_of_ss": float(np.mean(bs)),
                         "constant_share_ci95_low": float(np.percentile(bs, 2.5)),
@@ -364,22 +425,80 @@ def alpha_beta_table(
                 )
     out = pd.DataFrame(rows)
     out["alpha_minus_1_fdr_bh"] = bh_fdr(out["alpha_minus_1_boot_p"].to_numpy(dtype=float))
-    return out
+    return out, pd.DataFrame(pred_rows)
+
+
+def write_alpha_beta_scatter(pred_rows: pd.DataFrame, alpha_rows: pd.DataFrame, output_dir: Path, *, seed: int) -> Path | None:
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    sub = pred_rows[pred_rows["seed"] == seed].copy()
+    if sub.empty:
+        return None
+
+    directions = ["MATR -> HUST", "HUST -> MATR"]
+    models = sorted(sub["model"].unique())
+    fig, axes = plt.subplots(len(directions), len(models), figsize=(5.2 * len(models), 4.4 * len(directions)), squeeze=False)
+    for i, direction in enumerate(directions):
+        for j, model in enumerate(models):
+            ax = axes[i][j]
+            panel = sub[(sub["direction"] == direction) & (sub["model"] == model)]
+            if panel.empty:
+                ax.axis("off")
+                continue
+            ax.scatter(panel["source_prediction"], panel["cycle_life"], s=28, alpha=0.75, edgecolor="none")
+            x_min = float(panel["source_prediction"].min())
+            x_max = float(panel["source_prediction"].max())
+            y_min = float(panel["cycle_life"].min())
+            y_max = float(panel["cycle_life"].max())
+            lo = min(x_min, y_min)
+            hi = max(x_max, y_max)
+            xs = np.linspace(x_min, x_max, 100)
+            fit_row = alpha_rows[
+                (alpha_rows["direction"] == direction) & (alpha_rows["model"] == model) & (alpha_rows["seed"] == seed)
+            ]
+            if not fit_row.empty:
+                row = fit_row.iloc[0]
+                ax.plot(xs, row["alpha"] * xs + row["beta"], color="#d62728", linewidth=2.0, label=f"OLS alpha={row['alpha']:.2f}")
+                ax.plot(
+                    xs,
+                    row["theil_sen_alpha"] * xs + row["theil_sen_beta"],
+                    color="#2ca02c",
+                    linewidth=1.7,
+                    linestyle="--",
+                    label=f"Theil-Sen alpha={row['theil_sen_alpha']:.2f}",
+                )
+            ax.plot([lo, hi], [lo, hi], color="#666666", linewidth=1.0, linestyle=":", label="identity")
+            ax.set_title(f"{direction}, {model}")
+            ax.set_xlabel("Source-model prediction (cycles)")
+            ax.set_ylabel("Target cycle life")
+            ax.grid(alpha=0.25)
+            ax.legend(fontsize=8, loc="best")
+    fig.tight_layout()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"conditional_shift_alpha_beta_scatter_seed{seed}.png"
+    fig.savefig(out_path, dpi=180)
+    plt.close(fig)
+    return out_path
 
 
 def write_report(feature_rows: pd.DataFrame, alpha_rows: pd.DataFrame, path: Path) -> None:
     class_counts = feature_rows["shift_class"].value_counts().to_dict()
     n_features = len(feature_rows)
-    intercept_only = int(class_counts.get("intercept_only", 0))
-    slope_related = int(class_counts.get("slope_only", 0)) + int(class_counts.get("both_intercept_and_slope", 0))
+    slope_shifted = int(class_counts.get("slope_shifted", 0))
+    slope_stable = int(class_counts.get("slope_stable", 0))
+    universal_offset = float(feature_rows["universal_log_life_offset_hust_minus_matr"].iloc[0])
 
     lines = [
         "Conditional Shift Decomposition",
         "================================",
         "",
         f"Features analyzed: {n_features}",
-        f"Intercept-only features: {intercept_only} ({intercept_only / max(n_features, 1):.1%})",
-        f"Slope-shift features: {slope_related} ({slope_related / max(n_features, 1):.1%})",
+        f"Universal HUST-MATR log-life offset: {universal_offset:.3f} (life ratio {np.exp(universal_offset):.2f}x)",
+        f"Slope-stable features after log-life centering: {slope_stable} ({slope_stable / max(n_features, 1):.1%})",
+        f"Slope-shifted features after log-life centering: {slope_shifted} ({slope_shifted / max(n_features, 1):.1%})",
         "",
         "Feature shift classes:",
     ]
@@ -395,7 +514,9 @@ def write_report(feature_rows: pd.DataFrame, alpha_rows: pd.DataFrame, path: Pat
             f"[{sub['alpha_ci95_low'].mean():.3f}, {sub['alpha_ci95_high'].mean():.3f}], "
             f"constant_share={100 * sub['constant_share_of_ss'].mean():.1f}%, "
             f"constant_R2={sub['constant_R2'].mean():+.3f}, "
-            f"linear_R2={sub['linear_R2'].mean():+.3f}"
+            f"linear_R2={sub['linear_R2'].mean():+.3f}, "
+            f"Theil-Sen alpha={sub['theil_sen_alpha'].mean():+.3f}, "
+            f"Huber alpha={sub['huber_alpha'].mean():+.3f}"
         )
 
     path.write_text("\n".join(lines) + "\n")
@@ -408,6 +529,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     parser.add_argument("--n-bootstrap", type=int, default=1000)
     parser.add_argument("--features-from", type=Path, default=None)
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--scatter-seed", type=int, default=42)
     parser.add_argument("--log-target", action="store_true", default=True)
     parser.add_argument("--no-log-target", action="store_false", dest="log_target")
     parser.add_argument("--random-seed", type=int, default=20260507)
@@ -431,7 +554,7 @@ def main() -> int:
         f"seeds={args.seeds}, boot={args.n_bootstrap}"
     )
 
-    print("\n========== per-feature slope/intercept decomposition ==========")
+    print("\n========== per-feature centered-log slope decomposition ==========")
     feature_rows = feature_slope_table(
         df,
         feature_cols,
@@ -445,7 +568,7 @@ def main() -> int:
     print(feature_rows["shift_class"].value_counts().to_string())
 
     print("\n========== alpha/beta source-prediction calibration ==========")
-    alpha_rows = alpha_beta_table(
+    alpha_rows, prediction_rows = alpha_beta_table(
         df,
         feature_cols,
         n_cycles=args.n_cycles,
@@ -458,19 +581,42 @@ def main() -> int:
     out_alpha = INTERMEDIATE_DIR / "conditional_shift_alpha_beta.csv"
     alpha_rows.to_csv(out_alpha, index=False)
     print(f"[save] {out_alpha}")
-    print(alpha_rows.groupby(["direction", "model"])[["alpha", "constant_share_of_ss", "constant_R2", "linear_R2"]].mean())
+    out_predictions = INTERMEDIATE_DIR / "conditional_shift_alpha_beta_predictions.csv"
+    prediction_rows.to_csv(out_predictions, index=False)
+    print(f"[save] {out_predictions}")
+    scatter_path = write_alpha_beta_scatter(prediction_rows, alpha_rows, args.output_dir, seed=args.scatter_seed)
+    if scatter_path is not None:
+        print(f"[save] {scatter_path}")
+    print(
+        alpha_rows.groupby(["direction", "model"])[
+            ["alpha", "theil_sen_alpha", "huber_alpha", "constant_share_of_ss", "constant_R2", "linear_R2"]
+        ].mean()
+    )
 
+    universal_offset = float(feature_rows["universal_log_life_offset_hust_minus_matr"].iloc[0])
     payload = {
-        "protocol": "conditional_shift_decomposition_v1",
+        "protocol": "conditional_shift_decomposition_v2_centered_log_life",
         "n_cycles": int(args.n_cycles),
         "feature_count": int(len(feature_cols)),
         "models": args.models,
         "seeds": args.seeds,
         "n_bootstrap": int(args.n_bootstrap),
+        "universal_log_life_offset_hust_minus_matr": universal_offset,
+        "universal_life_ratio_hust_over_matr": float(np.exp(universal_offset)),
         "shift_class_counts": feature_rows["shift_class"].value_counts().to_dict(),
         "alpha_beta_summary": (
             alpha_rows.groupby(["direction", "model"])[
-                ["alpha", "constant_share_of_ss", "raw_R2", "constant_R2", "linear_R2"]
+                [
+                    "alpha",
+                    "theil_sen_alpha",
+                    "huber_alpha",
+                    "constant_share_of_ss",
+                    "raw_R2",
+                    "constant_R2",
+                    "linear_R2",
+                    "theil_sen_R2",
+                    "huber_R2",
+                ]
             ]
             .mean()
             .reset_index()

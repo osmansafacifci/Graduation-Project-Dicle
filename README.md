@@ -37,9 +37,10 @@ bootstrap intervals; seed-to-seed standard deviations remain in
 
 Naïve transfer fails on every (model, feature-set, direction) combination,
 even after capacity normalization aligns 71% of the feature-space shift
-(Mahalanobis 13 → 3.75). The failure is concept shift (cycle-life
-distributions differ), not covariate shift; a 2-parameter mean-and-slope
-correction fit on a small target labeled set recovers the bulk of the loss.
+(Mahalanobis 13 → 3.75). The failure is not explained by covariate shift
+alone; conditional/concept shift in the lifetime map remains, and a
+2-parameter mean-and-slope correction fit on a small target labeled set
+recovers the bulk of the loss.
 
 ---
 
@@ -64,7 +65,9 @@ correction fit on a small target labeled set recovers the bulk of the loss.
 │   ├── shap_feature_importance.py
 │   ├── survival_censoring.py
 │   ├── concept_shift_diagnostics.py
+│   ├── conditional_shift_decomposition.py
 │   ├── target_rescaling.py
+│   ├── importance_weighted_conformal.py
 │   ├── conformal_prediction.py
 │   └── summarize_conformal_results.py
 ├── notebooks/
@@ -166,9 +169,9 @@ python 3_analysis/summarize_conformal_results.py
 | **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability classes | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `outputs/results_v2_shap/...` |
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
-| **§6++** | Conditional-shift decomposition: per-feature slope/intercept tests and source-prediction alpha/beta calibration | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*` |
+| **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
-| **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, and clipping sweep | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
+| **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
 
 ---
@@ -307,7 +310,8 @@ without concept alignment.
 (a) **KS two-sample test on cycle_life marginals**: KS = 0.827, p = 3.6e-34.
 - MATR: n=129, mean=778, std=361, range [133, 2066]
 - HUST: n=77, mean=1490, std=274, range [829, 2024]
-- HUST cycles are e^0.65 ≈ 1.92× longer-lived on average.
+- HUST mean cycle life is ≈1.92× longer; the mean-log offset used in the
+  centered conditional-shift table is 0.735 (≈2.09× on the log scale).
 
 (b) **Constant-bias decomposition** (CatBoost, N=100):
 
@@ -316,24 +320,32 @@ without concept alignment.
 | MATR → HUST | −11.16 | **−0.03** | **91.5%** |
 | HUST → MATR | −2.73 | **+0.04** | **74.2%** |
 
-Most of the cross-dataset failure is *just a constant offset*. The right
-constant brings R² to nearly zero from R² = −11.
+Much of the cross-dataset failure is a directional offset, but it is not the
+whole story. The right constant brings R² close to zero from R² = −11 in the
+MATR → HUST CatBoost diagnostic, while finite-sample target correction still
+shows directional asymmetry.
 
 ### Conditional Shift Decomposition
 
-Per-feature tests fit `log(cycle_life) ~ z_j` after z-scoring each feature
-within each dataset, then compare HUST-MATR slope and intercept differences
-with bootstrap CIs and Benjamini-Hochberg correction. Result: 18/34 features
-are intercept-only, while 16/34 show both intercept and slope changes. This
-supports a more precise wording: **the dominant transfer failure is a large
-conditional offset, but the shift is not purely additive**. Fragile
-slope-shift features include `Qdis_cycle10`, `poly2_a`, `accel_mean`,
-`slope_last_quarter`, and `mad_Qdis`.
+Per-feature tests z-score each feature within dataset, center
+`log(cycle_life)` within dataset, then compare HUST-MATR slope differences
+with bootstrap CIs and Benjamini-Hochberg correction. The universal HUST-MATR
+log-life offset is reported separately: 0.735, equivalent to a 2.09× life
+ratio. After removing that y-marginal artefact from the feature labels, 18/34
+features are slope-stable and 16/34 are slope-shifted. This supports the more
+precise wording: **the transfer failure contains a large conditional offset
+plus genuine feature-level relationship changes**. Fragile slope-shift
+features include `Qdis_cycle10`, `poly2_a`, `accel_mean`,
+`slope_last_quarter`, `mad_Qdis`, `linearity_r2`, and `cycle_to_99pct`.
 
 Alpha/beta calibration of `y_target = alpha * y_source_pred + beta` supports
-that nuance. HUST -> MATR has `alpha` CIs containing 1 for both CatBoost and
-Random Forest, while MATR -> HUST has unstable/negative `alpha`; nevertheless
-the constant component still explains 72-90% of cross-direction squared error.
+that nuance. HUST -> MATR has OLS `alpha` CIs containing 1 for both CatBoost
+and Random Forest, while MATR -> HUST has negative `alpha`; Theil-Sen and
+Huber robust fits keep the MATR -> HUST sign negative, so the asymmetry is not
+just an OLS artefact. The constant component explains 72-90% of cross-direction
+squared error, but finite-sample constant R² is negative in the MATR -> HUST
+direction, so the manuscript should avoid claiming a uniformly sufficient
+constant adapter.
 
 ### Importance-Weighted CP Falsifier
 
@@ -345,6 +357,12 @@ recovers nominal coverage only by returning infinite intervals almost
 everywhere: at 90%, finite-interval fraction is <=0.9% for HUST -> MATR and
 0% for MATR -> HUST across the clipping sweep. This is the covariate-shift
 falsifier: feature weighting alone does not yield useful target intervals.
+The paper-facing comparison now adds the missing third row in the same table
+and figure: target-adapted residual-mean CP at k=20 gives 90% coverage of
+0.905-0.909 with finite intervals in HUST -> MATR and 0.907-0.908 in
+MATR -> HUST. See
+`outputs/results_v2_importance_weighted_cp/paper_iwcp_comparison.csv` and
+`paper_iwcp_comparison_90.png`.
 
 ### Target-mean rescaling fix
 

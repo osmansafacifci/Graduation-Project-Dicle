@@ -23,6 +23,8 @@ Outputs:
     outputs/results_v2_importance_weighted_cp/results_detailed.csv
     outputs/results_v2_importance_weighted_cp/results_summary.csv
     outputs/results_v2_importance_weighted_cp/results_importance_weighted_cp.json
+    outputs/results_v2_importance_weighted_cp/paper_iwcp_comparison.csv
+    outputs/results_v2_importance_weighted_cp/paper_iwcp_comparison_90.png
 
 Usage:
     python 3_analysis/importance_weighted_conformal.py
@@ -69,6 +71,7 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 FEATURES_PATH = PROJECT_ROOT / "data" / "intermediate" / "features_sop12_combined.csv"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_importance_weighted_cp"
+DEFAULT_CONFORMAL_DIR = PROJECT_ROOT / "outputs" / "results_v2_conformal"
 DEFAULT_CONFIDENCE_LEVELS = [0.90, 0.95]
 DEFAULT_CLIPS = ["5", "10", "20", "inf"]
 
@@ -382,6 +385,167 @@ def summarize(detailed: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _as_float(value, default: float = float("nan")) -> float:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return default
+    return out
+
+
+def build_paper_comparison(
+    iw_summary: pd.DataFrame,
+    *,
+    conformal_dir: Path,
+    output_dir: Path,
+    weighted_clip: str = "10",
+    k_target: int = 20,
+) -> pd.DataFrame:
+    rows: list[dict] = []
+
+    def append_iw_rows(mask: pd.Series, protocol: str, protocol_order: int) -> None:
+        for _, row in iw_summary[mask].iterrows():
+            rows.append(
+                {
+                    "protocol_order": protocol_order,
+                    "protocol": protocol,
+                    "source": row["source"],
+                    "target": row["target"],
+                    "direction": f"{str(row['source']).upper()} -> {str(row['target']).upper()}",
+                    "model": row["model"],
+                    "n_cycles": int(row["n_cycles"]),
+                    "confidence_level": _as_float(row["confidence_level"]),
+                    "coverage_mean": _as_float(row.get("coverage_mean")),
+                    "coverage_std": _as_float(row.get("coverage_std")),
+                    "median_width_mean": _as_float(row.get("median_width_mean")),
+                    "median_finite_width_mean": _as_float(row.get("median_finite_width_mean")),
+                    "finite_interval_fraction_mean": _as_float(row.get("finite_interval_fraction_mean")),
+                    "discriminator_auc_mean": _as_float(row.get("discriminator_auc_mean")),
+                    "cal_weight_ess_fraction_mean": _as_float(row.get("cal_weight_ess_fraction_mean")),
+                    "raw_cal_weight_ess_fraction_mean": _as_float(row.get("raw_cal_weight_ess_fraction_mean")),
+                    "target_mass_fraction_median_mean": _as_float(row.get("target_mass_fraction_median_mean")),
+                    "source_file": "importance_weighted_conformal",
+                }
+            )
+
+    append_iw_rows(iw_summary["scenario"].eq("unweighted_source_cp"), "Unweighted source CP", 1)
+    append_iw_rows(
+        iw_summary["scenario"].eq("importance_weighted_source_cp") & iw_summary["clip"].astype(str).eq(str(weighted_clip)),
+        f"Importance-weighted source CP (clip={weighted_clip})",
+        2,
+    )
+
+    conformal_summary_path = conformal_dir / "results_summary.csv"
+    if conformal_summary_path.exists():
+        cp = pd.read_csv(conformal_summary_path)
+        target = cp[
+            cp["scenario"].eq("cross_target_adapted_cp")
+            & cp["adapter_type"].eq("residual_mean")
+            & cp["k_adapter"].fillna(-1).astype(float).eq(float(k_target))
+            & cp["k_target"].fillna(-1).astype(float).eq(float(k_target))
+        ].copy()
+        for _, row in target.iterrows():
+            rows.append(
+                {
+                    "protocol_order": 3,
+                    "protocol": f"Target-adapted CP, residual mean (k={k_target})",
+                    "source": row["source"],
+                    "target": row["target"],
+                    "direction": f"{str(row['source']).upper()} -> {str(row['target']).upper()}",
+                    "model": row["model"],
+                    "n_cycles": int(row["n_cycles"]),
+                    "confidence_level": _as_float(row["confidence_level"]),
+                    "coverage_mean": _as_float(row.get("coverage_mean")),
+                    "coverage_std": _as_float(row.get("coverage_std")),
+                    "median_width_mean": _as_float(row.get("median_width_mean")),
+                    "median_finite_width_mean": _as_float(row.get("median_width_mean")),
+                    "finite_interval_fraction_mean": _as_float(row.get("finite_q_mean")),
+                    "discriminator_auc_mean": float("nan"),
+                    "cal_weight_ess_fraction_mean": float("nan"),
+                    "raw_cal_weight_ess_fraction_mean": float("nan"),
+                    "target_mass_fraction_median_mean": float("nan"),
+                    "source_file": "conformal_prediction",
+                }
+            )
+
+    out = pd.DataFrame(rows)
+    if not out.empty:
+        out = out.sort_values(
+            ["confidence_level", "direction", "model", "protocol_order"],
+            ignore_index=True,
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out.to_csv(output_dir / "paper_iwcp_comparison.csv", index=False)
+    return out
+
+
+def write_paper_comparison_plot(comparison: pd.DataFrame, output_dir: Path, *, confidence_level: float = 0.90) -> Path | None:
+    if comparison.empty:
+        return None
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    plot_df = comparison[np.isclose(comparison["confidence_level"].astype(float), confidence_level)].copy()
+    if plot_df.empty:
+        return None
+
+    panels = []
+    for (direction, model), sub in plot_df.groupby(["direction", "model"], sort=True):
+        panels.append((direction, model, sub.sort_values("protocol_order")))
+    if not panels:
+        return None
+
+    fig, axes = plt.subplots(len(panels), 3, figsize=(13.5, 3.4 * len(panels)), squeeze=False)
+    colors = ["#4c78a8", "#f58518", "#54a24b"]
+    label_map = {
+        "Unweighted source CP": "Source\nCP",
+        "Importance-weighted source CP (clip=10)": "Weighted\nsource CP\nclip=10",
+        "Target-adapted CP, residual mean (k=20)": "Target-adapted\nCP\nk=20",
+    }
+    for row_idx, (direction, model, sub) in enumerate(panels):
+        labels = [label_map.get(protocol, str(protocol).replace(", ", "\n")) for protocol in sub["protocol"]]
+        x = np.arange(len(sub))
+
+        ax = axes[row_idx][0]
+        ax.bar(x, sub["coverage_mean"], color=colors[: len(sub)])
+        ax.axhline(confidence_level, color="#333333", linestyle="--", linewidth=1.0)
+        ax.set_ylim(0, 1.05)
+        ax.set_ylabel("Coverage")
+        ax.set_title(f"{direction}, {model}")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=0, fontsize=8)
+
+        ax = axes[row_idx][1]
+        ax.bar(x, sub["finite_interval_fraction_mean"], color=colors[: len(sub)])
+        ax.set_ylim(0, 1.05)
+        ax.set_ylabel("Finite interval fraction")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=0, fontsize=8)
+
+        ax = axes[row_idx][2]
+        widths = sub["median_width_mean"].astype(float).to_numpy()
+        finite_widths = widths[np.isfinite(widths)]
+        cap = float(np.nanmax(finite_widths)) * 1.15 if len(finite_widths) else 1.0
+        heights = np.where(np.isfinite(widths), widths, cap)
+        ax.bar(x, heights, color=colors[: len(sub)])
+        for xi, raw, height in zip(x, widths, heights, strict=False):
+            if not np.isfinite(raw):
+                ax.text(xi, height, "inf", ha="center", va="bottom", fontsize=9)
+        ax.set_ylabel("Median width (cycles)")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=0, fontsize=8)
+        ax.set_ylim(0, max(1.0, float(np.nanmax(heights)) * 1.18))
+
+    fig.tight_layout()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"paper_iwcp_comparison_{int(round(confidence_level * 100))}.png"
+    fig.savefig(out_path, dpi=180)
+    plt.close(fig)
+    return out_path
+
+
 def json_clean(value):
     if isinstance(value, dict):
         return {k: json_clean(v) for k, v in value.items()}
@@ -405,6 +569,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--clip-values", nargs="+", default=DEFAULT_CLIPS)
     parser.add_argument("--features-from", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--conformal-dir", type=Path, default=DEFAULT_CONFORMAL_DIR)
+    parser.add_argument("--comparison-clip", default="10")
+    parser.add_argument("--comparison-k-target", type=int, default=20)
     parser.add_argument("--log-target", action="store_true", default=True)
     parser.add_argument("--no-log-target", action="store_false", dest="log_target")
     return parser.parse_args()
@@ -509,6 +676,14 @@ def main() -> int:
 
     detailed.to_csv(out_detailed, index=False)
     summary.to_csv(out_summary, index=False)
+    comparison = build_paper_comparison(
+        summary,
+        conformal_dir=args.conformal_dir,
+        output_dir=args.output_dir,
+        weighted_clip=str(args.comparison_clip),
+        k_target=args.comparison_k_target,
+    )
+    comparison_plot = write_paper_comparison_plot(comparison, args.output_dir, confidence_level=0.90)
     payload = {
         "protocol": "importance_weighted_conformal_v1",
         "features": feature_cols,
@@ -517,6 +692,7 @@ def main() -> int:
         "seeds": args.seeds,
         "confidence_levels": args.confidence_levels,
         "clip_values": [clip_label(c) for c in clips],
+        "paper_comparison_rows": comparison.to_dict(orient="records"),
         "summary": summary.to_dict(orient="records"),
     }
     out_json.write_text(json.dumps(json_clean(payload), indent=2))
@@ -524,6 +700,9 @@ def main() -> int:
     print(f"[save] {out_detailed}")
     print(f"[save] {out_summary}")
     print(f"[save] {out_json}")
+    print(f"[save] {args.output_dir / 'paper_iwcp_comparison.csv'}")
+    if comparison_plot is not None:
+        print(f"[save] {comparison_plot}")
     print("\n=== IMPORTANCE-WEIGHTED CP SUMMARY ===")
     cols = [
         "scenario",

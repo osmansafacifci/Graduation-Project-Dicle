@@ -1,0 +1,25 @@
+protocol_order,protocol,source,target,direction,model,n_cycles,confidence_level,coverage_mean,coverage_std,median_width_mean,median_finite_width_mean,finite_interval_fraction_mean,discriminator_auc_mean,cal_weight_ess_fraction_mean,raw_cal_weight_ess_fraction_mean,target_mass_fraction_median_mean,source_file
+1,Unweighted source CP,hust,matr,HUST -> MATR,catboost,100,0.9,0.2697674418604651,0.1949115321839181,918.8285542477436,918.8285542477436,1.0,,1.0,1.0,0.0769230769230769,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),hust,matr,HUST -> MATR,catboost,100,0.9,0.993798449612403,0.006485736639799,inf,inf,0.0077519379844961,0.996113963555824,0.9999999999999998,0.5515881810626493,0.8928571428571429,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",hust,matr,HUST -> MATR,catboost,100,0.9,0.9051685393258428,0.0695629011668378,1302.279503440718,1302.279503440718,1.0,,,,,conformal_prediction
+1,Unweighted source CP,hust,matr,HUST -> MATR,random_forest,100,0.9,0.3054263565891473,0.1754577143663887,941.1080275030464,941.1080275030464,1.0,,1.0,1.0,0.0769230769230769,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),hust,matr,HUST -> MATR,random_forest,100,0.9,0.993798449612403,0.006485736639799,inf,inf,0.0077519379844961,0.996113963555824,0.9999999999999998,0.5515881810626493,0.8928571428571429,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",hust,matr,HUST -> MATR,random_forest,100,0.9,0.9092134831460674,0.0650019983846736,1281.4448703362752,1281.4448703362752,1.0,,,,,conformal_prediction
+1,Unweighted source CP,matr,hust,MATR -> HUST,catboost,100,0.9,0.1896103896103896,0.161059906471974,1118.6128428871518,1118.6128428871518,1.0,,1.0,1.0,0.0476190476190476,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),matr,hust,MATR -> HUST,catboost,100,0.9,1.0,0.0,inf,inf,0.0,0.9936575052854122,1.0000000000000002,0.5907319106672249,0.8333333333333334,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",matr,hust,MATR -> HUST,catboost,100,0.9,0.9075675675675676,0.0680902524163357,998.6609260345537,998.6609260345537,1.0,,,,,conformal_prediction
+1,Unweighted source CP,matr,hust,MATR -> HUST,random_forest,100,0.9,0.148051948051948,0.1213434662524475,954.6166257982516,954.6166257982516,1.0,,1.0,1.0,0.0476190476190476,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),matr,hust,MATR -> HUST,random_forest,100,0.9,1.0,0.0,inf,inf,0.0,0.9936575052854122,1.0000000000000002,0.5907319106672249,0.8333333333333334,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",matr,hust,MATR -> HUST,random_forest,100,0.9,0.9067567567567568,0.073929285464713,1057.187066740661,1057.187066740661,1.0,,,,,conformal_prediction
+1,Unweighted source CP,hust,matr,HUST -> MATR,catboost,100,0.95,1.0,0.0,inf,inf,0.0,,1.0,1.0,0.0769230769230769,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),hust,matr,HUST -> MATR,catboost,100,0.95,1.0,0.0,inf,inf,0.0,0.996113963555824,0.9999999999999998,0.5515881810626493,0.8928571428571429,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",hust,matr,HUST -> MATR,catboost,100,0.95,0.9561797752808988,0.0506405520414535,1779.143200192543,1779.143200192543,1.0,,,,,conformal_prediction
+1,Unweighted source CP,hust,matr,HUST -> MATR,random_forest,100,0.95,1.0,0.0,inf,inf,0.0,,1.0,1.0,0.0769230769230769,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),hust,matr,HUST -> MATR,random_forest,100,0.95,1.0,0.0,inf,inf,0.0,0.996113963555824,0.9999999999999998,0.5515881810626493,0.8928571428571429,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",hust,matr,HUST -> MATR,random_forest,100,0.95,0.9586516853932584,0.0498890923398751,1839.576499777717,1839.576499777717,1.0,,,,,conformal_prediction
+1,Unweighted source CP,matr,hust,MATR -> HUST,catboost,100,0.95,0.2805194805194805,0.1793900950631896,1334.5272772943613,1334.5272772943613,1.0,,1.0,1.0,0.0476190476190476,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),matr,hust,MATR -> HUST,catboost,100,0.95,1.0,0.0,inf,inf,0.0,0.9936575052854122,1.0000000000000002,0.5907319106672249,0.8333333333333334,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",matr,hust,MATR -> HUST,catboost,100,0.95,0.9537837837837838,0.0490887665795505,1167.4562105969662,1167.4562105969662,1.0,,,,,conformal_prediction
+1,Unweighted source CP,matr,hust,MATR -> HUST,random_forest,100,0.95,0.2701298701298701,0.1545945572982127,1295.0263792244054,1295.0263792244054,1.0,,1.0,1.0,0.0476190476190476,importance_weighted_conformal
+2,Importance-weighted source CP (clip=10),matr,hust,MATR -> HUST,random_forest,100,0.95,1.0,0.0,inf,inf,0.0,0.9936575052854122,1.0000000000000002,0.5907319106672249,0.8333333333333334,importance_weighted_conformal
+3,"Target-adapted CP, residual mean (k=20)",matr,hust,MATR -> HUST,random_forest,100,0.95,0.9462162162162164,0.0624747331444533,1252.730471947992,1252.730471947992,1.0,,,,,conformal_prediction

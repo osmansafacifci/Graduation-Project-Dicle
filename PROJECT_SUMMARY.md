@@ -69,8 +69,8 @@ the SOP12 capacity-only features.
 | §5.2 | Cross-dataset experiments (MATR ↔ HUST) | ✅ | Three feature-set ablations × two directions |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ✅ | Plus per-feature attribution + capnorm comparison |
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
-| **+** | Conditional-shift decomposition (slope/intercept + alpha/beta) | ✅ | Dominant offset plus feature-level slope changes |
-| **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep |
+| **+** | Conditional-shift decomposition (centered-log slopes + alpha/beta) | ✅ | Universal log-life offset plus 16/34 feature-level slope changes; robust alpha checks and scatter plot added |
+| **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
@@ -149,23 +149,26 @@ relationships remain stable across datasets.
 
 `3_analysis/conditional_shift_decomposition.py` formalizes the terminology:
 this is conditional/concept shift in `P(Y|X)` with a large additive component,
-not label shift. Each feature is z-scored within dataset and fit as
-`log(cycle_life) ~ z_feature`; HUST-MATR slope and intercept differences are
-bootstrapped with Benjamini-Hochberg correction.
+not label shift. Each feature is z-scored within dataset, `log(cycle_life)` is
+centered within dataset, and HUST-MATR slope differences are bootstrapped with
+Benjamini-Hochberg correction. The universal HUST-MATR log-life offset is
+reported separately: 0.735, equivalent to a 2.09× life ratio.
 
 | Class | Count | Interpretation |
 |---|---:|---|
-| Intercept-only | 18 / 34 | Consistent with an additive conditional offset |
-| Intercept + slope | 16 / 34 | Same feature has changed target relationship |
+| Slope-stable | 18 / 34 | Feature relationship is stable after removing the dataset-level log-life offset |
+| Slope-shifted | 16 / 34 | Same feature has changed target relationship |
 
 The slope-shift list includes `Qdis_cycle10`, `poly2_a`, `accel_mean`,
 `slope_last_quarter`, `mad_Qdis`, `linearity_r2`, and `cycle_to_99pct`.
 Alpha/beta calibration gives the same nuance: HUST → MATR has alpha CIs
-containing 1 for CatBoost and Random Forest, but MATR → HUST has unstable /
-negative alpha because the source predictions are compressed and partly
-inverted. The constant component still explains 72–90% of squared error, so
-the paper wording should be **dominant near-additive conditional shift with
-structured feature-level slope changes**.
+containing 1 for CatBoost and Random Forest, but MATR → HUST has negative
+alpha because the source predictions are compressed and partly inverted.
+Theil-Sen and Huber robust fits keep the MATR → HUST alpha negative, so the
+asymmetry is not just an OLS artefact. The constant component still explains
+72–90% of squared error, but finite-sample constant R² is negative in the
+MATR → HUST direction. The paper wording should be **dominant conditional
+offset plus structured feature-level slope changes**, not pure additive shift.
 
 ### Importance-weighted CP falsifier (§7 diagnostic)
 
@@ -183,7 +186,9 @@ inf}, and reports ESS plus target-mass fraction.
 
 This is the clean covariate-vs-conditional-shift contrast: source weighting
 does not yield useful target intervals, while small target-side calibration
-does.
+does. The updated paper comparison table adds target-adapted residual-mean CP
+at k=20 in the same frame: 90% coverage is 0.905–0.909 with finite intervals
+for HUST → MATR and 0.907–0.908 for MATR → HUST.
 
 ### SHAP/XAI attribution bridge
 
@@ -246,7 +251,8 @@ cycle-life distribution mismatch.
 (a) **KS two-sample test on cycle_life marginals**: KS = 0.827, p = 3.6e-34.
   - MATR: n=129, mean=778, std=361, range [133, 2066]
   - HUST: n=77, mean=1490, std=274, range [829, 2024]
-  - HUST cycles are e^0.65 ≈ 1.92× longer-lived on average.
+  - HUST mean cycle life is ≈1.92× longer; the mean-log offset used in the
+    centered conditional-shift table is 0.735 (≈2.09× on the log scale).
 
 (b) **Constant-bias decomposition** (CatBoost N=100):
 
@@ -255,9 +261,10 @@ cycle-life distribution mismatch.
 | MATR → HUST | −11.16 | **−0.03** | **91.5%** |
 | HUST → MATR | −2.73 | **+0.04** | **74.2%** |
 
-Most of the cross-dataset failure is *just a constant offset*. The right
-constant (914 cycles for MATR → HUST, −601 cycles for HUST → MATR) brings
-R² to nearly zero from R² = −11.
+This shows that a large directional offset is present. The right constant
+(914 cycles for MATR → HUST, −601 cycles for HUST → MATR) brings R² close to
+zero from R² = −11 in the diagnostic, but the centered slope and alpha/beta
+analyses below show that this offset is not the whole conditional shift.
 
 ### Target-mean rescaling fix (§7 precursor)
 
@@ -362,14 +369,15 @@ CP repairs uncertainty. The remaining SOP-letter k-grid loose end is closed.
 >    and HUST (mean=1490, std=274) cycle_life marginals are statistically
 >    distinct (KS = 0.827, p = 3.6e-34). HUST cells live ~1.9× longer.
 >
-> 6. **72–90% of the cross-dataset error is a single constant offset.**
+> 6. **A large dataset-level offset coexists with feature-level slope shifts.**
 >    Adding the right bias (914 cycles for MATR → HUST, −601 for the other
->    direction) brings R² from −11 to near-zero. Formal slope/intercept
->    decomposition shows the shift is not purely additive: 18/34 features are
->    intercept-only, while 16/34 also show slope changes after BH correction.
->    The precise claim is therefore *dominant near-additive conditional shift
->    with structured feature-level changes*, not label shift and not pure
->    additive shift.
+>    direction) brings R² from −11 toward zero in the diagnostic, but the
+>    centered-log per-feature test shows the shift is not purely additive:
+>    18/34 features are slope-stable and 16/34 show slope changes after BH
+>    correction. Robust Theil-Sen/Huber alpha checks also preserve the
+>    negative MATR → HUST calibration slope. The precise claim is therefore
+>    *dominant conditional offset with structured feature-level changes*, not
+>    label shift and not pure additive shift.
 >
 > 7. **A covariate-shift CP falsifier fails usefully.** Importance-weighted
 >    source CP with cross-fitted logistic density ratios gives dataset
@@ -535,8 +543,8 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
-| `3_analysis/conditional_shift_decomposition.py` | per-feature slope/intercept tests and source-prediction alpha/beta calibration |
-| `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, and clipping sweep |
+| `3_analysis/conditional_shift_decomposition.py` | centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust alpha checks, and scatter plot |
+| `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, clipping sweep, and target-adapted comparison figure/table |
 | `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
