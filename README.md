@@ -166,7 +166,7 @@ python 3_analysis/summarize_conformal_results.py
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
-| §7 | Standard split conformal prediction with MAPIE (90%/95%; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...` |
+| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
 
 ---
 
@@ -348,7 +348,12 @@ Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
 Forest. Target rows use `k_target=20`; adapted rows use residual-mean
 `k_adapter=20` on a disjoint target subset before CP calibration. Outputs now
 include 95% Wilson score intervals for empirical coverage and short-/long-life
-stratified coverage.
+stratified coverage. The default recalibration sweep now covers
+`k_target,k_adapter ∈ {5, 10, 15, 20}`; `paper_cp_k_sweep.csv` and
+`paper_cp_k_sweep_coverage.png` expose the coverage curve while the headline
+policy remains `k=20`. Small-k rows are kept as sensitivity checks and include
+`finite_q_mean` to flag the exact split-CP quantile limitation at very small
+calibration size.
 
 | Scenario | Coverage | Median width | R² | Interpretation |
 |---|---:|---:|---:|---|
@@ -362,7 +367,8 @@ At `k_adapter=20`, `k_target=20`, residual-mean adaptation reduces median
 interval width by 33–60% and MAE by 55–71% relative to target-domain CP
 without the adapter at 90%. At 95%, adapted CP remains close to nominal
 coverage while preserving the same point-prediction repair. Paper-ready
-outputs are in `outputs/results_v2_conformal/paper_cp_summary.*` and
+outputs are in `outputs/results_v2_conformal/paper_cp_summary.*`,
+`outputs/results_v2_conformal/paper_cp_k_sweep.*`, and
 `outputs/results_v2_conformal/paper_cp_stratified_coverage.csv`.
 
 ---

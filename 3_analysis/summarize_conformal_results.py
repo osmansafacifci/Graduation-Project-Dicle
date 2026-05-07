@@ -15,7 +15,9 @@ Outputs:
     outputs/results_v2_conformal/paper_cp_summary.csv
     outputs/results_v2_conformal/paper_cp_summary.md
     outputs/results_v2_conformal/paper_cp_delta_summary.csv
+    outputs/results_v2_conformal/paper_cp_k_sweep.csv
     outputs/results_v2_conformal/paper_cp_coverage_width.png  (if matplotlib exists)
+    outputs/results_v2_conformal/paper_cp_k_sweep_coverage.png  (if matplotlib exists)
 
 Usage:
     python 3_analysis/summarize_conformal_results.py
@@ -128,6 +130,54 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+def build_k_sweep(summary: pd.DataFrame) -> pd.DataFrame:
+    target = summary[summary["scenario"].eq("cross_target_calibrated_cp")].copy()
+    adapted = summary[
+        summary["scenario"].eq("cross_target_adapted_cp")
+        & summary["adapter_type"].eq("residual_mean")
+        & summary["k_target"].eq(summary["k_adapter"])
+    ].copy()
+    k_sweep = pd.concat([target, adapted], ignore_index=True)
+    if k_sweep.empty:
+        return k_sweep
+
+    k_sweep["scenario_label"] = k_sweep["scenario"].map(SCENARIO_LABELS)
+    k_sweep["protocol"] = k_sweep["scenario"].map(
+        {
+            "cross_target_calibrated_cp": "Target CP",
+            "cross_target_adapted_cp": "Adapted CP",
+        }
+    )
+    k_sweep["direction"] = k_sweep["source"].str.upper() + " -> " + k_sweep["target"].str.upper()
+    cols = [
+        "scenario_label",
+        "protocol",
+        "direction",
+        "model",
+        "confidence_level",
+        "k_target",
+        "k_adapter",
+        "coverage_mean",
+        "coverage_wilson95_lower_mean",
+        "coverage_wilson95_upper_mean",
+        "coverage_short_life_mean",
+        "coverage_long_life_mean",
+        "short_long_coverage_gap_mean",
+        "median_width_mean",
+        "winkler_mean_mean",
+        "MAE_mean",
+        "SMAPE_mean",
+        "R2_mean",
+        "finite_q_mean",
+        "n_runs",
+    ]
+    cols = [c for c in cols if c in k_sweep.columns]
+    return k_sweep[cols].sort_values(
+        ["confidence_level", "direction", "model", "protocol", "k_target"],
+        ignore_index=True,
+    )
 
 
 def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> None:
@@ -262,6 +312,52 @@ def maybe_write_plot(primary: pd.DataFrame, path: Path, confidence_level: float)
     plt.close(fig)
 
 
+def maybe_write_k_sweep_plot(k_sweep: pd.DataFrame, path: Path, confidence_level: float) -> None:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
+
+    if k_sweep.empty:
+        return
+    plot_df = k_sweep[k_sweep["confidence_level"].round(6).eq(round(confidence_level, 6))].copy()
+    if plot_df.empty:
+        return
+
+    plot_df["line_label"] = (
+        plot_df["direction"]
+        + " "
+        + plot_df["model"].str.replace("_", " ")
+        + " "
+        + plot_df["protocol"]
+    )
+    labels = list(dict.fromkeys(plot_df["line_label"]))
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    colors = {"Target CP": "#ca6702", "Adapted CP": "#0a9396"}
+    markers = {"Target CP": "o", "Adapted CP": "s"}
+    for label in labels:
+        sub = plot_df[plot_df["line_label"].eq(label)].sort_values("k_target")
+        protocol = str(sub["protocol"].iloc[0])
+        ax.plot(
+            sub["k_target"],
+            sub["coverage_mean"],
+            marker=markers.get(protocol, "o"),
+            linewidth=1.6,
+            color=colors.get(protocol, "#333333"),
+            alpha=0.75,
+            label=label,
+        )
+    ax.axhline(confidence_level, color="#333333", linestyle="--", linewidth=1)
+    ax.set_xlabel("Target calibration cells (k)")
+    ax.set_ylabel("Empirical coverage")
+    ax.set_ylim(0, 1.05)
+    ax.set_xticks(sorted(plot_df["k_target"].dropna().unique()))
+    ax.legend(fontsize=7, ncols=2, frameon=False, loc="lower center", bbox_to_anchor=(0.5, 1.02))
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
 def write_stratified_summary(primary: pd.DataFrame, path: Path) -> None:
     cols = [
         "scenario_label",
@@ -302,22 +398,30 @@ def main() -> int:
 
     out_summary = args.results_dir / "paper_cp_summary.csv"
     out_delta = args.results_dir / "paper_cp_delta_summary.csv"
+    out_k_sweep = args.results_dir / "paper_cp_k_sweep.csv"
     out_stratified = args.results_dir / "paper_cp_stratified_coverage.csv"
     out_md = args.results_dir / "paper_cp_summary.md"
     out_png = args.results_dir / "paper_cp_coverage_width.png"
+    out_k_sweep_png = args.results_dir / "paper_cp_k_sweep_coverage.png"
 
     primary.to_csv(out_summary, index=False)
     delta.to_csv(out_delta, index=False)
+    k_sweep = build_k_sweep(summary)
+    k_sweep.to_csv(out_k_sweep, index=False)
     write_stratified_summary(primary, out_stratified)
     write_markdown(primary, delta, out_md)
     maybe_write_plot(primary, out_png, args.plot_confidence_level)
+    maybe_write_k_sweep_plot(k_sweep, out_k_sweep_png, args.plot_confidence_level)
 
     print(f"[save] {out_summary}")
     print(f"[save] {out_delta}")
+    print(f"[save] {out_k_sweep}")
     print(f"[save] {out_stratified}")
     print(f"[save] {out_md}")
     if out_png.exists():
         print(f"[save] {out_png}")
+    if out_k_sweep_png.exists():
+        print(f"[save] {out_k_sweep_png}")
     return 0
 
 

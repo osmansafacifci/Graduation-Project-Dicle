@@ -44,8 +44,8 @@ Outputs:
 Usage:
     python 3_analysis/conformal_prediction.py
     python 3_analysis/conformal_prediction.py --models catboost --seeds 42
-    python 3_analysis/conformal_prediction.py --target-k-values 10 15 20
-    python 3_analysis/conformal_prediction.py --adapter-k-values 10 15 20
+    python 3_analysis/conformal_prediction.py --target-k-values 5 10 15 20
+    python 3_analysis/conformal_prediction.py --adapter-k-values 5 10 15 20
     python 3_analysis/conformal_prediction.py --confidence-levels 0.90 0.95
 """
 
@@ -103,7 +103,7 @@ ALL_MODELS = [
 DEFAULT_MODELS = ["catboost", "random_forest"]
 DEFAULT_DATASETS = ["matr", "hust"]
 DEFAULT_WINDOWS = [100]
-DEFAULT_TARGET_KS = [10, 15, 20]
+DEFAULT_TARGET_KS = [5, 10, 15, 20]
 DEFAULT_TARGET_REPEATS = 20
 DEFAULT_CONFIDENCE_LEVELS = [0.90, 0.95]
 ALL_ADAPTER_TYPES = ["residual_mean", "linear"]

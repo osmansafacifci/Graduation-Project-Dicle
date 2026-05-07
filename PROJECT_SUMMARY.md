@@ -72,7 +72,7 @@ the SOP12 capacity-only features.
 | **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
-| §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; linear adapter is sensitivity |
+| §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
 
 ---
 
@@ -251,7 +251,11 @@ Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
 Forest. Target rows use `k_target=20`; adapted rows use residual-mean
 `k_adapter=20` on a disjoint target subset before CP calibration. Outputs
 include 95% Wilson score intervals for empirical coverage and short-/long-life
-stratified coverage.
+stratified coverage. The reproducibility sweep covers
+`k_target,k_adapter ∈ {5, 10, 15, 20}`; `paper_cp_k_sweep.csv` and
+`paper_cp_k_sweep_coverage.png` expose the recalibration coverage curve while
+the manuscript headline stays at the stable `k=20` policy. Small-k rows are
+retained as sensitivity checks and explicitly carry the `finite_q_mean` flag.
 
 | Scenario | Coverage | Median width | R² | Interpretation |
 |---|---:|---:|---:|---|
@@ -266,7 +270,7 @@ interval width by 33–60% and MAE by 55–71% relative to target-domain CP
 without the adapter at 90%. At 95%, adapted CP stays close to nominal
 coverage while preserving the same point-prediction repair. This completes
 the uncertainty leg of the thesis arc: point calibration repairs the center;
-CP repairs uncertainty.
+CP repairs uncertainty. The remaining SOP-letter k-grid loose end is closed.
 
 ---
 
@@ -474,8 +478,8 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
 | `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
-| `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
-| `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, stratified coverage table, and coverage/width figure |
+| `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
+| `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
 | `notebooks/run_pipeline_colab.ipynb` | Phase A Colab runner |
 | `data/intermediate/*.csv` / `*.json` / `*.txt` | All audit, feature, VIF, shift outputs |
 | `outputs/results_v2*` | All experiment results, JSON + summary CSV per ablation |
