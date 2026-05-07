@@ -1,0 +1,16 @@
+Conditional Shift Decomposition
+================================
+
+Features analyzed: 34
+Intercept-only features: 18 (52.9%)
+Slope-shift features: 16 (47.1%)
+
+Feature shift classes:
+  - both_intercept_and_slope: 16
+  - intercept_only: 18
+
+Alpha/beta calibration summary:
+  - HUST -> MATR catboost: alpha=0.806 [0.236, 1.369], constant_share=76.4%, constant_R2=+0.043, linear_R2=+0.051
+  - HUST -> MATR random_forest: alpha=1.142 [0.540, 1.824], constant_share=72.2%, constant_R2=+0.070, linear_R2=+0.072
+  - MATR -> HUST catboost: alpha=-0.554 [-1.564, 0.576], constant_share=89.9%, constant_R2=-0.110, linear_R2=+0.016
+  - MATR -> HUST random_forest: alpha=-0.440 [-1.218, 0.319], constant_share=88.8%, constant_R2=-0.279, linear_R2=+0.022

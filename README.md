@@ -8,8 +8,9 @@ transfer of capacity-only features.
 > **Status**
 > Within-dataset, cross-dataset, distribution-shift quantification,
 > feature-transfer/XAI diagnostics, survival/censoring sensitivity,
-> concept-shift diagnostics, target-side recalibration baselines, and standard
-> MAPIE split conformal prediction are all in place.
+> concept-/conditional-shift diagnostics, importance-weighted CP falsifier,
+> target-side recalibration baselines, and standard MAPIE split conformal
+> prediction are all in place.
 
 ---
 
@@ -165,7 +166,9 @@ python 3_analysis/summarize_conformal_results.py
 | **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability classes | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `outputs/results_v2_shap/...` |
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
+| **§6++** | Conditional-shift decomposition: per-feature slope/intercept tests and source-prediction alpha/beta calibration | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
+| **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, and clipping sweep | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
 
 ---
@@ -316,6 +319,33 @@ without concept alignment.
 Most of the cross-dataset failure is *just a constant offset*. The right
 constant brings R² to nearly zero from R² = −11.
 
+### Conditional Shift Decomposition
+
+Per-feature tests fit `log(cycle_life) ~ z_j` after z-scoring each feature
+within each dataset, then compare HUST-MATR slope and intercept differences
+with bootstrap CIs and Benjamini-Hochberg correction. Result: 18/34 features
+are intercept-only, while 16/34 show both intercept and slope changes. This
+supports a more precise wording: **the dominant transfer failure is a large
+conditional offset, but the shift is not purely additive**. Fragile
+slope-shift features include `Qdis_cycle10`, `poly2_a`, `accel_mean`,
+`slope_last_quarter`, and `mad_Qdis`.
+
+Alpha/beta calibration of `y_target = alpha * y_source_pred + beta` supports
+that nuance. HUST -> MATR has `alpha` CIs containing 1 for both CatBoost and
+Random Forest, while MATR -> HUST has unstable/negative `alpha`; nevertheless
+the constant component still explains 72-90% of cross-direction squared error.
+
+### Importance-Weighted CP Falsifier
+
+Weighted source-calibrated CP uses a cross-fitted logistic dataset
+discriminator to estimate `p_target(X)/p_source(X)`, with clip values
+{5, 10, 20, inf}. The discriminator AUC is 0.994-0.996, raw calibration-weight
+ESS/n is 0.55-0.59, and target-mass fractions are large. Weighted CP therefore
+recovers nominal coverage only by returning infinite intervals almost
+everywhere: at 90%, finite-interval fraction is <=0.9% for HUST -> MATR and
+0% for MATR -> HUST across the clipping sweep. This is the covariate-shift
+falsifier: feature weighting alone does not yield useful target intervals.
+
 ### Target-mean rescaling fix
 
 Linear correction `y_corrected = a · y_raw + b` fit on k random target cells,
@@ -412,6 +442,10 @@ python 3_analysis/survival_censoring.py
 
 # Constant-bias decomposition (91.5% / 74.2% finding)
 python 3_analysis/concept_shift_diagnostics.py
+
+# Conditional-shift decomposition and weighted-CP falsifier
+python 3_analysis/conditional_shift_decomposition.py
+python 3_analysis/importance_weighted_conformal.py
 
 # Target-mean rescaling (R² = -10 → -0.02 with k=20)
 python 3_analysis/target_rescaling.py

@@ -1,8 +1,8 @@
 # Project Summary — Battery Lifetime Prediction (Dicle Çoban Thesis)
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
-> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, SHAP/XAI attribution, survival/censoring sensitivity, and standard MAPIE split conformal prediction.
-> **Last updated**: 2026-05-06
+> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction.
+> **Last updated**: 2026-05-07
 
 ---
 
@@ -69,6 +69,8 @@ the SOP12 capacity-only features.
 | §5.2 | Cross-dataset experiments (MATR ↔ HUST) | ✅ | Three feature-set ablations × two directions |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ✅ | Plus per-feature attribution + capnorm comparison |
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
+| **+** | Conditional-shift decomposition (slope/intercept + alpha/beta) | ✅ | Dominant offset plus feature-level slope changes |
+| **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep |
 | **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
@@ -142,6 +144,46 @@ but their feature/y relationship is more stable: `cycle_to_98pct`,
 This gives a principled SHAP/XAI bridge: distinguish features that are
 important within-domain from features whose distributions and target
 relationships remain stable across datasets.
+
+### Conditional-shift decomposition (§6.3++)
+
+`3_analysis/conditional_shift_decomposition.py` formalizes the terminology:
+this is conditional/concept shift in `P(Y|X)` with a large additive component,
+not label shift. Each feature is z-scored within dataset and fit as
+`log(cycle_life) ~ z_feature`; HUST-MATR slope and intercept differences are
+bootstrapped with Benjamini-Hochberg correction.
+
+| Class | Count | Interpretation |
+|---|---:|---|
+| Intercept-only | 18 / 34 | Consistent with an additive conditional offset |
+| Intercept + slope | 16 / 34 | Same feature has changed target relationship |
+
+The slope-shift list includes `Qdis_cycle10`, `poly2_a`, `accel_mean`,
+`slope_last_quarter`, `mad_Qdis`, `linearity_r2`, and `cycle_to_99pct`.
+Alpha/beta calibration gives the same nuance: HUST → MATR has alpha CIs
+containing 1 for CatBoost and Random Forest, but MATR → HUST has unstable /
+negative alpha because the source predictions are compressed and partly
+inverted. The constant component still explains 72–90% of squared error, so
+the paper wording should be **dominant near-additive conditional shift with
+structured feature-level slope changes**.
+
+### Importance-weighted CP falsifier (§7 diagnostic)
+
+`3_analysis/importance_weighted_conformal.py` tests whether a standard
+covariate-shift repair is enough. It estimates `p_target(X)/p_source(X)` with a
+cross-fitted logistic dataset discriminator, sweeps clipping at {5, 10, 20,
+inf}, and reports ESS plus target-mass fraction.
+
+| Diagnostic | Result |
+|---|---|
+| Dataset discriminator AUC | 0.994–0.996 |
+| Raw calibration-weight ESS/n | 0.55–0.59 |
+| 90% weighted CP finite-interval fraction | 0–0.9% |
+| Main interpretation | Coverage is recovered only through infinite intervals |
+
+This is the clean covariate-vs-conditional-shift contrast: source weighting
+does not yield useful target intervals, while small target-side calibration
+does.
 
 ### SHAP/XAI attribution bridge
 
@@ -320,11 +362,23 @@ CP repairs uncertainty. The remaining SOP-letter k-grid loose end is closed.
 >    and HUST (mean=1490, std=274) cycle_life marginals are statistically
 >    distinct (KS = 0.827, p = 3.6e-34). HUST cells live ~1.9× longer.
 >
-> 6. **75–92% of the cross-dataset error is a single constant offset.**
+> 6. **72–90% of the cross-dataset error is a single constant offset.**
 >    Adding the right bias (914 cycles for MATR → HUST, −601 for the other
->    direction) brings R² from −11 to −0.03 / from −2.7 to +0.04.
+>    direction) brings R² from −11 to near-zero. Formal slope/intercept
+>    decomposition shows the shift is not purely additive: 18/34 features are
+>    intercept-only, while 16/34 also show slope changes after BH correction.
+>    The precise claim is therefore *dominant near-additive conditional shift
+>    with structured feature-level changes*, not label shift and not pure
+>    additive shift.
 >
-> 7. **A two-parameter linear correction fit on k=20 target cells recovers
+> 7. **A covariate-shift CP falsifier fails usefully.** Importance-weighted
+>    source CP with cross-fitted logistic density ratios gives dataset
+>    discriminator AUC ≈ 0.994–0.996 and raw ESS/n ≈ 0.55–0.59, but coverage is
+>    recovered only by returning infinite intervals almost everywhere
+>    (finite-interval fraction ≤0.9% at 90%). This supports the interpretation
+>    that covariate weighting alone cannot repair target uncertainty.
+>
+> 8. **A two-parameter linear correction fit on k=20 target cells recovers
 >    the bulk of the failure**: R² goes from −10 to −0.05 across all tree-
 >    based models. The fix needs only a tiny target labeled set, no
 >    domain-adaptation infrastructure, no architecture changes. Conformal
@@ -447,9 +501,13 @@ python 3_analysis/survival_censoring.py
 
 # Concept-shift diagnostics
 python 3_analysis/concept_shift_diagnostics.py
+python 3_analysis/conditional_shift_decomposition.py
 
 # Target-mean rescaling
 python 3_analysis/target_rescaling.py
+
+# Covariate-shift CP falsifier
+python 3_analysis/importance_weighted_conformal.py
 
 # Standard split conformal prediction (MAPIE)
 python 3_analysis/conformal_prediction.py
@@ -477,6 +535,8 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
+| `3_analysis/conditional_shift_decomposition.py` | per-feature slope/intercept tests and source-prediction alpha/beta calibration |
+| `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, and clipping sweep |
 | `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |

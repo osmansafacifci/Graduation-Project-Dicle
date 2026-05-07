@@ -1,0 +1,59 @@
+{
+  "protocol": "conditional_shift_decomposition_v1",
+  "n_cycles": 100,
+  "feature_count": 34,
+  "models": [
+    "catboost",
+    "random_forest"
+  ],
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1011
+  ],
+  "n_bootstrap": 1000,
+  "shift_class_counts": {
+    "intercept_only": 18,
+    "both_intercept_and_slope": 16
+  },
+  "alpha_beta_summary": [
+    {
+      "direction": "HUST -> MATR",
+      "model": "catboost",
+      "alpha": 0.805825210021815,
+      "constant_share_of_ss": 0.7635097012482981,
+      "raw_R2": -3.064543073408135,
+      "constant_R2": 0.043272167489225646,
+      "linear_R2": 0.05112906197596538
+    },
+    {
+      "direction": "HUST -> MATR",
+      "model": "random_forest",
+      "alpha": 1.1416116576754765,
+      "constant_share_of_ss": 0.7217556348154387,
+      "raw_R2": -2.4032286914227337,
+      "constant_R2": 0.07043667993283342,
+      "linear_R2": 0.07237995194813943
+    },
+    {
+      "direction": "MATR -> HUST",
+      "model": "catboost",
+      "alpha": -0.5540832636250498,
+      "constant_share_of_ss": 0.8991448806553072,
+      "raw_R2": -9.995302115770333,
+      "constant_R2": -0.11034723277983663,
+      "linear_R2": 0.01622604751200467
+    },
+    {
+      "direction": "MATR -> HUST",
+      "model": "random_forest",
+      "alpha": -0.4395989762760637,
+      "constant_share_of_ss": 0.8881770068683117,
+      "raw_R2": -10.929441215216679,
+      "constant_R2": -0.2788174690546753,
+      "linear_R2": 0.021938102280408954
+    }
+  ]
+}
