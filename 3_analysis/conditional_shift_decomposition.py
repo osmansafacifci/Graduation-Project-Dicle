@@ -19,7 +19,9 @@ analysis:
            y_target = alpha * y_source_pred + beta
        If alpha ~= 1, a residual-mean adapter is a scientifically reasonable
        first-order target correction. If alpha differs from 1, the linear
-       adapter should be treated as more than a sensitivity check.
+       adapter should be treated as more than a sensitivity check. Pearson r
+       is reported alongside alpha to separate real rank-transfer signal from
+       noisy slopes around near-zero correlation.
 
 Inputs:
     data/intermediate/features_sop12_combined.csv
@@ -48,6 +50,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.stats import pearsonr
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import HuberRegressor, TheilSenRegressor
 
@@ -284,6 +287,18 @@ def fit_alpha_beta(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float
     return float(alpha), float(beta)
 
 
+def pearson_summary(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float]:
+    y_true = np.asarray(y_true, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
+    if len(y_true) < 3 or np.std(y_true) < 1e-12 or np.std(y_pred) < 1e-12:
+        return float("nan"), float("nan")
+    try:
+        res = pearsonr(y_pred, y_true)
+        return float(res.statistic), float(res.pvalue)
+    except Exception:
+        return float("nan"), float("nan")
+
+
 def fit_robust_alpha_beta(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -354,6 +369,7 @@ def alpha_beta_table(
                 raw = compute_metrics(y_true, y_pred)
                 constant = compute_metrics(y_true, y_pred + constant_bias)
                 linear = compute_metrics(y_true, np.clip(alpha * y_pred + beta, 1.0, 1e9))
+                pearson_r, pearson_p = pearson_summary(y_true, y_pred)
 
                 for cell_id, actual, pred in zip(cell_ids, y_true, y_pred, strict=False):
                     pred_rows.append(
@@ -373,10 +389,12 @@ def alpha_beta_table(
                 boot_alpha = []
                 boot_beta = []
                 boot_constant_share = []
+                boot_pearson_r = []
                 indices = np.arange(len(y_true))
                 for _ in range(n_boot):
                     b = rng.choice(indices, size=len(indices), replace=True)
                     ba, bb = fit_alpha_beta(y_true[b], y_pred[b])
+                    br, _ = pearson_summary(y_true[b], y_pred[b])
                     residuals = y_true[b] - y_pred[b]
                     ss_total = float(np.sum(residuals**2))
                     ss_after_constant = float(np.sum((residuals - np.mean(residuals)) ** 2))
@@ -384,10 +402,12 @@ def alpha_beta_table(
                     boot_alpha.append(ba)
                     boot_beta.append(bb)
                     boot_constant_share.append(share)
+                    boot_pearson_r.append(br)
 
                 ba = np.asarray(boot_alpha, dtype=float)
                 bb = np.asarray(boot_beta, dtype=float)
                 bs = np.asarray(boot_constant_share, dtype=float)
+                br = np.asarray(boot_pearson_r, dtype=float)
                 rows.append(
                     {
                         "source": source,
@@ -411,6 +431,10 @@ def alpha_beta_table(
                         "huber_alpha": huber_alpha,
                         "huber_beta": huber_beta,
                         "huber_R2": huber_r2,
+                        "pearson_r": pearson_r,
+                        "pearson_r_ci95_low": float(np.nanpercentile(br, 2.5)),
+                        "pearson_r_ci95_high": float(np.nanpercentile(br, 97.5)),
+                        "pearson_p": pearson_p,
                         "constant_bias": constant_bias,
                         "constant_share_of_ss": float(np.mean(bs)),
                         "constant_share_ci95_low": float(np.percentile(bs, 2.5)),
@@ -470,6 +494,18 @@ def write_alpha_beta_scatter(pred_rows: pd.DataFrame, alpha_rows: pd.DataFrame, 
                     linestyle="--",
                     label=f"Theil-Sen alpha={row['theil_sen_alpha']:.2f}",
                 )
+                ax.text(
+                    0.98,
+                    0.97,
+                    f"r={row['pearson_r']:.2f} "
+                    f"[{row['pearson_r_ci95_low']:.2f}, {row['pearson_r_ci95_high']:.2f}]\n"
+                    f"p={row['pearson_p']:.2g}",
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    fontsize=9,
+                    bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.85},
+                )
             ax.plot([lo, hi], [lo, hi], color="#666666", linewidth=1.0, linestyle=":", label="identity")
             ax.set_title(f"{direction}, {model}")
             ax.set_xlabel("Source-model prediction (cycles)")
@@ -515,6 +551,9 @@ def write_report(feature_rows: pd.DataFrame, alpha_rows: pd.DataFrame, path: Pat
             f"constant_share={100 * sub['constant_share_of_ss'].mean():.1f}%, "
             f"constant_R2={sub['constant_R2'].mean():+.3f}, "
             f"linear_R2={sub['linear_R2'].mean():+.3f}, "
+            f"Pearson r={sub['pearson_r'].mean():+.3f} "
+            f"[{sub['pearson_r_ci95_low'].mean():+.3f}, {sub['pearson_r_ci95_high'].mean():+.3f}], "
+            f"p={sub['pearson_p'].mean():.3g}, "
             f"Theil-Sen alpha={sub['theil_sen_alpha'].mean():+.3f}, "
             f"Huber alpha={sub['huber_alpha'].mean():+.3f}"
         )
@@ -589,7 +628,18 @@ def main() -> int:
         print(f"[save] {scatter_path}")
     print(
         alpha_rows.groupby(["direction", "model"])[
-            ["alpha", "theil_sen_alpha", "huber_alpha", "constant_share_of_ss", "constant_R2", "linear_R2"]
+            [
+                "alpha",
+                "theil_sen_alpha",
+                "huber_alpha",
+                "pearson_r",
+                "pearson_r_ci95_low",
+                "pearson_r_ci95_high",
+                "pearson_p",
+                "constant_share_of_ss",
+                "constant_R2",
+                "linear_R2",
+            ]
         ].mean()
     )
 
@@ -610,6 +660,10 @@ def main() -> int:
                     "alpha",
                     "theil_sen_alpha",
                     "huber_alpha",
+                    "pearson_r",
+                    "pearson_r_ci95_low",
+                    "pearson_r_ci95_high",
+                    "pearson_p",
                     "constant_share_of_ss",
                     "raw_R2",
                     "constant_R2",

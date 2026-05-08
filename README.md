@@ -169,7 +169,7 @@ python 3_analysis/summarize_conformal_results.py
 | **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability classes | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `outputs/results_v2_shap/...` |
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
-| **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
+| **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
@@ -339,13 +339,16 @@ features include `Qdis_cycle10`, `poly2_a`, `accel_mean`,
 `slope_last_quarter`, `mad_Qdis`, `linearity_r2`, and `cycle_to_99pct`.
 
 Alpha/beta calibration of `y_target = alpha * y_source_pred + beta` supports
-that nuance. HUST -> MATR has OLS `alpha` CIs containing 1 for both CatBoost
-and Random Forest, while MATR -> HUST has negative `alpha`; Theil-Sen and
-Huber robust fits keep the MATR -> HUST sign negative, so the asymmetry is not
-just an OLS artefact. The constant component explains 72-90% of cross-direction
-squared error, but finite-sample constant R² is negative in the MATR -> HUST
-direction, so the manuscript should avoid claiming a uniformly sufficient
-constant adapter.
+that nuance, but Pearson r is the safer interpretation than the sign of a
+near-zero-signal slope. HUST -> MATR retains weak positive rank signal
+(`r=0.22/0.27` for CatBoost/RF across seeds), while MATR -> HUST is essentially
+uncorrelated with target lifetime (`r=-0.12/-0.14`, bootstrap CIs cross zero).
+The negative MATR -> HUST alpha is therefore best framed as fitting noise
+around near-zero transfer signal, not a strong mechanistic inversion. The
+constant component explains 72-90% of cross-direction squared error, but
+finite-sample constant R² is negative in the MATR -> HUST direction; the
+target-adapted CP result remains the reliable uncertainty story regardless of
+weak point-fit recovery.
 
 ### Importance-Weighted CP Falsifier
 

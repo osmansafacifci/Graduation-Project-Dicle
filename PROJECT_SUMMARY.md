@@ -69,7 +69,7 @@ the SOP12 capacity-only features.
 | §5.2 | Cross-dataset experiments (MATR ↔ HUST) | ✅ | Three feature-set ablations × two directions |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ✅ | Plus per-feature attribution + capnorm comparison |
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
-| **+** | Conditional-shift decomposition (centered-log slopes + alpha/beta) | ✅ | Universal log-life offset plus 16/34 feature-level slope changes; robust alpha checks and scatter plot added |
+| **+** | Conditional-shift decomposition (centered-log slopes + alpha/beta) | ✅ | Universal log-life offset plus 16/34 feature-level slope changes; robust alpha checks, Pearson-r transfer signal, and scatter plot added |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
@@ -162,13 +162,16 @@ reported separately: 0.735, equivalent to a 2.09× life ratio.
 The slope-shift list includes `Qdis_cycle10`, `poly2_a`, `accel_mean`,
 `slope_last_quarter`, `mad_Qdis`, `linearity_r2`, and `cycle_to_99pct`.
 Alpha/beta calibration gives the same nuance: HUST → MATR has alpha CIs
-containing 1 for CatBoost and Random Forest, but MATR → HUST has negative
-alpha because the source predictions are compressed and partly inverted.
-Theil-Sen and Huber robust fits keep the MATR → HUST alpha negative, so the
-asymmetry is not just an OLS artefact. The constant component still explains
-72–90% of squared error, but finite-sample constant R² is negative in the
-MATR → HUST direction. The paper wording should be **dominant conditional
-offset plus structured feature-level slope changes**, not pure additive shift.
+containing 1 for CatBoost and Random Forest, but Pearson r is the safer
+transfer-signal summary than alpha sign. HUST → MATR retains weak positive
+rank signal (`r=0.22/0.27` for CatBoost/RF across seeds), while MATR → HUST is
+essentially uncorrelated with target lifetime (`r=-0.12/-0.14`, bootstrap CIs
+cross zero). The negative MATR → HUST alpha should therefore be framed as
+fitting noise around near-zero transfer signal, not as a strong mechanistic
+inversion claim. The constant component still explains 72–90% of squared error, but
+finite-sample constant R² is negative in the MATR → HUST direction. The paper
+wording should be **dominant conditional offset plus structured feature-level
+slope changes and asymmetric rank-transfer loss**, not pure additive shift.
 
 ### Importance-weighted CP falsifier (§7 diagnostic)
 
@@ -374,10 +377,13 @@ CP repairs uncertainty. The remaining SOP-letter k-grid loose end is closed.
 >    direction) brings R² from −11 toward zero in the diagnostic, but the
 >    centered-log per-feature test shows the shift is not purely additive:
 >    18/34 features are slope-stable and 16/34 show slope changes after BH
->    correction. Robust Theil-Sen/Huber alpha checks also preserve the
->    negative MATR → HUST calibration slope. The precise claim is therefore
->    *dominant conditional offset with structured feature-level changes*, not
->    label shift and not pure additive shift.
+>    correction. Pearson r makes the directional asymmetry clearer:
+>    HUST → MATR keeps weak positive rank signal (`r≈0.22–0.27`), whereas
+>    MATR → HUST is effectively uncorrelated with target lifetimes
+>    (`r≈−0.12 to −0.14`, bootstrap CIs cross zero). The precise claim is
+>    therefore *dominant conditional offset with structured feature-level
+>    changes and asymmetric rank-transfer loss*, not label shift and not pure
+>    additive shift.
 >
 > 7. **A covariate-shift CP falsifier fails usefully.** Importance-weighted
 >    source CP with cross-fitted logistic density ratios gives dataset
@@ -543,7 +549,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
-| `3_analysis/conditional_shift_decomposition.py` | centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust alpha checks, and scatter plot |
+| `3_analysis/conditional_shift_decomposition.py` | centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust alpha checks, Pearson r with bootstrap CI, and scatter plot |
 | `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, clipping sweep, and target-adapted comparison figure/table |
 | `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
