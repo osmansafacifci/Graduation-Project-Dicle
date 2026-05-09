@@ -9,8 +9,8 @@ transfer of capacity-only features.
 > Within-dataset, cross-dataset, distribution-shift quantification,
 > feature-transfer/XAI diagnostics, survival/censoring sensitivity,
 > concept-/conditional-shift diagnostics, importance-weighted CP falsifier,
-> target-side recalibration baselines, and standard MAPIE split conformal
-> prediction are all in place.
+> Koopman/DMD dynamics pilot, target-side recalibration baselines, and standard
+> MAPIE split conformal prediction are all in place.
 
 ---
 
@@ -66,6 +66,7 @@ recovers the bulk of the loss.
 │   ├── survival_censoring.py
 │   ├── concept_shift_diagnostics.py
 │   ├── conditional_shift_decomposition.py
+│   ├── koopman_dmd_pilot.py
 │   ├── target_rescaling.py
 │   ├── importance_weighted_conformal.py
 │   ├── conformal_prediction.py
@@ -144,8 +145,11 @@ python 3_analysis/feature_transfer_stability.py
 python 3_analysis/shap_feature_importance.py
 python 3_analysis/survival_censoring.py
 
-# Concept-shift diagnostics + target-mean rescaling
+# Concept-shift and dynamics diagnostics
 python 3_analysis/concept_shift_diagnostics.py
+python 3_analysis/koopman_dmd_pilot.py
+
+# Target-mean rescaling
 python 3_analysis/target_rescaling.py
 
 # Standard split conformal prediction (MAPIE)
@@ -170,6 +174,7 @@ python 3_analysis/summarize_conformal_results.py
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
+| **§6+++** | Hankel-DMD / Koopman-style dynamics pilot on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer | `3_analysis/koopman_dmd_pilot.py` | `data/intermediate/koopman_dmd_*`, `outputs/results_v2_koopman_dmd/...` |
 | **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
@@ -352,6 +357,31 @@ weak point-fit recovery.
 The paper-facing directional asymmetry scatter is saved at
 `outputs/results_v2_conditional_shift/paper_directional_asymmetry_seed42.png`.
 
+### Koopman/DMD Dynamics Pilot
+
+`3_analysis/koopman_dmd_pilot.py` runs a lightweight Hankel-DMD diagnostic on
+early Q/Q0 retention trajectories over cycles 2..100. This is an explanatory
+analysis, not a replacement for the supervised RUL models: it asks whether the
+early capacity traces contain dataset-specific dynamics that line up with the
+conditional-shift story.
+
+| Diagnostic | Result |
+|---|---|
+| Cells analyzed | MATR 135, HUST 77 |
+| Per-cell DMD-summary dataset AUC | 0.795 ± 0.039 |
+| Dominant eigenvalue distribution | KS = 0.826, p = 1.2e-34; mean Δ\|λ\| = −3.2e-5 |
+| Dominant mode vs. log-life | r ≈ 0.37 in MATR, r ≈ 0.32 in HUST |
+| MATR operator on HUST | 1.84× HUST self-operator one-step RMSE |
+| HUST operator on MATR | 1.02× MATR self-operator one-step RMSE |
+
+This supports a cautious dynamics-level version of the shift story: the early
+capacity trajectories are not identical dynamical objects across datasets, and
+DMD summaries carry moderate dataset identity. The eigenvalue shift is small in
+per-cycle magnitude, so the effect is useful for mechanistic framing but should
+be presented as a pilot/diagnostic until third and fourth datasets confirm
+whether the operator asymmetry is stable.
+Figures are in `outputs/results_v2_koopman_dmd/`.
+
 ### Importance-Weighted CP Falsifier
 
 Weighted source-calibrated CP uses a cross-fitted logistic dataset
@@ -469,6 +499,7 @@ python 3_analysis/concept_shift_diagnostics.py
 
 # Conditional-shift decomposition and weighted-CP falsifier
 python 3_analysis/conditional_shift_decomposition.py
+python 3_analysis/koopman_dmd_pilot.py
 python 3_analysis/importance_weighted_conformal.py
 
 # Target-mean rescaling (R² = -10 → -0.02 with k=20)
@@ -500,6 +531,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §6.3++ SHAP/XAI attribution joined to transfer-stability classes
 - [x] §6+ Survival/censoring sensitivity analysis
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
+- [x] §6+++ Koopman/DMD early-capacity dynamics pilot
 - [x] §7− Target-mean rescaling baseline (k = 5 / 10 / 20)
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 

@@ -1,0 +1,26 @@
+Koopman / Hankel-DMD Pilot
+===========================
+
+Observable: retention
+Cycles: 2..100  | delay_dim=12  | rank=4
+Cells analyzed: MATR=135, HUST=77
+
+Per-cell spectrum distribution tests (HUST minus MATR):
+- dominant_eig_abs: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
+- dominant_decay_rate: mean_delta=3.203e-05, KS=0.826, p=1.2e-34
+- dominant_coeff_fraction: mean_delta=-0.001393, KS=0.438, p=5.43e-09
+- spectral_radius: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
+- eig_abs_mean: mean_delta=-0.01205, KS=0.162, p=0.135
+
+Dataset separability from DMD summaries:
+- Logistic AUC = 0.795 +/- 0.039 across CV folds
+
+Dataset-level operator one-step RMSE on retention-delay snapshots:
+- K_matr on matr: RMSE=0.01370, MAE=0.00050, RMSE ratio vs target-self=1.00x
+- K_matr on hust: RMSE=0.00050, MAE=0.00028, RMSE ratio vs target-self=1.84x
+- K_hust on matr: RMSE=0.01398, MAE=0.00044, RMSE ratio vs target-self=1.02x
+- K_hust on hust: RMSE=0.00027, MAE=0.00019, RMSE ratio vs target-self=1.00x
+
+Interpretation guide:
+- If spectra and operator errors differ by dataset, this supports a dynamics-level version of conditional shift.
+- If spectra overlap, keep the result as a negative pilot and avoid adding Koopman language to the paper's main claim.

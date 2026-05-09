@@ -42,6 +42,8 @@ Stages:
                   -> data/intermediate/shap_feature_importance.csv
     survival      right-censoring sensitivity analysis for MATR censored cells
                   -> data/intermediate/survival_censoring_summary.csv
+    koopman_dmd   Hankel-DMD / Koopman-style early-capacity dynamics pilot
+                  -> data/intermediate/koopman_dmd_summary.json
     conformal     MAPIE split CP for within, naive cross, target CP, and
                   target-adapted CP
                   -> outputs/results_v2_conformal/results_summary.csv
@@ -196,6 +198,16 @@ def stage_survival() -> int:
     return _run([PYTHON, "3_analysis/survival_censoring.py"])
 
 
+def stage_koopman_dmd() -> int:
+    matr_cycles = INTERMEDIATE_DIR / "matr_cycles_tidy.csv"
+    hust_cycles = INTERMEDIATE_DIR / "hust_cycles_tidy.csv"
+    combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+    if not matr_cycles.exists() or not hust_cycles.exists() or not combined.exists():
+        print("[skip] koopman_dmd: missing tidy cycle tables or feature metadata.")
+        return 1
+    return _run([PYTHON, "3_analysis/koopman_dmd_pilot.py"])
+
+
 def stage_target_rescale() -> int:
     combined = INTERMEDIATE_DIR / "features_sop12_combined.csv"
     splits_root = PROJECT_ROOT / "splits" / "sop_v2"
@@ -326,6 +338,16 @@ STAGES: dict[str, Stage] = {
             INTERMEDIATE_DIR / "survival_censoring_report.txt",
         ],
     ),
+    "koopman_dmd": Stage(
+        name="koopman_dmd",
+        description="Hankel-DMD / Koopman-style early-capacity dynamics pilot",
+        run=stage_koopman_dmd,
+        outputs=[
+            INTERMEDIATE_DIR / "koopman_dmd_summary.json",
+            INTERMEDIATE_DIR / "koopman_dmd_report.txt",
+            PROJECT_ROOT / "outputs" / "results_v2_koopman_dmd" / "dmd_eigenvalue_complex_plane.png",
+        ],
+    ),
     "target_rescale": Stage(
         name="target_rescale",
         description="Target-mean rescaling baseline (k=5/10/20 calibration cells)",
@@ -349,7 +371,7 @@ STAGES: dict[str, Stage] = {
 DEFAULT_ORDER = [
     "download", "audit_matr", "audit_hust", "features",
     "splits", "vif", "experiments",
-    "shift", "feature_transfer", "shap", "survival", "concept_shift", "target_rescale", "conformal",
+    "shift", "feature_transfer", "shap", "survival", "concept_shift", "koopman_dmd", "target_rescale", "conformal",
 ]
 
 # Phase shortcuts. Two-phase workflow:
@@ -360,7 +382,7 @@ DEFAULT_ORDER = [
 PHASES: dict[str, list[str]] = {
     "extract":  ["download", "audit_matr", "audit_hust", "features"],
     "model":    ["splits", "vif", "experiments"],
-    "analysis": ["shift", "feature_transfer", "shap", "survival", "concept_shift", "target_rescale", "conformal"],
+    "analysis": ["shift", "feature_transfer", "shap", "survival", "concept_shift", "koopman_dmd", "target_rescale", "conformal"],
     "all":      DEFAULT_ORDER,
 }
 
