@@ -504,6 +504,16 @@ def write_paper_comparison_plot(comparison: pd.DataFrame, output_dir: Path, *, c
         "Importance-weighted source CP (clip=10)": "Weighted\nsource CP\nclip=10",
         "Target-adapted CP, residual mean (k=20)": "Target-adapted\nCP\nk=20",
     }
+
+    def pct_label(value: float) -> str:
+        if not np.isfinite(value):
+            return "NA"
+        if value <= 0.001:
+            return "0%"
+        if value < 0.01:
+            return f"{100 * value:.1f}%"
+        return f"{100 * value:.0f}%"
+
     for row_idx, (direction, model, sub) in enumerate(panels):
         labels = [label_map.get(protocol, str(protocol).replace(", ", "\n")) for protocol in sub["protocol"]]
         x = np.arange(len(sub))
@@ -518,7 +528,23 @@ def write_paper_comparison_plot(comparison: pd.DataFrame, output_dir: Path, *, c
         ax.set_xticklabels(labels, rotation=0, fontsize=8)
 
         ax = axes[row_idx][1]
-        ax.bar(x, sub["finite_interval_fraction_mean"], color=colors[: len(sub)])
+        finite_fraction = sub["finite_interval_fraction_mean"].astype(float).to_numpy()
+        ax.bar(x, finite_fraction, color=colors[: len(sub)])
+        for xi, value in zip(x, finite_fraction, strict=False):
+            if value >= 0.95:
+                ax.text(
+                    xi,
+                    0.965,
+                    pct_label(float(value)),
+                    ha="center",
+                    va="top",
+                    fontsize=8,
+                    color="white",
+                    fontweight="bold",
+                )
+            else:
+                label_y = max(float(value) + 0.035, 0.055)
+                ax.text(xi, label_y, pct_label(float(value)), ha="center", va="bottom", fontsize=8)
         ax.set_ylim(0, 1.05)
         ax.set_ylabel("Finite interval fraction")
         ax.set_xticks(x)

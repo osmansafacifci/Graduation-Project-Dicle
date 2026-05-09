@@ -168,10 +168,13 @@ rank signal (`r=0.22/0.27` for CatBoost/RF across seeds), while MATR → HUST is
 essentially uncorrelated with target lifetime (`r=-0.12/-0.14`, bootstrap CIs
 cross zero). The negative MATR → HUST alpha should therefore be framed as
 fitting noise around near-zero transfer signal, not as a strong mechanistic
-inversion claim. The constant component still explains 72–90% of squared error, but
-finite-sample constant R² is negative in the MATR → HUST direction. The paper
-wording should be **dominant conditional offset plus structured feature-level
-slope changes and asymmetric rank-transfer loss**, not pure additive shift.
+inversion claim. The constant component still explains 72–90% of squared
+error, but finite-sample constant R² is negative in the MATR → HUST direction.
+The paper-facing directional asymmetry scatter is saved at
+`outputs/results_v2_conditional_shift/paper_directional_asymmetry_seed42.png`.
+The paper wording should be **dominant conditional offset plus structured
+feature-level slope changes and asymmetric rank-transfer loss**, not pure
+additive shift.
 
 ### Importance-weighted CP falsifier (§7 diagnostic)
 
@@ -191,7 +194,8 @@ This is the clean covariate-vs-conditional-shift contrast: source weighting
 does not yield useful target intervals, while small target-side calibration
 does. The updated paper comparison table adds target-adapted residual-mean CP
 at k=20 in the same frame: 90% coverage is 0.905–0.909 with finite intervals
-for HUST → MATR and 0.907–0.908 for MATR → HUST.
+for HUST → MATR and 0.907–0.908 for MATR → HUST. The 90% figure now prints
+finite-interval fractions directly on the bars to make the degeneracy visible.
 
 ### SHAP/XAI attribution bridge
 

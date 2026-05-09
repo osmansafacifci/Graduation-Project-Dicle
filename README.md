@@ -349,6 +349,8 @@ constant component explains 72-90% of cross-direction squared error, but
 finite-sample constant R² is negative in the MATR -> HUST direction; the
 target-adapted CP result remains the reliable uncertainty story regardless of
 weak point-fit recovery.
+The paper-facing directional asymmetry scatter is saved at
+`outputs/results_v2_conditional_shift/paper_directional_asymmetry_seed42.png`.
 
 ### Importance-Weighted CP Falsifier
 
@@ -365,7 +367,8 @@ and figure: target-adapted residual-mean CP at k=20 gives 90% coverage of
 0.905-0.909 with finite intervals in HUST -> MATR and 0.907-0.908 in
 MATR -> HUST. See
 `outputs/results_v2_importance_weighted_cp/paper_iwcp_comparison.csv` and
-`paper_iwcp_comparison_90.png`.
+`paper_iwcp_comparison_90.png`, whose finite-interval panel now prints the
+fraction directly on each bar.
 
 ### Target-mean rescaling fix
 

@@ -34,6 +34,7 @@ Outputs:
     data/intermediate/conditional_shift_summary.json
     data/intermediate/conditional_shift_report.txt
     outputs/results_v2_conditional_shift/conditional_shift_alpha_beta_scatter_seed42.png
+    outputs/results_v2_conditional_shift/paper_directional_asymmetry_seed42.png
 
 Usage:
     python 3_analysis/conditional_shift_decomposition.py
@@ -520,6 +521,87 @@ def write_alpha_beta_scatter(pred_rows: pd.DataFrame, alpha_rows: pd.DataFrame, 
     return out_path
 
 
+def write_directional_asymmetry_scatter(
+    pred_rows: pd.DataFrame,
+    alpha_rows: pd.DataFrame,
+    output_dir: Path,
+    *,
+    seed: int,
+) -> Path | None:
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        return None
+
+    sub = pred_rows[pred_rows["seed"] == seed].copy()
+    if sub.empty:
+        return None
+
+    directions = ["HUST -> MATR", "MATR -> HUST"]
+    models = ["catboost", "random_forest"]
+    titles = {
+        "HUST -> MATR": "HUST -> MATR: weak rank signal retained",
+        "MATR -> HUST": "MATR -> HUST: no measurable rank transfer",
+    }
+    fig, axes = plt.subplots(len(directions), len(models), figsize=(10.8, 7.6), squeeze=False, sharex=False, sharey=False)
+
+    for i, direction in enumerate(directions):
+        for j, model in enumerate(models):
+            ax = axes[i][j]
+            panel = sub[(sub["direction"] == direction) & (sub["model"] == model)]
+            fit_row = alpha_rows[
+                (alpha_rows["direction"] == direction) & (alpha_rows["model"] == model) & (alpha_rows["seed"] == seed)
+            ]
+            if panel.empty or fit_row.empty:
+                ax.axis("off")
+                continue
+
+            row = fit_row.iloc[0]
+            x = panel["source_prediction"].to_numpy(dtype=float)
+            y = panel["cycle_life"].to_numpy(dtype=float)
+            x_pad = max(25.0, 0.08 * (float(np.max(x)) - float(np.min(x))))
+            y_pad = max(40.0, 0.08 * (float(np.max(y)) - float(np.min(y))))
+            x_min = float(np.min(x)) - x_pad
+            x_max = float(np.max(x)) + x_pad
+            y_min = float(np.min(y)) - y_pad
+            y_max = float(np.max(y)) + y_pad
+            xs = np.linspace(x_min, x_max, 100)
+
+            ax.scatter(x, y, s=30, alpha=0.72, color="#4c78a8", edgecolor="white", linewidth=0.35)
+            ax.plot(xs, row["alpha"] * xs + row["beta"], color="#d62728", linewidth=2.0, label=f"OLS alpha={row['alpha']:+.2f}")
+            ax.plot(
+                xs,
+                row["theil_sen_alpha"] * xs + row["theil_sen_beta"],
+                color="#2ca02c",
+                linewidth=1.8,
+                linestyle="--",
+                label=f"Theil-Sen alpha={row['theil_sen_alpha']:+.2f}",
+            )
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+            ax.grid(alpha=0.24)
+            ax.set_title(
+                f"{model.replace('_', ' ').title()}\n"
+                f"r={row['pearson_r']:+.2f} "
+                f"[{row['pearson_r_ci95_low']:+.2f}, {row['pearson_r_ci95_high']:+.2f}], "
+                f"p={row['pearson_p']:.2g}",
+                fontsize=11,
+            )
+            if i == len(directions) - 1:
+                ax.set_xlabel("Source-model prediction (cycles)")
+            if j == 0:
+                ax.set_ylabel(f"{titles[direction]}\nTarget cycle life")
+            ax.legend(fontsize=8, loc="best", frameon=True)
+
+    fig.suptitle(f"Directional Transfer Asymmetry (representative official split, seed={seed})", fontsize=14, y=0.995)
+    fig.tight_layout(rect=(0, 0, 1, 0.965))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"paper_directional_asymmetry_seed{seed}.png"
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+    return out_path
+
+
 def write_report(feature_rows: pd.DataFrame, alpha_rows: pd.DataFrame, path: Path) -> None:
     class_counts = feature_rows["shift_class"].value_counts().to_dict()
     n_features = len(feature_rows)
@@ -626,6 +708,9 @@ def main() -> int:
     scatter_path = write_alpha_beta_scatter(prediction_rows, alpha_rows, args.output_dir, seed=args.scatter_seed)
     if scatter_path is not None:
         print(f"[save] {scatter_path}")
+    asymmetry_path = write_directional_asymmetry_scatter(prediction_rows, alpha_rows, args.output_dir, seed=args.scatter_seed)
+    if asymmetry_path is not None:
+        print(f"[save] {asymmetry_path}")
     print(
         alpha_rows.groupby(["direction", "model"])[
             [
