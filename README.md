@@ -73,7 +73,8 @@ recovers the bulk of the loss.
 │   └── summarize_conformal_results.py
 ├── notebooks/
 │   ├── run_pipeline_colab.ipynb     # MATR + HUST Phase A extract
-│   └── run_sandia_colab.ipynb       # Sandia/SNL Phase A extract
+│   ├── run_sandia_colab.ipynb       # Sandia/SNL Phase A extract
+│   └── run_luh_colab.ipynb          # Luh/KIT RADAR Phase A extract
 ├── data/
 │   ├── raw/                 # gitignored — fetched at runtime
 │   └── intermediate/        # committed audit + feature CSVs (~MB)
@@ -122,6 +123,15 @@ Optional Sandia/SNL extension notebook:
 It expects the previously used Drive folder
 `MyDrive/SandiaNationalLab/`, audits `*_timeseries.csv` files, builds
 `features_sop12_sandia.csv`, and downloads a compact ZIP with no raw data.
+
+Optional Luh/KIT RADAR extension notebook:
+<https://colab.research.google.com/github/osmansafacifci/Graduation-Project-Dicle/blob/main/notebooks/run_luh_colab.ipynb>
+
+It expects the previously used Drive folder
+`MyDrive/RADAR69GB/unzipped/10.35097-1947/data/dataset/`, audits
+`cfg`, `cell_eocv2`, and `cell_log_age` files, interpolates capacity onto
+integer EFC cycles, builds `features_sop12_luh.csv`, and downloads a compact
+ZIP with no raw data.
 
 ### Phase B — Local
 
