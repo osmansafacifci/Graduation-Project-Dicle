@@ -72,7 +72,8 @@ recovers the bulk of the loss.
 │   ├── conformal_prediction.py
 │   └── summarize_conformal_results.py
 ├── notebooks/
-│   └── run_pipeline_colab.ipynb     # Phase A (Drive-mounted, heavy I/O)
+│   ├── run_pipeline_colab.ipynb     # MATR + HUST Phase A extract
+│   └── run_sandia_colab.ipynb       # Sandia/SNL Phase A extract
 ├── data/
 │   ├── raw/                 # gitignored — fetched at runtime
 │   └── intermediate/        # committed audit + feature CSVs (~MB)
@@ -114,6 +115,13 @@ Open in Colab and `Runtime → Run all`:
 
 The last cell triggers a ZIP download containing the audit + feature CSVs.
 Unzip into `data/intermediate/` locally and commit.
+
+Optional Sandia/SNL extension notebook:
+<https://colab.research.google.com/github/osmansafacifci/Graduation-Project-Dicle/blob/main/notebooks/run_sandia_colab.ipynb>
+
+It expects the previously used Drive folder
+`MyDrive/SandiaNationalLab/`, audits `*_timeseries.csv` files, builds
+`features_sop12_sandia.csv`, and downloads a compact ZIP with no raw data.
 
 ### Phase B — Local
 
