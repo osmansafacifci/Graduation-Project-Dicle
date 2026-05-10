@@ -1,0 +1,17 @@
+table,dataset,n_cycles,rows,cells,modeling_cells,censored_cells,capacity_normalized
+features_sop12_four_dataset.csv,hust,50,77,77,77,0,0
+features_sop12_four_dataset.csv,hust,100,77,77,77,0,0
+features_sop12_four_dataset.csv,luh,50,108,108,106,2,0
+features_sop12_four_dataset.csv,luh,100,108,108,106,2,0
+features_sop12_four_dataset.csv,matr,50,135,135,129,6,0
+features_sop12_four_dataset.csv,matr,100,135,135,129,6,0
+features_sop12_four_dataset.csv,sandia,50,61,61,50,11,0
+features_sop12_four_dataset.csv,sandia,100,61,61,50,11,0
+features_sop12_four_dataset_capnorm.csv,hust,50,77,77,77,0,1
+features_sop12_four_dataset_capnorm.csv,hust,100,77,77,77,0,1
+features_sop12_four_dataset_capnorm.csv,luh,50,108,108,106,2,1
+features_sop12_four_dataset_capnorm.csv,luh,100,108,108,106,2,1
+features_sop12_four_dataset_capnorm.csv,matr,50,135,135,129,6,1
+features_sop12_four_dataset_capnorm.csv,matr,100,135,135,129,6,1
+features_sop12_four_dataset_capnorm.csv,sandia,50,61,61,50,11,1
+features_sop12_four_dataset_capnorm.csv,sandia,100,61,61,50,11,1

@@ -1,0 +1,4 @@
+dataset,eol_fraction,n_cells_ok,n_reached_eol,n_censored,reached_eol_fraction
+luh,0.9,108,108,0,1.0
+luh,0.85,108,106,2,0.9814814814814815
+luh,0.8,108,94,14,0.8703703703703703

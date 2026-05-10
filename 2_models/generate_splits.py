@@ -14,10 +14,14 @@ Outputs:
 
 Usage:
     python 2_models/generate_splits.py
+    python 2_models/generate_splits.py \
+        --features-path data/intermediate/features_sop12_four_dataset.csv \
+        --output-dir splits/sop_v2_four_dataset
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -89,19 +93,39 @@ def make_splits_for_dataset(df: pd.DataFrame, dataset: str) -> dict[int, dict]:
     return out
 
 
-def main() -> int:
-    if not FEATURES_PATH.exists():
-        print(f"[error] {FEATURES_PATH} missing — run build_features.py first.")
-        return 1
-    df = pd.read_csv(FEATURES_PATH)
-    SPLITS_DIR.mkdir(parents=True, exist_ok=True)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--features-path", type=Path, default=FEATURES_PATH,
+                        help="Feature table to split. Default: data/intermediate/features_sop12_combined.csv")
+    parser.add_argument("--output-dir", type=Path, default=SPLITS_DIR,
+                        help="Directory for split JSON files. Default: splits/sop_v2")
+    parser.add_argument("--datasets", nargs="+", default=None,
+                        help="Optional dataset subset. Default: all datasets in the feature table.")
+    return parser.parse_args()
 
-    for dataset in sorted(df["dataset"].unique()):
+
+def main() -> int:
+    args = parse_args()
+    features_path = args.features_path if args.features_path.is_absolute() else PROJECT_ROOT / args.features_path
+    splits_dir = args.output_dir if args.output_dir.is_absolute() else PROJECT_ROOT / args.output_dir
+    if not features_path.exists():
+        print(f"[error] {features_path} missing — run build_features.py first.")
+        return 1
+    df = pd.read_csv(features_path)
+    splits_dir.mkdir(parents=True, exist_ok=True)
+
+    datasets = sorted(df["dataset"].unique()) if args.datasets is None else args.datasets
+    print(f"[setup] features_path: {features_path.relative_to(PROJECT_ROOT)}")
+    print(f"[setup] output_dir: {splits_dir.relative_to(PROJECT_ROOT)}")
+    for dataset in datasets:
         print(f"\n[{dataset}]")
         sub = df[df["dataset"] == dataset]
+        if sub.empty:
+            print(f"  [skip] no rows")
+            continue
         splits = make_splits_for_dataset(sub, dataset=dataset)
         for seed, split in splits.items():
-            out = SPLITS_DIR / f"{dataset}_{seed}.json"
+            out = splits_dir / f"{dataset}_{seed}.json"
             with out.open("w") as f:
                 json.dump(split, f, indent=2)
             print(f"  -> {out.relative_to(PROJECT_ROOT)}")

@@ -1,0 +1,4 @@
+dataset,eol_fraction,n_cells_ok,n_reached_eol,n_censored,reached_eol_fraction
+sandia,0.9,86,80,6,0.9302325581395349
+sandia,0.85,86,75,11,0.872093023255814
+sandia,0.8,86,67,19,0.7790697674418605

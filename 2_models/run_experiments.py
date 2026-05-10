@@ -25,6 +25,11 @@ Usage:
     python 2_models/run_experiments.py --models elastic_net
     python 2_models/run_experiments.py --windows 100
     python 2_models/run_experiments.py --no-log-target --output-dir outputs/results_v2_no_log
+    python 2_models/run_experiments.py \
+        --features-path data/intermediate/features_sop12_four_dataset.csv \
+        --splits-dir splits/sop_v2_four_dataset \
+        --datasets matr hust sandia luh \
+        --output-dir outputs/results_v2_four_dataset_within_34feat_log
 """
 
 from __future__ import annotations
@@ -57,6 +62,7 @@ RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2_34feat_log"
 
 SEEDS = [42, 123, 456, 789, 1011]
 DEFAULT_WINDOWS = [50, 100]
+ALL_DATASETS = ["matr", "hust", "sandia", "luh"]
 ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
 DEFAULT_MODELS = ALL_MODELS  # full lineup (stacking included)
 
@@ -771,12 +777,16 @@ def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=["matr", "hust"])
+    parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=ALL_DATASETS)
     parser.add_argument("--models", nargs="+", default=DEFAULT_MODELS, choices=ALL_MODELS,
                         help="Models to train. Default: full 7-model lineup.")
     parser.add_argument("--windows", type=int, nargs="+", default=DEFAULT_WINDOWS,
                         help="Prediction windows N. Default: 50 100 (per SOP §2.1). "
                              "Optional ablation: add 25.")
+    parser.add_argument("--features-path", type=Path, default=FEATURES_PATH,
+                        help="Feature table to use. Default: data/intermediate/features_sop12_combined.csv")
+    parser.add_argument("--splits-dir", type=Path, default=SPLITS_DIR,
+                        help="Directory containing {dataset}_{seed}.json split files. Default: splits/sop_v2")
     parser.add_argument("--features-from", type=Path, default=None,
                         help="Path to a text file with one feature name per line. "
                              "If omitted, every non-metadata column in the CSV is used. "
@@ -807,10 +817,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     global SOP12_FEATURE_COLS  # may be rewritten if --features-from is used
     args = parse_args()
-    if not FEATURES_PATH.exists():
-        print(f"[error] {FEATURES_PATH} missing — run build_features.py first.")
+    features_path = args.features_path if args.features_path.is_absolute() else PROJECT_ROOT / args.features_path
+    splits_dir = args.splits_dir if args.splits_dir.is_absolute() else PROJECT_ROOT / args.splits_dir
+    if not features_path.exists():
+        print(f"[error] {features_path} missing — run build_features.py first.")
         return 1
-    df = pd.read_csv(FEATURES_PATH)
+    df = pd.read_csv(features_path)
 
     # Resolve feature subset.
     # Default = every numeric column in the CSV that isn't metadata (so when the
@@ -839,6 +851,8 @@ def main() -> int:
 
     results_dir = args.output_dir if args.output_dir is not None else RESULTS_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[setup] features_path: {features_path.relative_to(PROJECT_ROOT)}")
+    print(f"[setup] splits_dir: {splits_dir.relative_to(PROJECT_ROOT)}")
     print(f"[setup] features: {feature_subset_source} -> {feature_cols}")
     print(f"[setup] output_dir: {results_dir}")
 
@@ -879,7 +893,7 @@ def main() -> int:
             }
 
             for seed in SEEDS:
-                split_path = SPLITS_DIR / f"{src}_{seed}.json"
+                split_path = splits_dir / f"{src}_{seed}.json"
                 if not split_path.exists():
                     print(f"[warn] missing split file: {split_path}")
                     continue
@@ -959,7 +973,7 @@ def main() -> int:
         }
 
         for seed in SEEDS:
-            split_path = SPLITS_DIR / f"{dataset}_{seed}.json"
+            split_path = splits_dir / f"{dataset}_{seed}.json"
             if not split_path.exists():
                 print(f"[warn] missing split file: {split_path}")
                 continue
