@@ -83,6 +83,7 @@ recovers the bulk of the loss.
 │   ├── survival_censoring_four_dataset.py
 │   ├── concept_shift_diagnostics.py
 │   ├── conditional_shift_decomposition.py
+│   ├── conditional_shift_four_dataset.py
 │   ├── koopman_dmd_pilot.py
 │   ├── target_rescaling.py
 │   ├── summarize_target_rescaling.py
@@ -211,6 +212,7 @@ python 3_analysis/summarize_conformal_results.py
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
+| **Paper extension** | Four-dataset conditional-shift diagnostics: pairwise feature-slope shifts, naive-best source-prediction rank signal, residual-vs-linear calibration regime labels | `3_analysis/conditional_shift_four_dataset.py` | `data/intermediate/four_dataset_conditional_shift_*`, `outputs/results_v2_four_dataset_conditional_shift/...` |
 | **§6+++** | Hankel-DMD / Koopman-style dynamics pilot on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer | `3_analysis/koopman_dmd_pilot.py` | `data/intermediate/koopman_dmd_*`, `outputs/results_v2_koopman_dmd/...` |
 | **Paper extension** | Four-dataset validation: Sandia 0-100 subset, Luh standard-cycling subset, feature-table counts, split completeness, and full within/cross result matrix checks | `3_analysis/validate_four_dataset_extension.py` | `data/intermediate/four_dataset_validation_*` |
 | **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves and pairwise log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
@@ -418,6 +420,42 @@ weak point-fit recovery.
 The paper-facing directional asymmetry scatter is saved at
 `outputs/results_v2_conditional_shift/paper_directional_asymmetry_seed42.png`.
 
+### Four-Dataset Conditional Shift
+
+`3_analysis/conditional_shift_four_dataset.py` extends the same decomposition
+to MATR, HUST, Sandia, and Luh using the capacity-normalized four-dataset
+feature table. It separates three things: the dataset-level log-life offset,
+the share of features whose centered-log slope changes, and whether the
+naive-best source model preserves target rank signal.
+
+| Pair | Life ratio B/A | Slope-shifted features |
+|---|---:|---:|
+| HUST vs Luh | 0.275 | 26 / 34 |
+| HUST vs Sandia | 0.247 | 25 / 34 |
+| MATR vs Sandia | 0.515 | 19 / 34 |
+| MATR vs Luh | 0.573 | 17 / 34 |
+| MATR vs HUST | 2.085 | 14 / 34 |
+| Sandia vs Luh | 1.113 | 3 / 34 |
+
+Direction-level diagnostics show the transfer regimes directly:
+
+| Direction | Naive-best model | Naive R² | Pearson r | Linear-calibrated R² | Interpretation |
+|---|---|---:|---:|---:|---|
+| Luh → Sandia | XGBoost | 0.492 | 0.912 | 0.840 | strong transferable rank signal |
+| Sandia → Luh | PLS | 0.477 | 0.859 | 0.744 | strong transferable rank signal |
+| HUST → Luh | PLS | -0.373 | 0.766 | 0.600 | rank signal survives despite large offset |
+| MATR → Sandia | CatBoost | 0.041 | 0.522 | 0.343 | moderate/strong target-calibratable transfer |
+| MATR → HUST | Gaussian Process | -7.937 | -0.120 | 0.025 | center repair, rank signal lost |
+| HUST → MATR | Gaussian Process | -3.600 | -0.130 | 0.015 | center repair, rank signal lost |
+
+This is the broader item-5 interpretation: **transferability is governed less
+by naive covariate alignment alone and more by whether source predictions keep
+target rank order**. The easiest pair, Sandia↔Luh, has almost no feature-slope
+shift and high Pearson r. Harder directions can still reduce MAE after target
+calibration, but if r collapses the recovery is mostly a target-center repair.
+Outputs are in `data/intermediate/four_dataset_conditional_shift_report.md`
+and `outputs/results_v2_four_dataset_conditional_shift/four_dataset_conditional_shift_heatmaps.png`.
+
 ### Koopman/DMD Dynamics Pilot
 
 `3_analysis/koopman_dmd_pilot.py` runs a lightweight Hankel-DMD diagnostic on
@@ -588,6 +626,7 @@ python 3_analysis/concept_shift_diagnostics.py
 
 # Conditional-shift decomposition and weighted-CP falsifier
 python 3_analysis/conditional_shift_decomposition.py
+python 3_analysis/conditional_shift_four_dataset.py
 python 3_analysis/koopman_dmd_pilot.py
 python 3_analysis/importance_weighted_conformal.py
 
@@ -639,6 +678,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §7− Target calibration baseline (k = 5 / 10 / 15 / 20; residual-mean + linear)
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 - [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
+- [x] Paper extension conditional-shift diagnostics (four-dataset feature-slope and rank-signal regimes)
 - [x] Paper extension survival/censoring audit (four-dataset Kaplan-Meier/log-rank/KS checks)
 
 ---

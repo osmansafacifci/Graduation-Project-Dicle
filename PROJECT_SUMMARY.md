@@ -1,7 +1,7 @@
 # Project Summary — Battery Lifetime Prediction (Dicle Çoban Thesis)
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
-> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, k-shot target calibration, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
+> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, conditional-shift/rank-signal diagnostics, k-shot target calibration, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
 > **Last updated**: 2026-05-11
 
 ---
@@ -71,6 +71,7 @@ the SOP12 capacity-only features.
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ✅ | Plus per-feature attribution + capnorm comparison |
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
 | **+** | Conditional-shift decomposition (centered-log slopes + alpha/beta) | ✅ | Universal log-life offset plus 16/34 feature-level slope changes; robust alpha checks, Pearson-r transfer signal, and scatter plot added |
+| **Paper extension** | Four-dataset conditional-shift diagnostics | ✅ | Pairwise feature-slope shift shares plus source-prediction rank-signal/calibration regimes for all 12 directions |
 | **+** | Koopman/DMD dynamics pilot | ✅ | Hankel-DMD on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
@@ -206,6 +207,42 @@ The paper-facing directional asymmetry scatter is saved at
 The paper wording should be **dominant conditional offset plus structured
 feature-level slope changes and asymmetric rank-transfer loss**, not pure
 additive shift.
+
+### Four-dataset conditional-shift regimes
+
+`3_analysis/conditional_shift_four_dataset.py` extends the decomposition to
+MATR, HUST, Sandia, and Luh/KIT using the capacity-normalized four-dataset
+feature table. It tests whether each pair differs mainly by a log-life offset,
+by feature→life slope changes, or by loss of source-prediction rank signal.
+
+| Pair | Life ratio B/A | Slope-shifted features |
+|---|---:|---:|
+| HUST vs Luh | 0.275 | 26 / 34 |
+| HUST vs Sandia | 0.247 | 25 / 34 |
+| MATR vs Sandia | 0.515 | 19 / 34 |
+| MATR vs Luh | 0.573 | 17 / 34 |
+| MATR vs HUST | 2.085 | 14 / 34 |
+| Sandia vs Luh | 1.113 | 3 / 34 |
+
+Direction diagnostics make the manuscript claim less dataset-specific and more
+mechanistic: directions with preserved rank signal are the directions where
+linear target calibration becomes genuinely predictive.
+
+| Direction | Naive R² | Pearson r | Linear-calibrated R² | Regime |
+|---|---:|---:|---:|---|
+| Luh → Sandia | 0.492 | 0.912 | 0.840 | transferable rank signal |
+| Sandia → Luh | 0.477 | 0.859 | 0.744 | transferable rank signal |
+| HUST → Luh | -0.373 | 0.766 | 0.600 | rank signal survives large offset |
+| MATR → Sandia | 0.041 | 0.522 | 0.343 | calibratable transfer |
+| MATR → HUST | -7.937 | -0.120 | 0.025 | center repair; rank signal lost |
+| HUST → MATR | -3.600 | -0.130 | 0.015 | center repair; rank signal lost |
+
+This supports the broader paper claim: **cross-dataset battery RUL transfer is
+not a binary success/failure problem; it separates into rank-preserving
+directions, offset-dominated repairs, and true conditional-shift failures.**
+The cross-check report is
+`data/intermediate/four_dataset_conditional_shift_report.md`; the heatmap is
+`outputs/results_v2_four_dataset_conditional_shift/four_dataset_conditional_shift_heatmaps.png`.
 
 ### Koopman/DMD dynamics pilot (§6+++)
 
@@ -576,6 +613,7 @@ python 3_analysis/survival_censoring.py
 # Concept-shift diagnostics
 python 3_analysis/concept_shift_diagnostics.py
 python 3_analysis/conditional_shift_decomposition.py
+python 3_analysis/conditional_shift_four_dataset.py
 python 3_analysis/koopman_dmd_pilot.py
 
 # Target calibration
@@ -627,6 +665,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/survival_censoring_four_dataset.py` | four-dataset Kaplan-Meier/log-rank/KS censoring audit |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
 | `3_analysis/conditional_shift_decomposition.py` | centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust alpha checks, Pearson r with bootstrap CI, and scatter plot |
+| `3_analysis/conditional_shift_four_dataset.py` | four-dataset feature-slope/rank-signal conditional-shift regimes |
 | `3_analysis/koopman_dmd_pilot.py` | Hankel-DMD / Koopman-style early-capacity dynamics pilot with per-cell modes and source/target operator transfer |
 | `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, clipping sweep, and target-adapted comparison figure/table |
 | `3_analysis/target_rescaling.py` | k-shot residual-mean/linear target-calibration baseline (§7 precursor) |
