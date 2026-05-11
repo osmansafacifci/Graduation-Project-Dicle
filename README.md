@@ -1,9 +1,10 @@
 # Battery Lifetime Prediction — SOP-Compliant Pipeline
 
 Early-cycle lifetime prediction for lithium-ion cells (Severson/MATR and HUST
-public datasets), built around an SOP that fixes label semantics, feature
-definitions, and split protocols. Companion to a thesis on cross-dataset
-transfer of capacity-only features.
+public datasets, with Sandia/SNL and Luh/KIT extensions for the paper), built
+around an SOP that fixes label semantics, feature definitions, and split
+protocols. Companion to a thesis on cross-dataset transfer of capacity-only
+features.
 
 > **Status**
 > Within-dataset, cross-dataset, distribution-shift quantification,
@@ -11,6 +12,8 @@ transfer of capacity-only features.
 > concept-/conditional-shift diagnostics, importance-weighted CP falsifier,
 > Koopman/DMD dynamics pilot, target-side recalibration baselines, and standard
 > MAPIE split conformal prediction are all in place.
+> Four-dataset feature tables, within/cross metrics, k-shot target calibration,
+> and survival/censoring audit are also committed for the paper extension.
 
 ---
 
@@ -27,6 +30,19 @@ transfer of capacity-only features.
 Bootstrap intervals are averaged across the 5 seed-specific test-cell
 bootstrap intervals; seed-to-seed standard deviations remain in
 `outputs/results_v2_34feat_log/results_summary.csv`.
+
+**Four-dataset paper extension (34 features + log-target, N=100, fixed
+four-dataset splits):**
+
+| Dataset | Best within model | Within R² | Within MAE | Cells / modeled / censored |
+|---|---|---:|---:|---:|
+| MATR | CatBoost | 0.575 | 171.7 | 135 / 129 / 6 |
+| HUST | Random Forest | 0.340 | 178.0 | 77 / 77 / 0 |
+| Sandia 0-100 SOC | XGBoost | 0.940 | 120.8 | 61 / 50 / 11 |
+| Luh/KIT | Gaussian Process | 0.769 | 115.8 | 108 / 106 / 2 |
+
+The extension validation report is
+`data/intermediate/four_dataset_validation_report.md`.
 
 **Cross-dataset transfer (best per direction across all feature-set ablations):**
 
@@ -64,10 +80,13 @@ recovers the bulk of the loss.
 │   ├── feature_transfer_stability.py
 │   ├── shap_feature_importance.py
 │   ├── survival_censoring.py
+│   ├── survival_censoring_four_dataset.py
 │   ├── concept_shift_diagnostics.py
 │   ├── conditional_shift_decomposition.py
 │   ├── koopman_dmd_pilot.py
 │   ├── target_rescaling.py
+│   ├── summarize_target_rescaling.py
+│   ├── validate_four_dataset_extension.py
 │   ├── importance_weighted_conformal.py
 │   ├── conformal_prediction.py
 │   └── summarize_conformal_results.py
@@ -167,7 +186,7 @@ python 3_analysis/survival_censoring.py
 python 3_analysis/concept_shift_diagnostics.py
 python 3_analysis/koopman_dmd_pilot.py
 
-# Target-mean rescaling
+# Target calibration
 python 3_analysis/target_rescaling.py
 
 # Standard split conformal prediction (MAPIE)
@@ -193,7 +212,9 @@ python 3_analysis/summarize_conformal_results.py
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
 | **§6+++** | Hankel-DMD / Koopman-style dynamics pilot on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer | `3_analysis/koopman_dmd_pilot.py` | `data/intermediate/koopman_dmd_*`, `outputs/results_v2_koopman_dmd/...` |
-| **§7−** | Target-mean rescaling baseline (k=5/10/20 calibration cells) | `3_analysis/target_rescaling.py` | `outputs/results_v2_target_rescale/...` |
+| **Paper extension** | Four-dataset validation: Sandia 0-100 subset, Luh standard-cycling subset, feature-table counts, split completeness, and full within/cross result matrix checks | `3_analysis/validate_four_dataset_extension.py` | `data/intermediate/four_dataset_validation_*` |
+| **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves and pairwise log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
+| **§7−** | Target calibration baseline (k=5/10/15/20 calibration cells; residual-mean and linear adapters; MATR/HUST default or four-dataset extension via CLI) | `3_analysis/target_rescaling.py`, `3_analysis/summarize_target_rescaling.py` | `outputs/results_v2_target_rescale/...`, `outputs/results_v2_four_dataset_target_rescale/...`, `data/intermediate/four_dataset_target_rescale_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
 
@@ -264,6 +285,28 @@ Three observations:
    primary (R² = 0.575) but transfers worse than the 12-feature SOP set —
    within-dataset accuracy and transferability trade off in opposite
    directions.
+
+### Four-dataset extension
+
+The paper extension uses the same 34-feature/log-target protocol on MATR,
+HUST, Sandia 0-100 SOC cells, and Luh/KIT standard-cycling cells. Validation
+passes all count, split, and result-matrix checks in
+`data/intermediate/four_dataset_validation_report.md`.
+
+Best naive cross-dataset transfers at N=100 show that adding Sandia and Luh
+does not make transfer uniformly easy; only chemically/protocol-adjacent
+directions are strong.
+
+| Direction | Best model | MAE | R² |
+|---|---|---:|---:|
+| Luh → Sandia | XGBoost | 415.3 | 0.492 |
+| Sandia → Luh | PLS | 185.0 | 0.477 |
+| MATR → Sandia | CatBoost | 715.0 | 0.041 |
+| MATR → HUST | Gaussian Process | 763.0 | -7.937 |
+| HUST → MATR | Gaussian Process | 720.4 | -3.600 |
+
+The full 12-direction matrix is in
+`outputs/results_v2_four_dataset_cross_34feat_capnorm_log/results_summary.csv`.
 
 ### Distribution shift quantification (§6.3)
 
@@ -418,10 +461,12 @@ MATR -> HUST. See
 `paper_iwcp_comparison_90.png`, whose finite-interval panel now prints the
 fraction directly on each bar.
 
-### Target-mean rescaling fix
+### Target calibration fix
 
-Linear correction `y_corrected = a · y_raw + b` fit on k random target cells,
-scored on the rest. Averaged across 5 seeds × 20 calibration draws.
+Residual-mean and linear corrections are fit on k random target cells and
+scored on the rest. The two-dataset thesis table below uses the linear
+adapter; the four-dataset extension runs both residual-mean and linear
+adapters for `k={5,10,15,20}` across all 12 directions.
 
 **MATR → HUST** (n_target = 77):
 
@@ -443,6 +488,23 @@ Tree-based models recover from R² ≈ −10 to ≈ −0.05 with k = 20 calibrat
 cells — a 50× to 500× MSE reduction. R² ≈ 0 means the rescaled model now
 matches the target's marginal-mean predictor, consistent with the 91.5% /
 74.2% constant-bias share found in the residual decomposition.
+
+For the four-dataset extension, the conservative audit fixes the naive-best
+model per direction before applying k=20 adapters:
+
+| Direction | Naive-best model | Baseline R² | Residual R² | Linear R² |
+|---|---|---:|---:|---:|
+| Luh → Sandia | XGBoost | 0.492 | 0.499 | 0.784 |
+| Sandia → Luh | PLS | 0.477 | 0.592 | 0.716 |
+| MATR → Sandia | CatBoost | 0.041 | -0.023 | 0.201 |
+| MATR → HUST | Gaussian Process | -7.937 | -0.266 | -0.108 |
+| Sandia → HUST | CatBoost | -1.431 | -0.418 | -0.078 |
+| HUST → MATR | Gaussian Process | -3.600 | -0.052 | -1.168 |
+
+Full tables are in
+`outputs/results_v2_four_dataset_target_rescale/results_summary.csv`,
+`data/intermediate/four_dataset_target_rescale_naive_best_k20.csv`, and
+`data/intermediate/four_dataset_target_rescale_report_k20.md`.
 
 ### Conformal Prediction
 
@@ -481,6 +543,8 @@ outputs are in `outputs/results_v2_conformal/paper_cp_summary.*`,
 |---|---|---|---|
 | MATR (b1+b2+b3 strict merge) | 135 | 6 (4.4%) | 129 |
 | HUST | 77 | 0 (0%) | 77 |
+| Sandia 0-100 SOC | 61 | 11 (18.0%) | 50 |
+| Luh/KIT | 108 | 2 (1.9%) | 106 |
 
 Censored cells are kept in the feature table with `cycle_life = NaN`;
 experiments drop them.
@@ -491,6 +555,13 @@ lifetime gap: MATR KM median 773 cycles vs HUST 1513 cycles, log-rank
 χ² = 61.2, p = 5.2e-15. Even the conservative lower-bound imputation
 where censored MATR cells fail at their censoring times moves the MATR mean
 only from 778 to 802 cycles; HUST remains 1490 cycles.
+
+The four-dataset survival audit extends the same rule to Sandia and Luh:
+censored cells are excluded from regression metrics and retained as
+right-censored observations for Kaplan-Meier/log-rank sensitivity checks.
+Key medians are MATR 773, HUST 1513, Sandia 305, and Luh 508 cycles in
+`data/intermediate/four_dataset_survival_censoring_report.md`; the plot is
+`outputs/results_v2_four_dataset_survival/kaplan_meier_four_dataset.png`.
 
 ---
 
@@ -520,7 +591,7 @@ python 3_analysis/conditional_shift_decomposition.py
 python 3_analysis/koopman_dmd_pilot.py
 python 3_analysis/importance_weighted_conformal.py
 
-# Target-mean rescaling (R² = -10 → -0.02 with k=20)
+# Target calibration (R² = -10 → -0.02 with k=20)
 python 3_analysis/target_rescaling.py
 
 # Standard split conformal prediction (MAPIE)
@@ -529,6 +600,21 @@ python 3_analysis/summarize_conformal_results.py
 
 # Optional sensitivity: include the two-parameter linear target adapter
 python 3_analysis/conformal_prediction.py --adapter-types residual_mean linear
+
+# Four-dataset extension checks and target calibration
+python 3_analysis/validate_four_dataset_extension.py
+python 3_analysis/survival_censoring_four_dataset.py
+python 3_analysis/target_rescaling.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --windows 100 \
+    --k-values 5 10 15 20 \
+    --adapter-types residual_mean linear \
+    --n-repeats 20 \
+    --output-dir outputs/results_v2_four_dataset_target_rescale
+python 3_analysis/summarize_target_rescaling.py \
+    --results outputs/results_v2_four_dataset_target_rescale/results_summary.csv
 ```
 
 Each script writes a JSON with the per-seed numbers and a summary CSV.
@@ -550,8 +636,10 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §6+ Survival/censoring sensitivity analysis
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
 - [x] §6+++ Koopman/DMD early-capacity dynamics pilot
-- [x] §7− Target-mean rescaling baseline (k = 5 / 10 / 20)
+- [x] §7− Target calibration baseline (k = 5 / 10 / 15 / 20; residual-mean + linear)
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
+- [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
+- [x] Paper extension survival/censoring audit (four-dataset Kaplan-Meier/log-rank/KS checks)
 
 ---
 

@@ -2,19 +2,20 @@
 Target-mean rescaling baseline for cross-dataset transfer (precursor to SOP §7).
 
 For each cross-dataset direction and each model, we already showed naive
-transfer collapses (R² ≪ 0). The covariate-vs-concept-shift analysis in
-§6.3 suggested the failure is concept shift (P(y|x) differs), not covariate
-shift (P(x) differs). This script tests the simplest possible concept-shift
-remedy: a 2-parameter linear correction fit on a small target calibration
-subset.
+transfer often collapses. The covariate-vs-concept-shift analysis in §6.3
+suggested the failure is conditional/concept shift (P(y|x) differs), not just
+covariate shift (P(x) differs). This script tests two small-target-label
+point-calibration adapters:
+
+    residual_mean: y_corrected = y_predicted + mean(y_true - y_predicted)
+    linear:        y_corrected = a * y_predicted + b
 
 Algorithm:
     1. Train each model on the source dataset's training split (same as the
        cross-dataset experiment).
     2. Predict on the full target dataset (same as before).
-    3. Sample k cells from the target as a calibration subset; fit
-           y_corrected = a * y_predicted + b
-       via OLS on those k cells.
+    3. Sample k cells from the target as a calibration subset; fit the requested
+       adapter(s) on those k cells.
     4. Apply (a, b) to the remaining target cells; score MAE / R² there.
     5. Repeat with `--n-repeats` random calibration draws and average.
 
@@ -29,7 +30,14 @@ Outputs:
 Usage:
     python 3_analysis/target_rescaling.py
     python 3_analysis/target_rescaling.py --features-from data/intermediate/feature_set_sop12.txt
-    python 3_analysis/target_rescaling.py --k-values 5 10 20 --n-repeats 20
+    python 3_analysis/target_rescaling.py --k-values 5 10 15 20 --n-repeats 20
+    python 3_analysis/target_rescaling.py \
+        --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+        --splits-dir splits/sop_v2_four_dataset \
+        --datasets matr hust sandia luh \
+        --windows 100 \
+        --adapter-types residual_mean linear \
+        --output-dir outputs/results_v2_four_dataset_target_rescale
 """
 
 from __future__ import annotations
@@ -65,8 +73,10 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_target_rescale"
 ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
 DEFAULT_WINDOWS = [50, 100]
 DEFAULT_DATASETS = ["matr", "hust"]
-DEFAULT_KS = [5, 10, 20]
+ALL_DATASETS = ["matr", "hust", "sandia", "luh"]
+DEFAULT_KS = [5, 10, 15, 20]
 DEFAULT_N_REPEATS = 20
+ADAPTER_TYPES = ["residual_mean", "linear"]
 
 FITTERS = {
     "elastic_net": fit_elastic_net,
@@ -87,8 +97,19 @@ def safe_pred(model, X):
     return np.clip(raw, -1e9, 1e9)
 
 
-def linear_recalibration(y_pred: np.ndarray, y_true: np.ndarray) -> tuple[float, float]:
-    """OLS fit y_true = a * y_pred + b. Falls back to (1, mean shift) if pred has zero variance."""
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def fit_point_adapter(y_pred: np.ndarray, y_true: np.ndarray, adapter_type: str) -> tuple[float, float]:
+    """Return (slope, intercept) for the requested target-side point adapter."""
+    if adapter_type == "residual_mean":
+        return 1.0, float(np.mean(y_true - y_pred))
+    if adapter_type != "linear":
+        raise ValueError(f"unknown adapter_type={adapter_type}")
     if np.std(y_pred) < 1e-12:
         return 1.0, float(np.mean(y_true) - np.mean(y_pred))
     a, b = np.polyfit(y_pred, y_true, 1)
@@ -99,40 +120,45 @@ def rescale_block(
     y_pred_target: np.ndarray,
     y_true_target: np.ndarray,
     k_values: list[int],
+    adapter_types: list[str],
     n_repeats: int,
     seed: int,
 ) -> dict:
-    """For each k, repeat sample(k cells) → fit linear → score on rest, average."""
+    """For each adapter/k, repeat sample(k cells) → fit adapter → score on rest."""
     rng = np.random.default_rng(seed)
     n = len(y_pred_target)
     out: dict = {}
-    for k in k_values:
-        if k >= n - 1:
-            continue
-        maes, smapes, r2s, a_vals, b_vals = [], [], [], [], []
-        for _ in range(n_repeats):
-            cal_idx = rng.choice(n, size=k, replace=False)
-            test_idx = np.setdiff1d(np.arange(n), cal_idx)
-            a, b = linear_recalibration(y_pred_target[cal_idx], y_true_target[cal_idx])
-            corrected = a * y_pred_target[test_idx] + b
-            metrics = compute_metrics(y_true_target[test_idx], corrected)
-            maes.append(metrics["MAE"])
-            smapes.append(metrics["SMAPE"])
-            r2s.append(metrics["R2"])
-            a_vals.append(a)
-            b_vals.append(b)
-        out[str(k)] = {
-            "k": int(k),
-            "n_repeats": int(n_repeats),
-            "MAE_mean": float(np.mean(maes)),
-            "MAE_std": float(np.std(maes)),
-            "SMAPE_mean": float(np.mean(smapes)),
-            "SMAPE_std": float(np.std(smapes)),
-            "R2_mean": float(np.mean(r2s)),
-            "R2_std": float(np.std(r2s)),
-            "slope_mean": float(np.mean(a_vals)),
-            "intercept_mean": float(np.mean(b_vals)),
-        }
+    for adapter_type in adapter_types:
+        out[adapter_type] = {}
+        for k in k_values:
+            if k >= n - 1:
+                continue
+            maes, smapes, r2s, a_vals, b_vals = [], [], [], [], []
+            for _ in range(n_repeats):
+                cal_idx = rng.choice(n, size=k, replace=False)
+                test_idx = np.setdiff1d(np.arange(n), cal_idx)
+                a, b = fit_point_adapter(y_pred_target[cal_idx], y_true_target[cal_idx], adapter_type)
+                corrected = a * y_pred_target[test_idx] + b
+                corrected = np.clip(np.nan_to_num(corrected, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
+                metrics = compute_metrics(y_true_target[test_idx], corrected)
+                maes.append(metrics["MAE"])
+                smapes.append(metrics["SMAPE"])
+                r2s.append(metrics["R2"])
+                a_vals.append(a)
+                b_vals.append(b)
+            out[adapter_type][str(k)] = {
+                "adapter_type": adapter_type,
+                "k": int(k),
+                "n_repeats": int(n_repeats),
+                "MAE_mean": float(np.mean(maes)),
+                "MAE_std": float(np.std(maes)),
+                "SMAPE_mean": float(np.mean(smapes)),
+                "SMAPE_std": float(np.std(smapes)),
+                "R2_mean": float(np.mean(r2s)),
+                "R2_std": float(np.std(r2s)),
+                "slope_mean": float(np.mean(a_vals)),
+                "intercept_mean": float(np.mean(b_vals)),
+            }
     return out
 
 
@@ -147,14 +173,16 @@ def evaluate_direction(
     models: list[str],
     log_target: bool,
     k_values: list[int],
+    adapter_types: list[str],
     n_repeats: int,
+    splits_dir: Path,
 ) -> dict:
     """Train on source's training split, score on target with and without rescaling."""
     from sklearn.preprocessing import StandardScaler
 
     src_df = df[(df["dataset"] == src) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)]
     tgt_df = df[(df["dataset"] == tgt) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)]
-    split_path = SPLITS_DIR / f"{src}_{seed}.json"
+    split_path = splits_dir / f"{src}_{seed}.json"
     if not split_path.exists():
         return {"_skipped": True, "reason": "missing split"}
     with split_path.open() as f:
@@ -196,7 +224,7 @@ def evaluate_direction(
         y_pred_target = _to_cycles(safe_pred(model, X_tgt_s))
 
         baseline = compute_metrics(y_tgt, y_pred_target)
-        rescaled = rescale_block(y_pred_target, y_tgt, k_values, n_repeats, seed=seed)
+        rescaled = rescale_block(y_pred_target, y_tgt, k_values, adapter_types, n_repeats, seed=seed)
 
         out["models"][name] = {"baseline": baseline, "rescaled": rescaled}
     return out
@@ -204,7 +232,11 @@ def evaluate_direction(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--datasets", nargs="+", default=DEFAULT_DATASETS, choices=DEFAULT_DATASETS)
+    parser.add_argument("--features-path", type=Path, default=FEATURES_PATH,
+                        help="Feature table to use. Default: data/intermediate/features_sop12_combined.csv")
+    parser.add_argument("--splits-dir", type=Path, default=SPLITS_DIR,
+                        help="Directory containing {dataset}_{seed}.json split files. Default: splits/sop_v2")
+    parser.add_argument("--datasets", nargs="+", default=DEFAULT_DATASETS, choices=ALL_DATASETS)
     parser.add_argument("--models", nargs="+", default=ALL_MODELS, choices=ALL_MODELS)
     parser.add_argument("--windows", type=int, nargs="+", default=DEFAULT_WINDOWS)
     parser.add_argument("--features-from", type=Path, default=None,
@@ -214,7 +246,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log-target", action="store_true", default=True)
     parser.add_argument("--no-log-target", action="store_false", dest="log_target")
     parser.add_argument("--k-values", type=int, nargs="+", default=DEFAULT_KS,
-                        help="Calibration set sizes to sweep. Default: 5 10 20.")
+                        help="Calibration set sizes to sweep. Default: 5 10 15 20.")
+    parser.add_argument("--adapter-types", nargs="+", default=["residual_mean", "linear"], choices=ADAPTER_TYPES,
+                        help="Target-side point adapters to evaluate. Default: residual_mean linear.")
     parser.add_argument("--n-repeats", type=int, default=DEFAULT_N_REPEATS,
                         help="Random calibration draws to average over. Default: 20.")
     return parser.parse_args()
@@ -222,10 +256,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if not FEATURES_PATH.exists():
-        print(f"[error] {FEATURES_PATH} missing — run build_features.py first.")
+    features_path = args.features_path if args.features_path.is_absolute() else PROJECT_ROOT / args.features_path
+    splits_dir = args.splits_dir if args.splits_dir.is_absolute() else PROJECT_ROOT / args.splits_dir
+    if not features_path.exists():
+        print(f"[error] {features_path} missing — run build_features.py first.")
         return 1
-    df = pd.read_csv(FEATURES_PATH)
+    df = pd.read_csv(features_path)
 
     available = [c for c in df.columns if c not in META_COLS]
     feature_cols = list(available)
@@ -244,9 +280,11 @@ def main() -> int:
 
     out_dir = args.output_dir if args.output_dir is not None else DEFAULT_OUTPUT_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[setup] features_path: {display_path(features_path)}")
+    print(f"[setup] splits_dir: {display_path(splits_dir)}")
     print(f"[setup] features: {feature_subset_source}")
     print(f"[setup] output_dir: {out_dir}")
-    print(f"[setup] k_values: {args.k_values}, n_repeats: {args.n_repeats}, log_target: {args.log_target}")
+    print(f"[setup] k_values: {args.k_values}, adapter_types={args.adapter_types}, n_repeats: {args.n_repeats}, log_target: {args.log_target}")
 
     pairs = [(s, t) for s in args.datasets for t in args.datasets if s != t]
     summary_rows: list[dict] = []
@@ -275,7 +313,8 @@ def main() -> int:
                     df, src, tgt, feature_cols,
                     n_cycles=n, seed=seed,
                     models=args.models, log_target=args.log_target,
-                    k_values=args.k_values, n_repeats=args.n_repeats,
+                    k_values=args.k_values, adapter_types=args.adapter_types,
+                    n_repeats=args.n_repeats, splits_dir=splits_dir,
                 )
             bundle["per_seed"][str(seed)] = per_window
 
@@ -283,7 +322,10 @@ def main() -> int:
         for n in args.windows:
             for model in args.models:
                 base_mae, base_r2, base_smape = [], [], []
-                rescaled_acc: dict[int, dict[str, list[float]]] = {k: {"MAE": [], "R2": [], "SMAPE": []} for k in args.k_values}
+                rescaled_acc: dict[str, dict[int, dict[str, list[float]]]] = {
+                    adapter: {k: {"MAE": [], "R2": [], "SMAPE": [], "slope": [], "intercept": []} for k in args.k_values}
+                    for adapter in args.adapter_types
+                }
                 for seed in SEEDS:
                     block = bundle["per_seed"][str(seed)].get(str(n), {}).get("models", {}).get(model)
                     if not isinstance(block, dict):
@@ -291,32 +333,45 @@ def main() -> int:
                     base = block.get("baseline", {})
                     if "MAE" in base:
                         base_mae.append(base["MAE"]); base_r2.append(base["R2"]); base_smape.append(base["SMAPE"])
-                    for k_str, k_block in block.get("rescaled", {}).items():
-                        k = int(k_str)
-                        if k in rescaled_acc:
-                            rescaled_acc[k]["MAE"].append(k_block["MAE_mean"])
-                            rescaled_acc[k]["R2"].append(k_block["R2_mean"])
-                            rescaled_acc[k]["SMAPE"].append(k_block["SMAPE_mean"])
+                    for adapter_type, adapter_block in block.get("rescaled", {}).items():
+                        for k_str, k_block in adapter_block.items():
+                            k = int(k_str)
+                            if adapter_type in rescaled_acc and k in rescaled_acc[adapter_type]:
+                                rescaled_acc[adapter_type][k]["MAE"].append(k_block["MAE_mean"])
+                                rescaled_acc[adapter_type][k]["R2"].append(k_block["R2_mean"])
+                                rescaled_acc[adapter_type][k]["SMAPE"].append(k_block["SMAPE_mean"])
+                                rescaled_acc[adapter_type][k]["slope"].append(k_block["slope_mean"])
+                                rescaled_acc[adapter_type][k]["intercept"].append(k_block["intercept_mean"])
                 if not base_mae:
                     continue
-                row = {
-                    "experiment": f"{src}_to_{tgt}",
-                    "model": model,
-                    "n_cycles": n,
-                    "baseline_MAE": float(np.mean(base_mae)),
-                    "baseline_MAE_std": float(np.std(base_mae)),
-                    "baseline_SMAPE": float(np.mean(base_smape)),
-                    "baseline_R2": float(np.mean(base_r2)),
-                    "baseline_R2_std": float(np.std(base_r2)),
-                }
-                for k in args.k_values:
-                    if rescaled_acc[k]["MAE"]:
-                        row[f"k{k}_MAE"] = float(np.mean(rescaled_acc[k]["MAE"]))
-                        row[f"k{k}_MAE_std"] = float(np.std(rescaled_acc[k]["MAE"]))
-                        row[f"k{k}_SMAPE"] = float(np.mean(rescaled_acc[k]["SMAPE"]))
-                        row[f"k{k}_R2"] = float(np.mean(rescaled_acc[k]["R2"]))
-                        row[f"k{k}_R2_std"] = float(np.std(rescaled_acc[k]["R2"]))
-                summary_rows.append(row)
+                for adapter_type in args.adapter_types:
+                    for k in args.k_values:
+                        acc = rescaled_acc[adapter_type][k]
+                        if not acc["MAE"]:
+                            continue
+                        summary_rows.append({
+                            "experiment": f"{src}_to_{tgt}",
+                            "source": src,
+                            "target": tgt,
+                            "model": model,
+                            "n_cycles": n,
+                            "adapter_type": adapter_type,
+                            "k": int(k),
+                            "baseline_MAE": float(np.mean(base_mae)),
+                            "baseline_MAE_std": float(np.std(base_mae)),
+                            "baseline_SMAPE": float(np.mean(base_smape)),
+                            "baseline_R2": float(np.mean(base_r2)),
+                            "baseline_R2_std": float(np.std(base_r2)),
+                            "adapted_MAE": float(np.mean(acc["MAE"])),
+                            "adapted_MAE_std": float(np.std(acc["MAE"])),
+                            "adapted_SMAPE": float(np.mean(acc["SMAPE"])),
+                            "adapted_R2": float(np.mean(acc["R2"])),
+                            "adapted_R2_std": float(np.std(acc["R2"])),
+                            "adapter_slope_mean": float(np.mean(acc["slope"])),
+                            "adapter_intercept_mean": float(np.mean(acc["intercept"])),
+                            "delta_MAE": float(np.mean(acc["MAE"]) - np.mean(base_mae)),
+                            "delta_R2": float(np.mean(acc["R2"]) - np.mean(base_r2)),
+                        })
 
         out_path = out_dir / f"results_{src}_to_{tgt}.json"
         with out_path.open("w") as f:
@@ -329,9 +384,9 @@ def main() -> int:
     print(f"[save] {summary_path}")
 
     print("\n=== TARGET-RESCALING SUMMARY (5 seeds × n_repeats cal draws) ===")
-    cols = ["experiment", "model", "n_cycles", "baseline_R2"] + [f"k{k}_R2" for k in args.k_values]
+    cols = ["experiment", "model", "n_cycles", "adapter_type", "k", "baseline_R2", "adapted_R2", "delta_R2", "baseline_MAE", "adapted_MAE"]
     cols = [c for c in cols if c in summary_df.columns]
-    print(summary_df[cols].sort_values(["experiment", "n_cycles", "model"]).to_string(index=False))
+    print(summary_df[cols].sort_values(["experiment", "n_cycles", "model", "adapter_type", "k"]).to_string(index=False))
 
     return 0
 

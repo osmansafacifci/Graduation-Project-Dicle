@@ -1,16 +1,16 @@
 # Project Summary — Battery Lifetime Prediction (Dicle Çoban Thesis)
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
-> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction.
-> **Last updated**: 2026-05-09
+> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, k-shot target calibration, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
+> **Last updated**: 2026-05-11
 
 ---
 
 ## 1. What we built
 
 A reproducible, SOPv2-compliant pipeline for early-cycle battery lifetime
-prediction on the Severson/MATR (124 LFP cells) and HUST (77 LFP cells) public
-datasets. Forked from the student's original repo
+prediction on the Severson/MATR and HUST public datasets, now extended with
+Sandia/SNL and Luh/KIT feature tables for the paper. Forked from the student's original repo
 ([diclecoban/Graduation-Project](https://github.com/diclecoban/Graduation-Project));
 v2 modules live alongside the original code so deviations from the supervisor's
 SOPv2 spec are traceable.
@@ -21,8 +21,9 @@ The pipeline runs in two phases:
   runs MATR + HUST audits, builds 34-feature CSVs (~500 KB).
 - **Phase B (laptop)** — splits, VIF, experiments, shift metrics,
   feature-transfer/XAI diagnostics, survival/censoring sensitivity,
-  Koopman/DMD dynamics pilot, target rescaling, and conformal prediction. Pure
-  CPU, seconds-to-minutes per light experiment.
+  Koopman/DMD dynamics pilot, target rescaling, four-dataset extension checks,
+  and conformal prediction. Pure CPU, seconds-to-minutes per light experiment;
+  full four-dataset model/calibration sweeps are longer laptop runs.
 
 Phase A is run only when feature definitions change. Phase B is iterated freely
 on the committed CSVs without ever re-touching the raw data.
@@ -72,10 +73,12 @@ the SOP12 capacity-only features.
 | **+** | Conditional-shift decomposition (centered-log slopes + alpha/beta) | ✅ | Universal log-life offset plus 16/34 feature-level slope changes; robust alpha checks, Pearson-r transfer signal, and scatter plot added |
 | **+** | Koopman/DMD dynamics pilot | ✅ | Hankel-DMD on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
-| **+** | Target-mean rescaling baseline (precursor to §7) | ✅ | New finding (see below) |
+| **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
+| **Paper extension** | Four-dataset validation | ✅ | MATR/HUST/Sandia/Luh feature counts, split completeness, and 56-row within / 168-row cross result matrices pass |
+| **Paper extension** | Four-dataset survival/censoring audit | ✅ | Sandia 11/61 censored, Luh 2/108 censored; Kaplan-Meier curves and pairwise tests committed |
 
 ---
 
@@ -91,6 +94,19 @@ intervals.
 |---|---|---|---|---|
 | MATR | CatBoost | **171.7 [110.4, 243.2]** | 23.7 [15.5, 33.5] | **0.575 [0.256, 0.732]** |
 | HUST | Random Forest | **178.0 [112.1, 253.7]** | 12.2 [7.7, 17.3] | **0.340 [-0.579, 0.690]** |
+
+Four-dataset paper extension at the same N=100 / 34-feature / log-target
+setting:
+
+| Dataset | Best model | MAE | sMAPE | R² | Cells / modeled / censored |
+|---|---|---:|---:|---:|---:|
+| MATR | CatBoost | 171.7 | 23.7 | 0.575 | 135 / 129 / 6 |
+| HUST | Random Forest | 178.0 | 12.2 | 0.340 | 77 / 77 / 0 |
+| Sandia 0-100 SOC | XGBoost | 120.8 | 23.4 | 0.940 | 61 / 50 / 11 |
+| Luh/KIT | Gaussian Process | 115.8 | 18.4 | 0.769 | 108 / 106 / 2 |
+
+The validation audit is
+`data/intermediate/four_dataset_validation_report.md`.
 
 Reference points:
 - Severson 2019 (voltage-curve features, MATR): R² ≈ 0.85–0.92
@@ -110,6 +126,20 @@ All transfers fail catastrophically. R² < 0 means worse than predicting the
 target's mean cycle life. **More features hurt transfer** (34-feat is the
 within-dataset champion but transfers worse than 12-feat) — the entropy / FFT
 features capture MATR-specific signal that does not generalize.
+
+Four-dataset naive cross transfer is mixed rather than uniformly catastrophic:
+Luh → Sandia reaches R² = 0.492 and Sandia → Luh reaches R² = 0.477, while
+MATR/HUST directions remain poor and some Sandia/HUST/MATR directions still
+need target calibration. The full matrix is
+`outputs/results_v2_four_dataset_cross_34feat_capnorm_log/results_summary.csv`.
+
+At k=20, target calibration was run for all 12 directions, all 7 models, and
+both residual-mean and linear adapters. The conservative table fixes the
+naive-best model first; examples: Luh → Sandia improves from R² = 0.492 to
+0.784 with the linear adapter, Sandia → Luh from 0.477 to 0.716, MATR → HUST
+from −7.937 to −0.108, and Sandia → HUST from −1.431 to −0.078. Cross-check
+files: `data/intermediate/four_dataset_target_rescale_naive_best_k20.csv` and
+`data/intermediate/four_dataset_target_rescale_report_k20.md`.
 
 ### Distribution shift (§6.3)
 
@@ -260,6 +290,13 @@ with censored MATR cells imputed at their earliest possible failure times, it
 is still D = 0.818, p = 6.5e-34. So censoring is not the reason HUST appears
 longer-lived.
 
+The four-dataset audit applies the same rule to the paper extension. Counts
+are MATR 135/129/6, HUST 77/77/0, Sandia 61/50/11, and Luh 108/106/2
+(cells/events-or-modeled/censored). Kaplan-Meier medians are MATR 773, HUST
+1513, Sandia 305, and Luh 508 cycles. Outputs:
+`data/intermediate/four_dataset_survival_censoring_report.md` and
+`outputs/results_v2_four_dataset_survival/kaplan_meier_four_dataset.png`.
+
 ### The covariate-vs-concept finding
 
 Re-running cross-dataset with capacity normalization:
@@ -298,10 +335,12 @@ This shows that a large directional offset is present. The right constant
 zero from R² = −11 in the diagnostic, but the centered slope and alpha/beta
 analyses below show that this offset is not the whole conditional shift.
 
-### Target-mean rescaling fix (§7 precursor)
+### Target calibration fix (§7 precursor)
 
-Linear correction `y_corrected = a · y_predicted + b` fit on k random target
-cells, scored on the rest. Averaged across 5 seeds × 20 calibration draws.
+Residual-mean and linear corrections are fit on k random target cells and
+scored on the rest. The original MATR/HUST table below reports the linear
+adapter; the four-dataset extension now sweeps k={5,10,15,20} with both
+adapters across all 12 directions.
 
 **MATR → HUST** (n_target = 77):
 
@@ -449,9 +488,8 @@ domain study — it suits applied-ML venues better than pure mech-eng venues.
 ### Sections
 
 1. **Setup** — corrected SOP labels, feature engineering, model lineup.
-2. **Within-dataset benchmark** — 5 datasets if we extend with Sandia /
-   Knapp / Luh from the BİLGEM project (highly recommended for the paper);
-   otherwise just MATR + HUST.
+2. **Within-dataset benchmark** — MATR, HUST, Sandia 0-100 SOC, and Luh/KIT
+   now form the committed four-dataset benchmark.
 3. **Naïve cross-dataset transfer fails** — full transfer matrix.
 4. **Distribution shift quantification** — MMD, Mahalanobis, per-feature
    attribution. Identifies the absolute-capacity gap as the dominant
@@ -466,8 +504,9 @@ domain study — it suits applied-ML venues better than pure mech-eng venues.
    but does not improve transfer. **The headline result.**
 9. **Concept-shift evidence** — KS test on y, per-cell residual
    constant-bias decomposition.
-10. **Target-side rescaling works** — k=20 label fix recovers R² from
-   −10 to −0.05.
+10. **Target-side calibration works** — k=20 label fix recovers R² from
+   −10 to near 0 in the hard MATR/HUST directions and lifts the easier
+   Sandia/Luh directions above their naive baselines.
 11. **Conformal prediction** — source CP fails under shift; target-domain CP
    restores coverage; residual-mean target adaptation narrows intervals.
 12. **Practical recommendation** — quantify shift, take a small target
@@ -484,21 +523,13 @@ domain study — it suits applied-ML venues better than pure mech-eng venues.
   clean visual that reviewers will remember.
 - The practical fix (k=20 cells → 50× MSE reduction) is industry-relevant.
 
-### Extensions worth doing for the paper
+### Extensions still worth doing for the paper
 
-These can be pursued **after** Dicle submits the thesis. Each is independent
-of the others; pick by appetite:
+Sandia and Luh/KIT are now integrated. The remaining optional extensions are:
 
-1. **Add Sandia / Knapp / Luh datasets** from the BİLGEM TÜBİTAK project.
-   With 4–5 datasets you can:
-   - Build a 4×4 / 5×5 transfer matrix.
-   - Decompose shift components: same chemistry / different temperature
-     transfer; different chemistry / same temperature transfer; both
-     different (worst case).
-   - Quantify which factor (chemistry, temperature, C-rate, manufacturer)
-     contributes most to transfer failure.
-   This is the strongest standalone paper extension. ~6–8 weeks of work
-   to port loaders, run experiments, analyze.
+1. **Fifth dataset / chemistry-axis expansion** if a clean public dataset can
+   be mapped to the same capacity-only feature contract. This would turn the
+   current 4×4 matrix into a broader chemistry/protocol-factor study.
 
 2. **Q_CV/Q_CC novel feature** (also from BİLGEM project). Use only as a
    secondary ablation on datasets with comparable charge-stage data and
@@ -547,8 +578,23 @@ python 3_analysis/concept_shift_diagnostics.py
 python 3_analysis/conditional_shift_decomposition.py
 python 3_analysis/koopman_dmd_pilot.py
 
-# Target-mean rescaling
+# Target calibration
 python 3_analysis/target_rescaling.py
+
+# Four-dataset extension validation, survival, and target calibration
+python 3_analysis/validate_four_dataset_extension.py
+python 3_analysis/survival_censoring_four_dataset.py
+python 3_analysis/target_rescaling.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --windows 100 \
+    --k-values 5 10 15 20 \
+    --adapter-types residual_mean linear \
+    --n-repeats 20 \
+    --output-dir outputs/results_v2_four_dataset_target_rescale
+python 3_analysis/summarize_target_rescaling.py \
+    --results outputs/results_v2_four_dataset_target_rescale/results_summary.csv
 
 # Covariate-shift CP falsifier
 python 3_analysis/importance_weighted_conformal.py
@@ -578,11 +624,14 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/feature_transfer_stability.py` | feature-level transfer/stability analysis and SHAP bridge |
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
+| `3_analysis/survival_censoring_four_dataset.py` | four-dataset Kaplan-Meier/log-rank/KS censoring audit |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
 | `3_analysis/conditional_shift_decomposition.py` | centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust alpha checks, Pearson r with bootstrap CI, and scatter plot |
 | `3_analysis/koopman_dmd_pilot.py` | Hankel-DMD / Koopman-style early-capacity dynamics pilot with per-cell modes and source/target operator transfer |
 | `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, clipping sweep, and target-adapted comparison figure/table |
-| `3_analysis/target_rescaling.py` | k-shot linear correction baseline (§7 precursor) |
+| `3_analysis/target_rescaling.py` | k-shot residual-mean/linear target-calibration baseline (§7 precursor) |
+| `3_analysis/summarize_target_rescaling.py` | compact k=20 target-calibration tables for four-dataset cross-checking |
+| `3_analysis/validate_four_dataset_extension.py` | validates four-dataset feature tables, splits, and within/cross result matrices |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
 | `notebooks/run_pipeline_colab.ipynb` | Phase A Colab runner |

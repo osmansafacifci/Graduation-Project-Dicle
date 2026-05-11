@@ -1,0 +1,4211 @@
+{
+  "protocol": "target_rescaling_v2",
+  "source": "hust",
+  "target": "sandia",
+  "feature_set": "auto-detected from CSV (34 features)",
+  "feature_columns": [
+    "Qdis_N",
+    "delta_Qdis",
+    "retention_ratio",
+    "slope_linear",
+    "variance_Qdis",
+    "range_Qdis",
+    "max_drop",
+    "std_diff",
+    "skewness_Qdis",
+    "slope_ratio",
+    "Qdis_cycle10",
+    "mean_diff",
+    "poly2_a",
+    "poly2_b",
+    "poly2_c",
+    "exp_decay_k",
+    "cycle_to_99pct",
+    "cycle_to_98pct",
+    "cycle_to_95pct",
+    "slope_first_quarter",
+    "slope_last_quarter",
+    "autocorr_lag1",
+    "knee_cycle",
+    "n_capacity_jumps",
+    "accel_mean",
+    "accel_std",
+    "accel_max_abs",
+    "linearity_r2",
+    "kurtosis_Qdis",
+    "fft_top3_energy_ratio",
+    "spectral_entropy",
+    "sample_entropy",
+    "pos_neg_diff_ratio",
+    "mad_Qdis"
+  ],
+  "log_target": true,
+  "k_values": [
+    5,
+    10,
+    15,
+    20
+  ],
+  "n_repeats": 20,
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1011
+  ],
+  "windows": [
+    100
+  ],
+  "models": [
+    "elastic_net",
+    "pls",
+    "random_forest",
+    "xgboost",
+    "catboost",
+    "gaussian_process",
+    "stacking"
+  ],
+  "per_seed": {
+    "42": {
+      "100": {
+        "n_cycles": 100,
+        "train_cells": 53,
+        "target_cells": 50,
+        "models": {
+          "elastic_net": {
+            "baseline": {
+              "MAE": 2957789.3109559566,
+              "SMAPE": 143.1085833410021,
+              "R2": -339144499.470693
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 3108354.850837702,
+                  "MAE_std": 713781.1199543414,
+                  "SMAPE_mean": 177.7037609552705,
+                  "SMAPE_std": 26.82674826372993,
+                  "R2_mean": -357805456.0974253,
+                  "R2_std": 88233230.91669995,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -1481061.237295318
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 2927384.165913453,
+                  "MAE_std": 1464356.5436790367,
+                  "SMAPE_mean": 188.56770446238642,
+                  "SMAPE_std": 18.170176069277602,
+                  "R2_mean": -342986400.3071714,
+                  "R2_std": 179164508.57183152,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -2908898.0179821686
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 2915555.7863845704,
+                  "MAE_std": 1908871.3296477036,
+                  "SMAPE_mean": 195.21665248582713,
+                  "SMAPE_std": 9.557482864937615,
+                  "R2_mean": -333756701.94779015,
+                  "R2_std": 224121381.69269177,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -2940083.0597325917
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 3142792.1001337217,
+                  "MAE_std": 2306347.0132271014,
+                  "SMAPE_mean": 193.96257820771953,
+                  "SMAPE_std": 14.800411383156305,
+                  "R2_mean": -386821371.8865167,
+                  "R2_std": 310805661.3593791,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -2603846.038798621
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 15056.898189122014,
+                  "MAE_std": 62120.22271021424,
+                  "SMAPE_mean": 109.71845939603534,
+                  "SMAPE_std": 27.322573173234034,
+                  "R2_mean": -142864.74632107333,
+                  "R2_std": 622732.4346547469,
+                  "slope_mean": -0.5684330727368888,
+                  "intercept_mean": 1778.132748997752
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 834.0486988470924,
+                  "MAE_std": 96.885655108366,
+                  "SMAPE_mean": 111.59453745953985,
+                  "SMAPE_std": 18.217861676107695,
+                  "R2_mean": -0.06562586169189284,
+                  "R2_std": 0.0852800297722349,
+                  "slope_mean": -0.12175220044680757,
+                  "intercept_mean": 1072.801709913448
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 839.7890890760063,
+                  "MAE_std": 72.8249562914183,
+                  "SMAPE_mean": 109.2818690800585,
+                  "SMAPE_std": 13.169666820861051,
+                  "R2_mean": -0.07163850563122096,
+                  "R2_std": 0.12773703458046645,
+                  "slope_mean": -0.020422351735223228,
+                  "intercept_mean": 808.9298572517392
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 847.4395699197512,
+                  "MAE_std": 54.17161285351426,
+                  "SMAPE_mean": 105.84893527854027,
+                  "SMAPE_std": 15.14383691957355,
+                  "R2_mean": -0.1217569410353907,
+                  "R2_std": 0.2771224942844574,
+                  "slope_mean": -0.00026763522385644413,
+                  "intercept_mean": 746.879548734091
+                }
+              }
+            }
+          },
+          "pls": {
+            "baseline": {
+              "MAE": 28395202.60024787,
+              "SMAPE": 114.43592599390162,
+              "R2": -19604730089.487316
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 29553836.943244,
+                  "MAE_std": 6326389.408738399,
+                  "SMAPE_mean": 184.10432687587155,
+                  "SMAPE_std": 23.82833030636018,
+                  "R2_mean": -20569841114.12211,
+                  "R2_std": 5136168184.935021,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -14201741.686879223
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 31006269.14735978,
+                  "MAE_std": 9827002.711171709,
+                  "SMAPE_mean": 190.602408484208,
+                  "SMAPE_std": 17.33403926196498,
+                  "R2_mean": -21993011980.612206,
+                  "R2_std": 8026670865.6603985,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -16163313.326577913
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 30362557.73565071,
+                  "MAE_std": 12933734.79816489,
+                  "SMAPE_mean": 197.06524788866085,
+                  "SMAPE_std": 3.8060436857143007,
+                  "R2_mean": -21371781150.735237,
+                  "R2_std": 10304578871.566359,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -21619768.639670216
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 26057667.965741944,
+                  "MAE_std": 16909368.102395035,
+                  "SMAPE_mean": 195.91131622488592,
+                  "SMAPE_std": 8.75623552336299,
+                  "R2_mean": -17760300257.39346,
+                  "R2_std": 14692343458.399158,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -30170659.998658925
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 6759009.6679551955,
+                  "MAE_std": 15840213.872628823,
+                  "SMAPE_mean": 110.1875485484687,
+                  "SMAPE_std": 24.727580669061304,
+                  "R2_mean": -5635006684.055683,
+                  "R2_std": 13468581633.0404,
+                  "slope_mean": 0.3388731559143595,
+                  "intercept_mean": 506.1716036327842
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 1085990.141218593,
+                  "MAE_std": 2899932.8740864974,
+                  "SMAPE_mean": 111.13519101809909,
+                  "SMAPE_std": 16.760014840680054,
+                  "R2_mean": -216214729.0998341,
+                  "R2_std": 717991881.0350918,
+                  "slope_mean": 0.027921829411520223,
+                  "intercept_mean": 750.2912458791989
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 847.9978983772277,
+                  "MAE_std": 71.43279035199863,
+                  "SMAPE_mean": 110.22915654156904,
+                  "SMAPE_std": 13.057817631770618,
+                  "R2_mean": -0.08120935875228927,
+                  "R2_std": 0.11491146696900141,
+                  "slope_mean": -0.004683183814287445,
+                  "intercept_mean": 758.2813673609401
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 864.5959126925333,
+                  "MAE_std": 57.64342783864773,
+                  "SMAPE_mean": 107.3058286622767,
+                  "SMAPE_std": 14.328435045011258,
+                  "R2_mean": -0.13879181434275129,
+                  "R2_std": 0.2932719842249074,
+                  "slope_mean": -3.0337578238971397e-06,
+                  "intercept_mean": 741.1238426306292
+                }
+              }
+            }
+          },
+          "random_forest": {
+            "baseline": {
+              "MAE": 1265.0982354790715,
+              "SMAPE": 127.36927755110364,
+              "R2": -0.44728261792776913
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 804.1471814620378,
+                  "MAE_std": 171.8352223296349,
+                  "SMAPE_mean": 106.17538231730998,
+                  "SMAPE_std": 13.765451722755842,
+                  "R2_mean": -0.042314804529442016,
+                  "R2_std": 0.24813951160170394,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -851.5721083861636
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 786.0878872901088,
+                  "MAE_std": 87.213856812107,
+                  "SMAPE_mean": 100.41899761382074,
+                  "SMAPE_std": 14.46421075034709,
+                  "R2_mean": 0.02725239652267038,
+                  "R2_std": 0.09845699205852425,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -846.4012296661674
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 785.422967813586,
+                  "MAE_std": 77.34574807233967,
+                  "SMAPE_mean": 96.21180129327892,
+                  "SMAPE_std": 14.38097382180686,
+                  "R2_mean": 0.024008806504021412,
+                  "R2_std": 0.1755760941441399,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -835.9697530340563
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 810.961266725789,
+                  "MAE_std": 72.08956858194385,
+                  "SMAPE_mean": 99.8788109613225,
+                  "SMAPE_std": 14.784074121492422,
+                  "R2_mean": -0.0012026376145203633,
+                  "R2_std": 0.1551529748169855,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -813.0269505821522
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 785.9060209499987,
+                  "MAE_std": 204.89848454362811,
+                  "SMAPE_mean": 103.84635505027661,
+                  "SMAPE_std": 31.13244879096429,
+                  "R2_mean": -0.1528846271047281,
+                  "R2_std": 0.4167727298028642,
+                  "slope_mean": 3.8077018512229737,
+                  "intercept_mean": -5785.548809777952
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 775.3471918145157,
+                  "MAE_std": 86.00125422926652,
+                  "SMAPE_mean": 107.52466798485416,
+                  "SMAPE_std": 19.318471551849957,
+                  "R2_mean": 0.011882378534059745,
+                  "R2_std": 0.12173443283451064,
+                  "slope_mean": 1.6667921914427246,
+                  "intercept_mean": -1922.441796823235
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 788.9522085710438,
+                  "MAE_std": 55.364006084423714,
+                  "SMAPE_mean": 105.24163386375912,
+                  "SMAPE_std": 18.288524064645664,
+                  "R2_mean": 0.0002006741926794564,
+                  "R2_std": 0.10318765118433151,
+                  "slope_mean": 1.6418106560877959,
+                  "intercept_mean": -1885.6996681941287
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 790.5971180424981,
+                  "MAE_std": 35.423285313273155,
+                  "SMAPE_mean": 104.61449155730934,
+                  "SMAPE_std": 19.89344439692387,
+                  "R2_mean": -0.022357355076616337,
+                  "R2_std": 0.26409632113974296,
+                  "slope_mean": 1.5524021020964962,
+                  "intercept_mean": -1749.6923542079257
+                }
+              }
+            }
+          },
+          "xgboost": {
+            "baseline": {
+              "MAE": 1205.2629370117188,
+              "SMAPE": 125.32314964025626,
+              "R2": -0.31182622809604066
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 745.2271110026043,
+                  "MAE_std": 164.2529064647882,
+                  "SMAPE_mean": 101.10091604556496,
+                  "SMAPE_std": 16.545189998102394,
+                  "R2_mean": 0.08470360900189103,
+                  "R2_std": 0.21893270357294836,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -831.233858642578
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 723.7992816162108,
+                  "MAE_std": 83.37007241908171,
+                  "SMAPE_mean": 93.98451473342416,
+                  "SMAPE_std": 16.4763233372958,
+                  "R2_mean": 0.14877915230053995,
+                  "R2_std": 0.09266056097143092,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -824.2336834716796
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 726.2675949532645,
+                  "MAE_std": 71.75253728660111,
+                  "SMAPE_mean": 91.9270652387307,
+                  "SMAPE_std": 14.884802151715729,
+                  "R2_mean": 0.14270076295029904,
+                  "R2_std": 0.14822431488626628,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -814.6933060709636
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 747.0717156982422,
+                  "MAE_std": 64.86333113668907,
+                  "SMAPE_mean": 94.5867848132211,
+                  "SMAPE_std": 16.027407633481413,
+                  "R2_mean": 0.1290133793821391,
+                  "R2_std": 0.1332362406945198,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -794.7929315185546
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 688.168039279514,
+                  "MAE_std": 176.20239854941127,
+                  "SMAPE_mean": 106.29401827386441,
+                  "SMAPE_std": 31.70465881909031,
+                  "R2_mean": 0.03749378482782263,
+                  "R2_std": 0.4065210519208646,
+                  "slope_mean": 2.235623712852856,
+                  "intercept_mean": -2933.546324001948
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 674.4907307434082,
+                  "MAE_std": 72.31680617854792,
+                  "SMAPE_mean": 122.56319814960645,
+                  "SMAPE_std": 20.48444909353805,
+                  "R2_mean": 0.22166773203189152,
+                  "R2_std": 0.214893844447388,
+                  "slope_mean": 2.300253022236128,
+                  "intercept_mean": -2932.7057208503725
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 698.3218380737305,
+                  "MAE_std": 53.20435890887571,
+                  "SMAPE_mean": 120.58131041336571,
+                  "SMAPE_std": 23.76672752514779,
+                  "R2_mean": 0.21190566876432992,
+                  "R2_std": 0.1306312848341633,
+                  "slope_mean": 2.2537361446957367,
+                  "intercept_mean": -2825.3648814762973
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 696.2786703491212,
+                  "MAE_std": 56.58171525559543,
+                  "SMAPE_mean": 109.89410597312504,
+                  "SMAPE_std": 26.497535851130127,
+                  "R2_mean": 0.19568076104390977,
+                  "R2_std": 0.2552430656150547,
+                  "slope_mean": 2.1559867129193173,
+                  "intercept_mean": -2657.38302031403
+                }
+              }
+            }
+          },
+          "catboost": {
+            "baseline": {
+              "MAE": 1376.0854318324518,
+              "SMAPE": 131.14019853237846,
+              "R2": -0.6812063733000242
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 847.8742169470621,
+                  "MAE_std": 222.6241477085176,
+                  "SMAPE_mean": 97.6971738499001,
+                  "SMAPE_std": 24.98798318644077,
+                  "R2_mean": -0.22243513430099293,
+                  "R2_std": 0.3418980578194502,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -929.6622939676956
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 851.4416083387425,
+                  "MAE_std": 120.56812420761433,
+                  "SMAPE_mean": 103.10762616263847,
+                  "SMAPE_std": 18.2951743248707,
+                  "R2_mean": -0.13808155092680569,
+                  "R2_std": 0.12174067046018125,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -910.508934965527
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 858.6143264647244,
+                  "MAE_std": 88.03631833035733,
+                  "SMAPE_mean": 106.8011677818416,
+                  "SMAPE_std": 12.722283854210003,
+                  "R2_mean": -0.12968398344163345,
+                  "R2_std": 0.22555077281013144,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -902.2533384093429
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 873.7059743276462,
+                  "MAE_std": 58.73316352602699,
+                  "SMAPE_mean": 107.8449675678994,
+                  "SMAPE_std": 13.995407083913102,
+                  "R2_mean": -0.15261391610409886,
+                  "R2_std": 0.16935298292583176,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -888.9064437930408
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 1019.7399891368292,
+                  "MAE_std": 369.26056102323344,
+                  "SMAPE_mean": 107.36310642493432,
+                  "SMAPE_std": 31.60722960790261,
+                  "R2_mean": -0.7084999743506513,
+                  "R2_std": 1.0114712978181797,
+                  "slope_mean": -1.167932218417937,
+                  "intercept_mean": 2811.6259572004574
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 902.6156406536768,
+                  "MAE_std": 147.97060824455698,
+                  "SMAPE_mean": 105.45315838596107,
+                  "SMAPE_std": 16.578829455221214,
+                  "R2_mean": -0.2287101589470843,
+                  "R2_std": 0.18427091867816509,
+                  "slope_mean": -0.41227477108204597,
+                  "intercept_mean": 1470.1731875808155
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 871.4241797890927,
+                  "MAE_std": 78.15377480296894,
+                  "SMAPE_mean": 103.66693810624119,
+                  "SMAPE_std": 14.256644643515532,
+                  "R2_mean": -0.1553923396174946,
+                  "R2_std": 0.11697842612426493,
+                  "slope_mean": 0.2397040156836386,
+                  "intercept_mean": 332.22178958893426
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 865.5574219230409,
+                  "MAE_std": 72.166399687664,
+                  "SMAPE_mean": 103.35875684097736,
+                  "SMAPE_std": 14.463681368333068,
+                  "R2_mean": -0.19275535953171447,
+                  "R2_std": 0.4179457111993451,
+                  "slope_mean": -0.31851610949381054,
+                  "intercept_mean": 1238.9554055231224
+                }
+              }
+            }
+          },
+          "gaussian_process": {
+            "baseline": {
+              "MAE": 1271.2693026477523,
+              "SMAPE": 128.7999525839748,
+              "R2": -0.4411025744833965
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 844.6041543684448,
+                  "MAE_std": 221.9034800793387,
+                  "SMAPE_mean": 97.75899405405966,
+                  "SMAPE_std": 23.99200707341534,
+                  "R2_mean": -0.206860866502528,
+                  "R2_std": 0.34212442463296494,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -765.5234875544556
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 847.9221382976309,
+                  "MAE_std": 126.53037649191188,
+                  "SMAPE_mean": 102.5660293187203,
+                  "SMAPE_std": 18.375311421756308,
+                  "R2_mean": -0.12660164908831129,
+                  "R2_std": 0.1300801161607365,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -744.6886124659728
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 849.5531553997271,
+                  "MAE_std": 89.7656224125963,
+                  "SMAPE_mean": 105.51531290712475,
+                  "SMAPE_std": 13.636066776585716,
+                  "R2_mean": -0.11713717271115084,
+                  "R2_std": 0.22380064107612607,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -744.0113850387208
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 867.3296363794918,
+                  "MAE_std": 53.40450331581983,
+                  "SMAPE_mean": 107.29136042103076,
+                  "SMAPE_std": 14.333747188064503,
+                  "R2_mean": -0.13080393396608397,
+                  "R2_std": 0.16712485959057038,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -724.776326881087
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 49978.28480649937,
+                  "MAE_std": 205939.04423392453,
+                  "SMAPE_mean": 70.19015432466608,
+                  "SMAPE_std": 19.314013394431548,
+                  "R2_mean": -405574.4252326678,
+                  "R2_std": 1765483.807176099,
+                  "slope_mean": 2022429.1983729273,
+                  "intercept_mean": -2993696507.3061833
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 5463781.694067555,
+                  "MAE_std": 23803788.1073778,
+                  "SMAPE_mean": 81.88095713675227,
+                  "SMAPE_std": 23.748617317680154,
+                  "R2_mean": -4004985029.2309012,
+                  "R2_std": 17457322530.59415,
+                  "slope_mean": 1157754817.114181,
+                  "intercept_mean": -1713764285424.529
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 47899.632321753525,
+                  "MAE_std": 193838.82033270242,
+                  "SMAPE_mean": 81.17393095089382,
+                  "SMAPE_std": 17.13481527439856,
+                  "R2_mean": -274070.4713839779,
+                  "R2_std": 1191982.228071883,
+                  "slope_mean": 1510897.787267034,
+                  "intercept_mean": -2236503002.3173327
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 7923.296435391196,
+                  "MAE_std": 17289.241676069607,
+                  "SMAPE_mean": 87.22767772022817,
+                  "SMAPE_std": 19.56903542125434,
+                  "R2_mean": -1767.5164056798735,
+                  "R2_std": 4210.096710075309,
+                  "slope_mean": 205858.49111302145,
+                  "intercept_mean": -304721075.1192467
+                }
+              }
+            }
+          },
+          "stacking": {
+            "baseline": {
+              "MAE": 1268.5793299400243,
+              "SMAPE": 127.64585962625605,
+              "R2": -0.44793926343747437
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 807.058494506771,
+                  "MAE_std": 178.18470648151524,
+                  "SMAPE_mean": 105.49735053328814,
+                  "SMAPE_std": 13.647228488375324,
+                  "R2_mean": -0.05580867243391306,
+                  "R2_std": 0.2575500627832519,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -847.0411499405989
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 790.5084651721884,
+                  "MAE_std": 93.15910277186919,
+                  "SMAPE_mean": 100.20333879783439,
+                  "SMAPE_std": 15.215306719784527,
+                  "R2_mean": 0.015464594880540411,
+                  "R2_std": 0.10120018393311579,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -840.2147942423759
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 790.9592917680083,
+                  "MAE_std": 78.47761209650318,
+                  "SMAPE_mean": 97.60123518564345,
+                  "SMAPE_std": 14.430453311943241,
+                  "R2_mean": 0.013948909222994127,
+                  "R2_std": 0.17936407867448573,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -830.8943174697209
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 814.8123919738631,
+                  "MAE_std": 69.92684053548346,
+                  "SMAPE_mean": 100.3982229194242,
+                  "SMAPE_std": 15.124664633616701,
+                  "R2_mean": -0.009858448850448853,
+                  "R2_std": 0.1550071739069764,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -808.3678488947268
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 786.1391008639185,
+                  "MAE_std": 205.6661578507071,
+                  "SMAPE_mean": 104.0745715605924,
+                  "SMAPE_std": 31.414582980930316,
+                  "R2_mean": -0.15324752804884695,
+                  "R2_std": 0.4194945913797801,
+                  "slope_mean": 4.4024691742336355,
+                  "intercept_mean": -6719.1503898973
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 775.4387629177875,
+                  "MAE_std": 86.04457190532789,
+                  "SMAPE_mean": 107.48506209879011,
+                  "SMAPE_std": 19.38103497979672,
+                  "R2_mean": 0.011878840212540653,
+                  "R2_std": 0.12162989866673146,
+                  "slope_mean": 1.8710064538019986,
+                  "intercept_mean": -2233.719673633362
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 789.0936158163574,
+                  "MAE_std": 55.479334818081945,
+                  "SMAPE_mean": 105.20076457538994,
+                  "SMAPE_std": 18.292764142784574,
+                  "R2_mean": 0.00016983821829282819,
+                  "R2_std": 0.10315732944732117,
+                  "slope_mean": 1.8430158004427555,
+                  "intercept_mean": -2192.5079475615257
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 790.741419751982,
+                  "MAE_std": 35.383478101681504,
+                  "SMAPE_mean": 104.59130519409905,
+                  "SMAPE_std": 19.911704845199043,
+                  "R2_mean": -0.022846768972054076,
+                  "R2_std": 0.2645201702989467,
+                  "slope_mean": 1.7444219063910016,
+                  "intercept_mean": -2042.711635763989
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "123": {
+      "100": {
+        "n_cycles": 100,
+        "train_cells": 53,
+        "target_cells": 50,
+        "models": {
+          "elastic_net": {
+            "baseline": {
+              "MAE": 351.66332060253046,
+              "SMAPE": 164.34406824994844,
+              "R2": 0.8059384438416677
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 249.81963092741762,
+                  "MAE_std": 43.306244266844985,
+                  "SMAPE_mean": 49.465750223681894,
+                  "SMAPE_std": 29.31400682727986,
+                  "R2_mean": 0.8425482733026483,
+                  "R2_std": 0.018538020344320047,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 267.3502786976587
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 232.15975287253065,
+                  "MAE_std": 39.90993929191461,
+                  "SMAPE_mean": 42.399969928224166,
+                  "SMAPE_std": 14.057013003687647,
+                  "R2_mean": 0.8515611145696809,
+                  "R2_std": 0.0397166980857352,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 253.1475883370687
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 239.12114062176357,
+                  "MAE_std": 35.73409409867134,
+                  "SMAPE_mean": 42.48329646120491,
+                  "SMAPE_std": 12.012951634596096,
+                  "R2_mean": 0.8236169854777746,
+                  "R2_std": 0.07213840463683412,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 267.11020320425104
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 224.07521085693284,
+                  "MAE_std": 41.43579481956622,
+                  "SMAPE_mean": 36.52108548494435,
+                  "SMAPE_std": 6.656340516670989,
+                  "R2_mean": 0.8537240310001213,
+                  "R2_std": 0.06650455666499347,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 244.8300791751996
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 280.59433499776407,
+                  "MAE_std": 100.63162850281189,
+                  "SMAPE_mean": 39.330814543548904,
+                  "SMAPE_std": 15.386622571568154,
+                  "R2_mean": 0.7280780045090351,
+                  "R2_std": 0.18470700496572595,
+                  "slope_mean": 1.0785930861083428,
+                  "intercept_mean": 270.15089094479777
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 269.8604352593748,
+                  "MAE_std": 73.18663756240981,
+                  "SMAPE_mean": 36.469844176347934,
+                  "SMAPE_std": 5.994824130372747,
+                  "R2_mean": 0.7259711359103275,
+                  "R2_std": 0.16532369050604714,
+                  "slope_mean": 1.0730510754346274,
+                  "intercept_mean": 251.10625274981652
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 1157.48432468817,
+                  "MAE_std": 3996.9128698036357,
+                  "SMAPE_mean": 35.74724457799162,
+                  "SMAPE_std": 10.258846012783168,
+                  "R2_mean": -40.93714169135682,
+                  "R2_std": 181.7818215837408,
+                  "slope_mean": 2.3425675883670825,
+                  "intercept_mean": 244.56377941204624
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 237.35064652656433,
+                  "MAE_std": 54.935104376779,
+                  "SMAPE_mean": 35.811199669758594,
+                  "SMAPE_std": 6.064943227544361,
+                  "R2_mean": 0.7613428368585993,
+                  "R2_std": 0.13072446673593724,
+                  "slope_mean": 1.0569955275456242,
+                  "intercept_mean": 268.98692138383353
+                }
+              }
+            }
+          },
+          "pls": {
+            "baseline": {
+              "MAE": 349.52842275384506,
+              "SMAPE": 164.71880826495183,
+              "R2": 0.7699781515152245
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 263.4280177548479,
+                  "MAE_std": 60.2166147857154,
+                  "SMAPE_mean": 53.258489930130864,
+                  "SMAPE_std": 34.03781556566108,
+                  "R2_mean": 0.7880071265768821,
+                  "R2_std": 0.03315280467876993,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 231.11747913145845
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 260.88143319655876,
+                  "MAE_std": 61.747085216224285,
+                  "SMAPE_mean": 54.940828877376724,
+                  "SMAPE_std": 37.14400791870959,
+                  "R2_mean": 0.7925296737806322,
+                  "R2_std": 0.061096052629811284,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 217.55414040668438
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 248.12704664308256,
+                  "MAE_std": 42.16658771991089,
+                  "SMAPE_mean": 44.44247824518324,
+                  "SMAPE_std": 13.91914936239093,
+                  "R2_mean": 0.777297328122895,
+                  "R2_std": 0.08722670982405323,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 237.34024768692626
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 235.64884302403942,
+                  "MAE_std": 54.64428810719925,
+                  "SMAPE_mean": 39.22511573519963,
+                  "SMAPE_std": 8.549481100326345,
+                  "R2_mean": 0.8161835726246187,
+                  "R2_std": 0.08994339246414217,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 224.1537198870595
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 343.6511339484127,
+                  "MAE_std": 211.3373026117814,
+                  "SMAPE_mean": 42.625540318305205,
+                  "SMAPE_std": 16.349336503925333,
+                  "R2_mean": 0.43177794299023997,
+                  "R2_std": 1.1817193261445396,
+                  "slope_mean": 1.0789605919141991,
+                  "intercept_mean": 281.13194633496994
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 341.2360831712132,
+                  "MAE_std": 221.8879528287776,
+                  "SMAPE_mean": 39.978310977677175,
+                  "SMAPE_std": 7.79603903309688,
+                  "R2_mean": 0.4404791783869614,
+                  "R2_std": 1.1349105043556056,
+                  "slope_mean": 1.0414778482033475,
+                  "intercept_mean": 268.93216840994967
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 271.00194128470963,
+                  "MAE_std": 57.65544078685674,
+                  "SMAPE_mean": 36.72043288714699,
+                  "SMAPE_std": 4.40194584755729,
+                  "R2_mean": 0.7238437364279446,
+                  "R2_std": 0.13139003028915805,
+                  "slope_mean": 0.9668943789622695,
+                  "intercept_mean": 267.9033138950609
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 257.3583176100331,
+                  "MAE_std": 54.632475075545294,
+                  "SMAPE_mean": 39.00128232106842,
+                  "SMAPE_std": 7.442423668984253,
+                  "R2_mean": 0.7395302226621373,
+                  "R2_std": 0.11962585587134927,
+                  "slope_mean": 0.951625305737192,
+                  "intercept_mean": 295.2214123005323
+                }
+              }
+            }
+          },
+          "random_forest": {
+            "baseline": {
+              "MAE": 1219.6565250404878,
+              "SMAPE": 125.70324312453837,
+              "R2": -0.35348576651522534
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 807.4540341857335,
+                  "MAE_std": 174.70280457114913,
+                  "SMAPE_mean": 105.68174450047195,
+                  "SMAPE_std": 11.818169737201073,
+                  "R2_mean": -0.028865626403473975,
+                  "R2_std": 0.12976523479914281,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -775.1717017069892
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 813.1618575014065,
+                  "MAE_std": 108.69573436202192,
+                  "SMAPE_mean": 103.65532906297759,
+                  "SMAPE_std": 11.76526730538316,
+                  "R2_mean": 0.03751581552295359,
+                  "R2_std": 0.1322482814716041,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -738.0261349328399
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 800.1227985307429,
+                  "MAE_std": 87.175934615417,
+                  "SMAPE_mean": 103.35073589557472,
+                  "SMAPE_std": 10.383090463809975,
+                  "R2_mean": 0.00634201361304777,
+                  "R2_std": 0.33543718173732656,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -715.2347932409555
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 787.4264216147637,
+                  "MAE_std": 44.525650766807054,
+                  "SMAPE_mean": 101.5313780771973,
+                  "SMAPE_std": 9.742255354135807,
+                  "R2_mean": 0.043276991781940485,
+                  "R2_std": 0.19696403475186428,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -808.3172087731286
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 795.2591662696757,
+                  "MAE_std": 127.73506595473647,
+                  "SMAPE_mean": 107.65109569747335,
+                  "SMAPE_std": 23.313834258644636,
+                  "R2_mean": -0.011726039734800797,
+                  "R2_std": 0.28995911971935945,
+                  "slope_mean": 1.9621719395859802,
+                  "intercept_mean": -2279.3155754308486
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 806.0640323663547,
+                  "MAE_std": 95.82928470033586,
+                  "SMAPE_mean": 116.19464783108285,
+                  "SMAPE_std": 17.720810775086363,
+                  "R2_mean": 0.0547093061677556,
+                  "R2_std": 0.17663018945297154,
+                  "slope_mean": 1.8019728206655956,
+                  "intercept_mean": -1992.0933945182635
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 801.7957218825507,
+                  "MAE_std": 60.50043087481336,
+                  "SMAPE_mean": 118.92447473844337,
+                  "SMAPE_std": 17.46447019352681,
+                  "R2_mean": 0.07377357573477995,
+                  "R2_std": 0.15363273780372597,
+                  "slope_mean": 1.799034292615556,
+                  "intercept_mean": -2007.8428793742303
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 792.2190654734657,
+                  "MAE_std": 84.78234557796172,
+                  "SMAPE_mean": 122.72192038265871,
+                  "SMAPE_std": 14.609140211401145,
+                  "R2_mean": 0.06830500632140116,
+                  "R2_std": 0.1827858594573526,
+                  "slope_mean": 2.3486750297912105,
+                  "intercept_mean": -2836.886077140613
+                }
+              }
+            }
+          },
+          "xgboost": {
+            "baseline": {
+              "MAE": 1213.5879809570313,
+              "SMAPE": 124.714718886963,
+              "R2": -0.359784031583392
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 801.189916381836,
+                  "MAE_std": 162.45724700725617,
+                  "SMAPE_mean": 104.84935666241054,
+                  "SMAPE_std": 10.934370656049014,
+                  "R2_mean": -0.019225062264526683,
+                  "R2_std": 0.12531012802669136,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -797.1768457031251
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 820.2817486190797,
+                  "MAE_std": 100.02330324075088,
+                  "SMAPE_mean": 107.82131111923393,
+                  "SMAPE_std": 8.840834422323569,
+                  "R2_mean": 0.04059916512330833,
+                  "R2_std": 0.13811618439798332,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -740.743966064453
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 807.1319908796038,
+                  "MAE_std": 88.95118000533452,
+                  "SMAPE_mean": 105.08911671103378,
+                  "SMAPE_std": 10.678941747298781,
+                  "R2_mean": 0.0034949820384481633,
+                  "R2_std": 0.35912463330582817,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -714.2618884277343
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 793.8817295328776,
+                  "MAE_std": 38.367502598334,
+                  "SMAPE_mean": 104.51687701420073,
+                  "SMAPE_std": 9.81650751081124,
+                  "R2_mean": 0.044958153118218755,
+                  "R2_std": 0.20845276543372004,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -812.661720275879
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 783.9829790072971,
+                  "MAE_std": 140.51794586766113,
+                  "SMAPE_mean": 113.31387543113688,
+                  "SMAPE_std": 26.159160603642558,
+                  "R2_mean": 0.019635289514958153,
+                  "R2_std": 0.2663012589972341,
+                  "slope_mean": 7.728757985603131,
+                  "intercept_mean": -12614.832190858115
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 816.5985580062867,
+                  "MAE_std": 98.1872396149289,
+                  "SMAPE_mean": 115.99080536654148,
+                  "SMAPE_std": 15.636315123536562,
+                  "R2_mean": 0.03937242996982449,
+                  "R2_std": 0.18986734038666137,
+                  "slope_mean": 1.4511459826323305,
+                  "intercept_mean": -1461.349796796776
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 809.106734335763,
+                  "MAE_std": 50.56656295674511,
+                  "SMAPE_mean": 118.83067611035862,
+                  "SMAPE_std": 16.77582600005053,
+                  "R2_mean": 0.06310409997640423,
+                  "R2_std": 0.14830098408796372,
+                  "slope_mean": 1.4407727901598595,
+                  "intercept_mean": -1468.0449587293992
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 819.3900537109373,
+                  "MAE_std": 85.83783297456061,
+                  "SMAPE_mean": 125.43628163222029,
+                  "SMAPE_std": 10.732253703773804,
+                  "R2_mean": 0.031816865897979905,
+                  "R2_std": 0.19074299985648768,
+                  "slope_mean": 2.2201616180859687,
+                  "intercept_mean": -2666.2388675704015
+                }
+              }
+            }
+          },
+          "catboost": {
+            "baseline": {
+              "MAE": 1239.810130941442,
+              "SMAPE": 127.15914244272189,
+              "R2": -0.3755633655409343
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 829.4101876053494,
+                  "MAE_std": 202.4488662814511,
+                  "SMAPE_mean": 99.556618313008,
+                  "SMAPE_std": 21.35475830925133,
+                  "R2_mean": -0.09988507836892187,
+                  "R2_std": 0.145341812975804,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -744.774233585968
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 823.4513935564004,
+                  "MAE_std": 122.48137217877445,
+                  "SMAPE_mean": 102.07170787123094,
+                  "SMAPE_std": 15.75009344172598,
+                  "R2_mean": -0.012061577487227615,
+                  "R2_std": 0.12172168401117857,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -728.8369663691853
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 833.6821845689459,
+                  "MAE_std": 86.73408046590642,
+                  "SMAPE_mean": 105.6167545097099,
+                  "SMAPE_std": 14.150726658746398,
+                  "R2_mean": -0.044244894063768594,
+                  "R2_std": 0.3104808497363064,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -684.5142054745545
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 813.6989585098516,
+                  "MAE_std": 45.4674234973487,
+                  "SMAPE_mean": 101.06874220692183,
+                  "SMAPE_std": 13.878950834135107,
+                  "R2_mean": -0.016014931240650572,
+                  "R2_std": 0.2357380066821154,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -781.28579747264
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 762.6640667693666,
+                  "MAE_std": 119.07395077050684,
+                  "SMAPE_mean": 108.08936966719693,
+                  "SMAPE_std": 20.847630797010876,
+                  "R2_mean": 0.02653958396165641,
+                  "R2_std": 0.28326973516959714,
+                  "slope_mean": 4.54679704090239,
+                  "intercept_mean": -6188.713703252399
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 778.7199798820803,
+                  "MAE_std": 81.06925998814752,
+                  "SMAPE_mean": 109.09078633277235,
+                  "SMAPE_std": 11.555648984857761,
+                  "R2_mean": 0.10441010043827037,
+                  "R2_std": 0.1399865670426939,
+                  "slope_mean": 4.190515813083661,
+                  "intercept_mean": -5564.087606298123
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 770.0497629737337,
+                  "MAE_std": 66.05170626743659,
+                  "SMAPE_mean": 109.80062041572452,
+                  "SMAPE_std": 12.19176685058499,
+                  "R2_mean": 0.12736074029158542,
+                  "R2_std": 0.16244571291802776,
+                  "slope_mean": 4.018595120602258,
+                  "intercept_mean": -5307.928150246424
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 751.8984463598118,
+                  "MAE_std": 79.81967137423165,
+                  "SMAPE_mean": 114.275301707696,
+                  "SMAPE_std": 13.30120118548824,
+                  "R2_mean": 0.11230947372567575,
+                  "R2_std": 0.18657668924437976,
+                  "slope_mean": 4.915880323161419,
+                  "intercept_mean": -6639.467054966102
+                }
+              }
+            }
+          },
+          "gaussian_process": {
+            "baseline": {
+              "MAE": 1254.3439883235071,
+              "SMAPE": 128.42845389912733,
+              "R2": -0.4071185579033827
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 876.5186666666668,
+                  "MAE_std": 216.57678393232538,
+                  "SMAPE_mean": 99.12375602335135,
+                  "SMAPE_std": 26.728379398714157,
+                  "R2_mean": -0.22022056109965668,
+                  "R2_std": 0.15556522943170353,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -688.1633138725122
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 854.1155000000001,
+                  "MAE_std": 130.31673907157895,
+                  "SMAPE_mean": 104.41321670940764,
+                  "SMAPE_std": 16.5389445146813,
+                  "R2_mean": -0.11544375621433803,
+                  "R2_std": 0.1262266239489202,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -692.713313872512
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 877.4702857142859,
+                  "MAE_std": 97.37821490975958,
+                  "SMAPE_mean": 109.31752821156797,
+                  "SMAPE_std": 14.212691299184312,
+                  "R2_mean": -0.15796236960079463,
+                  "R2_std": 0.3329193302187602,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -631.4599805391787
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 859.8593333333332,
+                  "MAE_std": 46.19935413930478,
+                  "SMAPE_mean": 106.01452933292724,
+                  "SMAPE_std": 12.867164417716475,
+                  "R2_mean": -0.1270669293222524,
+                  "R2_std": 0.25937200696565177,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -729.920813872512
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 865.2475555555554,
+                  "MAE_std": 265.09933402210385,
+                  "SMAPE_mean": 100.54776296559606,
+                  "SMAPE_std": 22.74020903559208,
+                  "R2_mean": -0.2614263431135595,
+                  "R2_std": 0.7132304127341796,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -697.3133138725119
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 845.1782499999999,
+                  "MAE_std": 144.11514489527985,
+                  "SMAPE_mean": 103.50819715767739,
+                  "SMAPE_std": 14.943659748242357,
+                  "R2_mean": -0.12808650897545362,
+                  "R2_std": 0.22149285558607612,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -711.4133138725119
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 847.6615238095237,
+                  "MAE_std": 72.77171987926316,
+                  "SMAPE_mean": 104.99230013991978,
+                  "SMAPE_std": 13.029722887231936,
+                  "R2_mean": -0.1061667006385885,
+                  "R2_std": 0.1591038739233803,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -713.3899805391786
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 866.9928333333334,
+                  "MAE_std": 68.13857819241126,
+                  "SMAPE_mean": 110.79630656760473,
+                  "SMAPE_std": 11.806518333763249,
+                  "R2_mean": -0.13650262568876026,
+                  "R2_std": 0.19288522631491434,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -623.2258138725122
+                }
+              }
+            }
+          },
+          "stacking": {
+            "baseline": {
+              "MAE": 1153.121583973286,
+              "SMAPE": 123.63815765185385,
+              "R2": -0.21540194046526162
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 793.3882596650376,
+                  "MAE_std": 174.4177847918677,
+                  "SMAPE_mean": 102.45859967822568,
+                  "SMAPE_std": 13.256948631969198,
+                  "R2_mean": -0.004422990058241272,
+                  "R2_std": 0.1256580447847109,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -684.8484061178284
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 797.4165114813079,
+                  "MAE_std": 110.7543124911204,
+                  "SMAPE_mean": 100.70643012179524,
+                  "SMAPE_std": 12.656517800813953,
+                  "R2_mean": 0.06415299236033385,
+                  "R2_std": 0.12882795218970458,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -648.2107056820639
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 794.1280086656532,
+                  "MAE_std": 87.39711416259834,
+                  "SMAPE_mean": 101.74514198426596,
+                  "SMAPE_std": 11.309193989889025,
+                  "R2_mean": 0.030441553637428304,
+                  "R2_std": 0.32662270235800556,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -615.5214523770215
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 776.6626116868174,
+                  "MAE_std": 41.053753684937675,
+                  "SMAPE_mean": 98.83479330438021,
+                  "SMAPE_std": 9.68654653092274,
+                  "R2_mean": 0.06627695559814573,
+                  "R2_std": 0.19871627958850388,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -711.7071422322532
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 726.4813220055455,
+                  "MAE_std": 138.8884681071202,
+                  "SMAPE_mean": 113.90361781429165,
+                  "SMAPE_std": 24.319796632627753,
+                  "R2_mean": 0.17945953607896042,
+                  "R2_std": 0.25915581568535434,
+                  "slope_mean": 3.341750905504626,
+                  "intercept_mean": -4244.69732703774
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 772.9501728383016,
+                  "MAE_std": 78.23742795737046,
+                  "SMAPE_mean": 118.90195892096801,
+                  "SMAPE_std": 11.383357644354144,
+                  "R2_mean": 0.17003607263848516,
+                  "R2_std": 0.14333298255192053,
+                  "slope_mean": 2.3271038620450275,
+                  "intercept_mean": -2579.7337377642975
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 766.1838303362639,
+                  "MAE_std": 52.645694508181755,
+                  "SMAPE_mean": 118.26995511348878,
+                  "SMAPE_std": 13.13159654382826,
+                  "R2_mean": 0.1784894969189345,
+                  "R2_std": 0.1587785866393137,
+                  "slope_mean": 2.3472466831228753,
+                  "intercept_mean": -2628.5612509730886
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 761.3280099521456,
+                  "MAE_std": 110.22807190365553,
+                  "SMAPE_mean": 123.29624655128175,
+                  "SMAPE_std": 7.821869581405333,
+                  "R2_mean": 0.17999760371686974,
+                  "R2_std": 0.2019834967556153,
+                  "slope_mean": 3.082919805581727,
+                  "intercept_mean": -3664.2827403565802
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "456": {
+      "100": {
+        "n_cycles": 100,
+        "train_cells": 53,
+        "target_cells": 50,
+        "models": {
+          "elastic_net": {
+            "baseline": {
+              "MAE": 20006098.838935547,
+              "SMAPE": 87.63186527100773,
+              "R2": -17099585994.707598
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 18894457.490145847,
+                  "MAE_std": 7936923.125442428,
+                  "SMAPE_mean": 115.33395624778738,
+                  "SMAPE_std": 53.05584797647448,
+                  "R2_mean": -16689174119.162838,
+                  "R2_std": 7424524043.890152,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -30002695.59704902
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 18754349.227123857,
+                  "MAE_std": 10827372.47568115,
+                  "SMAPE_mean": 133.08747972297698,
+                  "SMAPE_std": 65.33944517341949,
+                  "R2_mean": -16850715828.02089,
+                  "R2_std": 10212981853.630104,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -25005494.50898177
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 18575152.84123519,
+                  "MAE_std": 13629884.925278628,
+                  "SMAPE_mean": 149.46016695545515,
+                  "SMAPE_std": 62.63412887407522,
+                  "R2_mean": -19393210245.786533,
+                  "R2_std": 21165501967.03593,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -23340767.06090788
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 18335710.932310805,
+                  "MAE_std": 16584645.129859151,
+                  "SMAPE_mean": 176.23177647608938,
+                  "SMAPE_std": 44.58693079902523,
+                  "R2_mean": -16148311696.505701,
+                  "R2_std": 15100036166.416323,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -22508374.078349493
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 16610334.242436096,
+                  "MAE_std": 8086663.241002173,
+                  "SMAPE_mean": 84.69338927962892,
+                  "SMAPE_std": 31.273709953734286,
+                  "R2_mean": -13742053072.717274,
+                  "R2_std": 7855479901.262682,
+                  "slope_mean": 1.2821694004553659,
+                  "intercept_mean": 76.8180270050631
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 6215368.418976338,
+                  "MAE_std": 9082444.989904106,
+                  "SMAPE_mean": 92.02582374334634,
+                  "SMAPE_std": 24.459690111845948,
+                  "R2_mean": -5036610732.346001,
+                  "R2_std": 9789025085.051212,
+                  "slope_mean": 0.2915494683892199,
+                  "intercept_mean": 582.2174285196709
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 6185999.318963433,
+                  "MAE_std": 10181630.36089772,
+                  "SMAPE_mean": 93.51326736733753,
+                  "SMAPE_std": 16.013258617552754,
+                  "R2_mean": -4985700593.951039,
+                  "R2_std": 10183701454.254223,
+                  "slope_mean": 0.27390311363910325,
+                  "intercept_mean": 548.8348261255521
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 8016570.00893794,
+                  "MAE_std": 13279195.841295725,
+                  "SMAPE_mean": 101.82410916446243,
+                  "SMAPE_std": 20.86850669868116,
+                  "R2_mean": -7298065070.130785,
+                  "R2_std": 14270654427.94703,
+                  "slope_mean": 0.2958054287231854,
+                  "intercept_mean": 658.9825400179479
+                }
+              }
+            }
+          },
+          "pls": {
+            "baseline": {
+              "MAE": 20000343.613268472,
+              "SMAPE": 135.5863215546729,
+              "R2": -17099584627.036041
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 18889262.472347494,
+                  "MAE_std": 7934740.624009348,
+                  "SMAPE_mean": 80.25500752553009,
+                  "SMAPE_std": 58.18201180826844,
+                  "R2_mean": -16689274308.749475,
+                  "R2_std": 7424534980.387068,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -29999677.00619774
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 18750393.251675956,
+                  "MAE_std": 10825088.10940542,
+                  "SMAPE_mean": 87.00263557621757,
+                  "SMAPE_std": 65.82114210633807,
+                  "R2_mean": -16850969829.075842,
+                  "R2_std": 10213131545.987928,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -24999682.04797653
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 18571842.337201826,
+                  "MAE_std": 13627455.29250367,
+                  "SMAPE_mean": 98.46683763765033,
+                  "SMAPE_std": 74.0635091996597,
+                  "R2_mean": -19393435348.020767,
+                  "R2_std": 21165552129.951447,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -23333032.145212643
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 18333778.184033986,
+                  "MAE_std": 16582896.54429665,
+                  "SMAPE_mean": 115.0573045702757,
+                  "SMAPE_std": 75.75982444631458,
+                  "R2_mean": -16148607147.71912,
+                  "R2_std": 15100329442.457357,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -22499673.134799898
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 19329365.70096974,
+                  "MAE_std": 6750023.578420976,
+                  "SMAPE_mean": 43.229421847304764,
+                  "SMAPE_std": 15.882679209364039,
+                  "R2_mean": -16869899950.143787,
+                  "R2_std": 6797527163.733005,
+                  "slope_mean": 2.0195587867480764,
+                  "intercept_mean": 200.20741534104118
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 22201439.44994945,
+                  "MAE_std": 6892266.366969576,
+                  "SMAPE_mean": 39.25223579620692,
+                  "SMAPE_std": 9.219323332176389,
+                  "R2_mean": -20052944879.37035,
+                  "R2_std": 8076486734.856114,
+                  "slope_mean": 1.0832250101734269,
+                  "intercept_mean": 219.02128392091146
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 17143310.63055812,
+                  "MAE_std": 13996781.03193206,
+                  "SMAPE_mean": 60.32579070870604,
+                  "SMAPE_std": 32.33808050863219,
+                  "R2_mean": -15498706847.252945,
+                  "R2_std": 13016897768.266493,
+                  "slope_mean": 0.8031571959011131,
+                  "intercept_mean": 389.83208244387936
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 23333742.700230435,
+                  "MAE_std": 15274936.2963786,
+                  "SMAPE_mean": 59.078923185504166,
+                  "SMAPE_std": 36.795975719537886,
+                  "R2_mean": -21273551931.358055,
+                  "R2_std": 14947264428.630611,
+                  "slope_mean": 0.9020594149928753,
+                  "intercept_mean": 424.32860869375344
+                }
+              }
+            }
+          },
+          "random_forest": {
+            "baseline": {
+              "MAE": 1192.5083973954227,
+              "SMAPE": 124.79924943434924,
+              "R2": -0.30800737892516894
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 838.8852080494565,
+                  "MAE_std": 268.96681651872166,
+                  "SMAPE_mean": 107.66747945332459,
+                  "SMAPE_std": 14.741231760344313,
+                  "R2_mean": -0.20285803415630452,
+                  "R2_std": 0.5331039658392787,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -720.990067619831
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 805.5996826843189,
+                  "MAE_std": 128.68227622481768,
+                  "SMAPE_mean": 102.9262469296888,
+                  "SMAPE_std": 12.402437769046887,
+                  "R2_mean": 0.010006612088007776,
+                  "R2_std": 0.2264457685177334,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -697.4698492370203
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 816.0984641043995,
+                  "MAE_std": 107.10484176913562,
+                  "SMAPE_mean": 104.72364737706565,
+                  "SMAPE_std": 12.766021521581669,
+                  "R2_mean": -0.1714511618828657,
+                  "R2_std": 0.8696402352333659,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -699.5829393025624
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 767.0969612628735,
+                  "MAE_std": 61.82576783716005,
+                  "SMAPE_mean": 98.06170381139633,
+                  "SMAPE_std": 8.252458995553537,
+                  "R2_mean": 0.08740080937080677,
+                  "R2_std": 0.07863710615064771,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -695.9006152273621
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 852.7736392568773,
+                  "MAE_std": 229.6837418416777,
+                  "SMAPE_mean": 108.42060252606157,
+                  "SMAPE_std": 26.999664572459388,
+                  "R2_mean": -0.2527409014264471,
+                  "R2_std": 0.7294925583064017,
+                  "slope_mean": 1.2217422152476343,
+                  "intercept_mean": -1040.6324710302429
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 846.7442281609004,
+                  "MAE_std": 134.83270424183812,
+                  "SMAPE_mean": 109.0501490888478,
+                  "SMAPE_std": 21.36056705524831,
+                  "R2_mean": -0.13748590361246668,
+                  "R2_std": 0.2818603002453036,
+                  "slope_mean": 1.6255316147230974,
+                  "intercept_mean": -1598.044189173846
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 802.7429959648064,
+                  "MAE_std": 65.03182389145219,
+                  "SMAPE_mean": 108.85119817377024,
+                  "SMAPE_std": 16.234056946054242,
+                  "R2_mean": 0.026903983225696655,
+                  "R2_std": 0.14591504064258348,
+                  "slope_mean": 1.4338754284051365,
+                  "intercept_mean": -1388.4009315766607
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 796.434457788949,
+                  "MAE_std": 44.10272072278771,
+                  "SMAPE_mean": 116.78559596054174,
+                  "SMAPE_std": 14.166826632185245,
+                  "R2_mean": 0.04488195876965534,
+                  "R2_std": 0.14584805542779697,
+                  "slope_mean": 1.680871222651246,
+                  "intercept_mean": -1691.892895358694
+                }
+              }
+            }
+          },
+          "xgboost": {
+            "baseline": {
+              "MAE": 1246.01353515625,
+              "SMAPE": 127.19211580658842,
+              "R2": -0.39261478929572036
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 846.8028544108074,
+                  "MAE_std": 290.9037793035086,
+                  "SMAPE_mean": 101.94895769754685,
+                  "SMAPE_std": 18.126622564567402,
+                  "R2_mean": -0.2658762217578806,
+                  "R2_std": 0.5801659406804955,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -760.9987670898438
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 813.4916090393066,
+                  "MAE_std": 142.54609164795954,
+                  "SMAPE_mean": 99.7122367359306,
+                  "SMAPE_std": 16.56263375919472,
+                  "R2_mean": -0.02962554651589338,
+                  "R2_std": 0.2267152630518888,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -741.9683404541015
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 835.1844865199497,
+                  "MAE_std": 124.08508352943237,
+                  "SMAPE_mean": 103.19909524923207,
+                  "SMAPE_std": 15.874374605548734,
+                  "R2_mean": -0.2328908969990334,
+                  "R2_std": 0.9870420942379066,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -731.5927221679688
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 798.8063093058269,
+                  "MAE_std": 45.08270695131266,
+                  "SMAPE_mean": 103.24013246657971,
+                  "SMAPE_std": 9.333054871568034,
+                  "R2_mean": 0.04353894603831762,
+                  "R2_std": 0.06469051001445786,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -728.034744567871
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 791.2081320529514,
+                  "MAE_std": 135.93558361149505,
+                  "SMAPE_mean": 110.35274476368411,
+                  "SMAPE_std": 27.012023669772844,
+                  "R2_mean": -0.03917276501996957,
+                  "R2_std": 0.21113593008323914,
+                  "slope_mean": 4.377563766829715,
+                  "intercept_mean": -6053.440200999068
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 844.593019657135,
+                  "MAE_std": 126.895911718128,
+                  "SMAPE_mean": 110.29027185685095,
+                  "SMAPE_std": 23.469204891574673,
+                  "R2_mean": -0.1233593265931107,
+                  "R2_std": 0.29930823710705234,
+                  "slope_mean": 2.802001767509224,
+                  "intercept_mean": -3455.2418921341696
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 800.1107629394531,
+                  "MAE_std": 62.18882125420897,
+                  "SMAPE_mean": 106.3623623521352,
+                  "SMAPE_std": 17.027966990503433,
+                  "R2_mean": 0.04519013387735763,
+                  "R2_std": 0.12460578010857849,
+                  "slope_mean": 2.3688833108131826,
+                  "intercept_mean": -2861.689248456397
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 801.7724583435058,
+                  "MAE_std": 45.24981164915764,
+                  "SMAPE_mean": 119.05450407320727,
+                  "SMAPE_std": 14.2160295340202,
+                  "R2_mean": 0.05910187777185003,
+                  "R2_std": 0.16493281602405163,
+                  "slope_mean": 2.863484286535572,
+                  "intercept_mean": -3549.0524465455537
+                }
+              }
+            }
+          },
+          "catboost": {
+            "baseline": {
+              "MAE": 1167.115418135719,
+              "SMAPE": 124.50596473549078,
+              "R2": -0.21979495306450336
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 799.1605771770288,
+                  "MAE_std": 283.32055893715585,
+                  "SMAPE_mean": 94.62404045077531,
+                  "SMAPE_std": 22.67968226893846,
+                  "R2_mean": -0.14107775311416476,
+                  "R2_std": 0.5364751154899811,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -690.7337124469279
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 763.4622215599865,
+                  "MAE_std": 137.4006788792532,
+                  "SMAPE_mean": 95.8062389701914,
+                  "SMAPE_std": 17.717956228659673,
+                  "R2_mean": 0.07872605950911614,
+                  "R2_std": 0.2009491272190692,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -678.1252598299268
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 783.1481902293892,
+                  "MAE_std": 121.556658105229,
+                  "SMAPE_mean": 97.99125032198955,
+                  "SMAPE_std": 18.621837521503203,
+                  "R2_mean": -0.11070902515657406,
+                  "R2_std": 0.911330337682947,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -671.0539399929888
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 753.2710274004635,
+                  "MAE_std": 38.414992525585625,
+                  "SMAPE_mean": 100.21406312095709,
+                  "SMAPE_std": 9.818461569521274,
+                  "R2_mean": 0.14599922509253532,
+                  "R2_std": 0.05661793135115963,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -663.6950788870605
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 702.9269813832004,
+                  "MAE_std": 343.8337196560486,
+                  "SMAPE_mean": 100.16169373544895,
+                  "SMAPE_std": 24.643301741049843,
+                  "R2_mean": -0.3915809025247765,
+                  "R2_std": 2.7261742873024377,
+                  "slope_mean": 5.970822810196589,
+                  "intercept_mean": -8007.584525031072
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 643.4791992256157,
+                  "MAE_std": 78.90238877466093,
+                  "SMAPE_mean": 103.88899657690305,
+                  "SMAPE_std": 17.150771393148847,
+                  "R2_mean": 0.2765628144140514,
+                  "R2_std": 0.26858310349112585,
+                  "slope_mean": 4.028839270218557,
+                  "intercept_mean": -5113.923231405373
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 610.9157908672194,
+                  "MAE_std": 60.83901918407173,
+                  "SMAPE_mean": 102.80933406326744,
+                  "SMAPE_std": 8.819909970277209,
+                  "R2_mean": 0.41543260856359965,
+                  "R2_std": 0.09197523247638185,
+                  "slope_mean": 4.031455656120545,
+                  "intercept_mean": -5120.12875934214
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 590.7586289986137,
+                  "MAE_std": 69.44943346646762,
+                  "SMAPE_mean": 109.04665378519557,
+                  "SMAPE_std": 9.13677837006159,
+                  "R2_mean": 0.4366831364889146,
+                  "R2_std": 0.11479018546168995,
+                  "slope_mean": 4.6594837610930195,
+                  "intercept_mean": -5998.377817088087
+                }
+              }
+            }
+          },
+          "gaussian_process": {
+            "baseline": {
+              "MAE": 1257.6250587192108,
+              "SMAPE": 128.50089095774447,
+              "R2": -0.41356468421455794
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 888.6311739123324,
+                  "MAE_std": 319.9928448022262,
+                  "SMAPE_mean": 96.88052290115182,
+                  "SMAPE_std": 26.954756976376434,
+                  "R2_mean": -0.41164853319986766,
+                  "R2_std": 0.6790969540509076,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -687.76397064993
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 857.6556788308419,
+                  "MAE_std": 148.47305647774286,
+                  "SMAPE_mean": 105.08178534304136,
+                  "SMAPE_std": 15.31969289327846,
+                  "R2_mean": -0.13766475104398254,
+                  "R2_std": 0.23578177879258835,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -681.0349664477837
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 887.49468789111,
+                  "MAE_std": 141.55985416775866,
+                  "SMAPE_mean": 107.68877042592767,
+                  "SMAPE_std": 16.641254271610556,
+                  "R2_mean": -0.3925860887422501,
+                  "R2_std": 1.224658762266063,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -662.1331979818083
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 857.1882087936574,
+                  "MAE_std": 34.42861490704801,
+                  "SMAPE_mean": 109.85171943318653,
+                  "SMAPE_std": 8.625608925818709,
+                  "R2_mean": -0.06962392426913588,
+                  "R2_std": 0.056990607450200376,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -658.3117310846152
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 21125.993596330336,
+                  "MAE_std": 79574.71701719263,
+                  "SMAPE_mean": 81.95951556301816,
+                  "SMAPE_std": 27.294048110904523,
+                  "R2_mean": -104538.66800449333,
+                  "R2_std": 452972.5173718173,
+                  "slope_mean": 310413.7435523726,
+                  "intercept_mean": -452453654.92561215
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 4200031.434429301,
+                  "MAE_std": 18219788.219735026,
+                  "SMAPE_mean": 92.96259579437026,
+                  "SMAPE_std": 25.63834243802769,
+                  "R2_mean": -2670605619.149093,
+                  "R2_std": 11640552997.281628,
+                  "slope_mean": 103678450.04492599,
+                  "intercept_mean": -151120071095.23395
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 2365.5722398274106,
+                  "MAE_std": 6849.888066056042,
+                  "SMAPE_mean": 85.28518757265397,
+                  "SMAPE_std": 20.38485279765058,
+                  "R2_mean": -536.2383743347491,
+                  "R2_std": 2331.6099558484384,
+                  "slope_mean": 22521.907861096184,
+                  "intercept_mean": -32827064.81936317
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 1260.2925108583531,
+                  "MAE_std": 1812.092166246676,
+                  "SMAPE_mean": 100.01447650614719,
+                  "SMAPE_std": 16.72380281384899,
+                  "R2_mean": -40.882487545557,
+                  "R2_std": 173.2762058389396,
+                  "slope_mean": 7105.700256299568,
+                  "intercept_mean": -10356486.513209673
+                }
+              }
+            }
+          },
+          "stacking": {
+            "baseline": {
+              "MAE": 1203.1329037292103,
+              "SMAPE": 125.75904956065938,
+              "R2": -0.3194851288173053
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 852.977459831022,
+                  "MAE_std": 285.31084618449694,
+                  "SMAPE_mean": 105.05230921462169,
+                  "SMAPE_std": 15.790596148730154,
+                  "R2_mean": -0.2648754849034939,
+                  "R2_std": 0.5793842069386568,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -699.4075439712236
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 817.9572457969194,
+                  "MAE_std": 141.03938135337862,
+                  "SMAPE_mean": 100.14792988097352,
+                  "SMAPE_std": 15.031221347834085,
+                  "R2_mean": -0.034615831283627156,
+                  "R2_std": 0.23330497451253684,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -680.5771312751982
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 836.6216845289352,
+                  "MAE_std": 119.45009929746037,
+                  "SMAPE_mean": 104.02818420180498,
+                  "SMAPE_std": 13.675742766411489,
+                  "R2_mean": -0.23070927269844352,
+                  "R2_std": 0.9584637224942748,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -673.6611179575374
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 792.3691428783388,
+                  "MAE_std": 52.85490387297582,
+                  "SMAPE_mean": 101.28564346403924,
+                  "SMAPE_std": 9.020078131212236,
+                  "R2_mean": 0.045940995946206375,
+                  "R2_std": 0.06979671479225169,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -671.3786408600365
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 819.5831009208844,
+                  "MAE_std": 154.18935525692285,
+                  "SMAPE_mean": 108.62758923985787,
+                  "SMAPE_std": 28.781689716578548,
+                  "R2_mean": -0.12307504727255683,
+                  "R2_std": 0.23199668376924315,
+                  "slope_mean": 2.5903102065239376,
+                  "intercept_mean": -3116.295878922392
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 865.3809060272006,
+                  "MAE_std": 140.26036625797616,
+                  "SMAPE_mean": 110.26584397770296,
+                  "SMAPE_std": 22.083126146519287,
+                  "R2_mean": -0.1791927637621233,
+                  "R2_std": 0.29392091202687726,
+                  "slope_mean": 1.9892112366501347,
+                  "intercept_mean": -2085.926035288389
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 815.0770894317676,
+                  "MAE_std": 69.52402657680382,
+                  "SMAPE_mean": 105.22835074849081,
+                  "SMAPE_std": 16.65927095141895,
+                  "R2_mean": -0.0006177341955233284,
+                  "R2_std": 0.14699916699302432,
+                  "slope_mean": 1.721987141920772,
+                  "intercept_mean": -1773.6081564568842
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 810.1103530889195,
+                  "MAE_std": 42.06615498789523,
+                  "SMAPE_mean": 115.1376142051012,
+                  "SMAPE_std": 13.840794339345637,
+                  "R2_mean": 0.017925137309630745,
+                  "R2_std": 0.1567182994882915,
+                  "slope_mean": 1.9540918383399657,
+                  "intercept_mean": -2051.2143877928693
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "789": {
+      "100": {
+        "n_cycles": 100,
+        "train_cells": 53,
+        "target_cells": 50,
+        "models": {
+          "elastic_net": {
+            "baseline": {
+              "MAE": 679.424846179421,
+              "SMAPE": 164.62824161288094,
+              "R2": -0.8822761566889432
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 612.8220675032628,
+                  "MAE_std": 78.85586647486218,
+                  "SMAPE_mean": 117.26285690041246,
+                  "SMAPE_std": 63.5340036429014,
+                  "R2_mean": -0.7488372805908204,
+                  "R2_std": 0.5132835821928543,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -252.45017305402772
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 610.9755292785521,
+                  "MAE_std": 109.83613909279907,
+                  "SMAPE_mean": 147.72508182327846,
+                  "SMAPE_std": 40.117769711288545,
+                  "R2_mean": -0.666376983231903,
+                  "R2_std": 0.77793528006303,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -369.51212028076696
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 595.9084576886352,
+                  "MAE_std": 148.06666793180645,
+                  "SMAPE_mean": 151.40146622683125,
+                  "SMAPE_std": 39.14369952020052,
+                  "R2_mean": -0.4665307155536554,
+                  "R2_std": 0.832660601596304,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -387.6188320277511
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 592.5783260067288,
+                  "MAE_std": 184.0887185255479,
+                  "SMAPE_mean": 160.4399256017372,
+                  "SMAPE_std": 25.809857260802254,
+                  "R2_mean": -0.5502754716721632,
+                  "R2_std": 1.0844253970937023,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -396.8480293528741
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 55737.18108753819,
+                  "MAE_std": 164356.2116642875,
+                  "SMAPE_mean": 53.615573366327034,
+                  "SMAPE_std": 22.787146390846253,
+                  "R2_mean": -120179.71325277432,
+                  "R2_std": 362368.80124189204,
+                  "slope_mean": 47.1369898994729,
+                  "intercept_mean": 218.75668508089547
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 666.455628775718,
+                  "MAE_std": 809.1835679196541,
+                  "SMAPE_mean": 48.91492406930781,
+                  "SMAPE_std": 14.824637693821106,
+                  "R2_mean": -2.75739144999736,
+                  "R2_std": 9.722327313301701,
+                  "slope_mean": 0.6256786395856608,
+                  "intercept_mean": 295.8037793394352
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 343.0942634992667,
+                  "MAE_std": 58.27056700411943,
+                  "SMAPE_mean": 43.71852063887409,
+                  "SMAPE_std": 9.763004762991253,
+                  "R2_mean": 0.5699197328070675,
+                  "R2_std": 0.24706688224502854,
+                  "slope_mean": 0.4214176534046333,
+                  "intercept_mean": 315.4953368962929
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 343.5751087827648,
+                  "MAE_std": 62.274747979476544,
+                  "SMAPE_mean": 42.84468194363418,
+                  "SMAPE_std": 12.314901087782259,
+                  "R2_mean": 0.5437188266648325,
+                  "R2_std": 0.23233454298171466,
+                  "slope_mean": 0.47725272099026494,
+                  "intercept_mean": 306.25542439592147
+                }
+              }
+            }
+          },
+          "pls": {
+            "baseline": {
+              "MAE": 474.75269815820053,
+              "SMAPE": 53.26672103588127,
+              "R2": 0.43026338834203137
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 603.6214832529222,
+                  "MAE_std": 122.12123771998058,
+                  "SMAPE_mean": 93.35573876316593,
+                  "SMAPE_std": 25.314567356752153,
+                  "R2_mean": 0.34592850938039255,
+                  "R2_std": 0.14987624280463202,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 93.6588776554004
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 598.3664623930704,
+                  "MAE_std": 117.52409084632885,
+                  "SMAPE_mean": 83.05856157417837,
+                  "SMAPE_std": 21.628646038962813,
+                  "R2_mean": 0.35583859762922615,
+                  "R2_std": 0.1819017955139188,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 195.34629095309492
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 603.8404399514719,
+                  "MAE_std": 45.14520676594658,
+                  "SMAPE_mean": 78.39560266548673,
+                  "SMAPE_std": 16.81112996209541,
+                  "R2_mean": 0.3534739871142228,
+                  "R2_std": 0.08203008809377581,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 170.05032930407805
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 546.6988635669385,
+                  "MAE_std": 84.23803216641375,
+                  "SMAPE_mean": 72.34622456654844,
+                  "SMAPE_std": 16.51895971281552,
+                  "R2_mean": 0.41297759069645484,
+                  "R2_std": 0.14166004682775038,
+                  "slope_mean": 1.0,
+                  "intercept_mean": 179.4327769243681
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 563.1735374554933,
+                  "MAE_std": 89.55310706573673,
+                  "SMAPE_mean": 97.67229913026776,
+                  "SMAPE_std": 26.48140590286574,
+                  "R2_mean": -0.026748603620606926,
+                  "R2_std": 0.30002460844916995,
+                  "slope_mean": 1.5476211777303939,
+                  "intercept_mean": -312.8390777915604
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 568.0252563121068,
+                  "MAE_std": 86.63096884707542,
+                  "SMAPE_mean": 90.10331306115476,
+                  "SMAPE_std": 19.402459937574694,
+                  "R2_mean": 0.1895046886233847,
+                  "R2_std": 0.28051557307154373,
+                  "slope_mean": 1.3030705386704002,
+                  "intercept_mean": -85.00124337086137
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 522.326524446534,
+                  "MAE_std": 41.86371444369347,
+                  "SMAPE_mean": 85.67799850525807,
+                  "SMAPE_std": 20.815385633153,
+                  "R2_mean": 0.28597300419853644,
+                  "R2_std": 0.22807760529540066,
+                  "slope_mean": 1.4331120633374819,
+                  "intercept_mean": -106.44821103278932
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 538.5385337797122,
+                  "MAE_std": 55.68657611934048,
+                  "SMAPE_mean": 85.47356520721469,
+                  "SMAPE_std": 20.028420546562963,
+                  "R2_mean": 0.15180964921142448,
+                  "R2_std": 0.42639664791716275,
+                  "slope_mean": 1.5320950144079457,
+                  "intercept_mean": -141.18098345296107
+                }
+              }
+            }
+          },
+          "random_forest": {
+            "baseline": {
+              "MAE": 1250.466935791619,
+              "SMAPE": 127.20526368748138,
+              "R2": -0.41970553900593077
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 813.6610772757725,
+                  "MAE_std": 185.95870828818838,
+                  "SMAPE_mean": 105.31788128377211,
+                  "SMAPE_std": 10.870968224096789,
+                  "R2_mean": -0.11115626259006164,
+                  "R2_std": 0.28666480894382906,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -845.0253371915562
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 851.0225810609597,
+                  "MAE_std": 94.89919518679176,
+                  "SMAPE_mean": 106.81218387524356,
+                  "SMAPE_std": 11.676601145875912,
+                  "R2_mean": -0.05011400881364438,
+                  "R2_std": 0.13761344789396215,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -702.588969894701
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 821.8980923240039,
+                  "MAE_std": 87.92300585823513,
+                  "SMAPE_mean": 107.31983748776045,
+                  "SMAPE_std": 12.325865528170176,
+                  "R2_mean": -0.08525096813365834,
+                  "R2_std": 0.11760205452994014,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -817.6524065956003
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 819.7827687789825,
+                  "MAE_std": 70.80732414243043,
+                  "SMAPE_mean": 103.38948571218893,
+                  "SMAPE_std": 10.374803076020195,
+                  "R2_mean": -0.012726027201326234,
+                  "R2_std": 0.1679564270183531,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -718.6970417958083
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 1652.8030778423235,
+                  "MAE_std": 2227.344453222231,
+                  "SMAPE_mean": 103.43793422565174,
+                  "SMAPE_std": 27.30923135408557,
+                  "R2_mean": -13.962484368876801,
+                  "R2_std": 43.15415804812826,
+                  "slope_mean": -2.755479388392317,
+                  "intercept_mean": 5646.15445795607
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 810.8800591738755,
+                  "MAE_std": 121.40160253359151,
+                  "SMAPE_mean": 96.94912468382823,
+                  "SMAPE_std": 19.705818045303026,
+                  "R2_mean": -0.1496465486162605,
+                  "R2_std": 0.2747483503667062,
+                  "slope_mean": 1.3095071986346096,
+                  "intercept_mean": -1291.131683527808
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 814.8436062064077,
+                  "MAE_std": 59.29435705954567,
+                  "SMAPE_mean": 104.83503544502805,
+                  "SMAPE_std": 15.102026268360582,
+                  "R2_mean": -0.02452564408334451,
+                  "R2_std": 0.12399196826957928,
+                  "slope_mean": 1.3733607510214427,
+                  "intercept_mean": -1327.8420115429283
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 819.2379673220026,
+                  "MAE_std": 53.48473781903521,
+                  "SMAPE_mean": 101.57758763270841,
+                  "SMAPE_std": 9.97255312010241,
+                  "R2_mean": -0.038069206321894415,
+                  "R2_std": 0.1933921203967841,
+                  "slope_mean": 1.2829806209460437,
+                  "intercept_mean": -1180.6525220825845
+                }
+              }
+            }
+          },
+          "xgboost": {
+            "baseline": {
+              "MAE": 1063.526854248047,
+              "SMAPE": 119.90860969749025,
+              "R2": -0.04190523383519862
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 708.7158980645074,
+                  "MAE_std": 155.69169272995921,
+                  "SMAPE_mean": 95.95278339792362,
+                  "SMAPE_std": 12.360288173704616,
+                  "R2_mean": 0.14999761525585656,
+                  "R2_std": 0.21050496060833848,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -696.287232055664
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 733.2771015548706,
+                  "MAE_std": 74.25115916816397,
+                  "SMAPE_mean": 97.14675278830723,
+                  "SMAPE_std": 11.664317775553297,
+                  "R2_mean": 0.2022938504333598,
+                  "R2_std": 0.09462808089567519,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -574.584942932129
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 713.3225181361607,
+                  "MAE_std": 68.16637171233839,
+                  "SMAPE_mean": 98.8209137698868,
+                  "SMAPE_std": 11.599028978024528,
+                  "R2_mean": 0.17016904287911266,
+                  "R2_std": 0.08016898247573317,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -677.5444116210937
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 702.6847107950846,
+                  "MAE_std": 62.66749272163605,
+                  "SMAPE_mean": 92.33404997519146,
+                  "SMAPE_std": 11.180505653722037,
+                  "R2_mean": 0.2280752023500455,
+                  "R2_std": 0.12802483755708835,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -590.8767678833008
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 604.4362168884278,
+                  "MAE_std": 179.106677393942,
+                  "SMAPE_mean": 100.41071763351036,
+                  "SMAPE_std": 25.411269949040765,
+                  "R2_mean": 0.21810516475258085,
+                  "R2_std": 0.4337363118251444,
+                  "slope_mean": 2.985648741706231,
+                  "intercept_mean": -3615.728427751738
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 622.9044605827331,
+                  "MAE_std": 85.89890269224824,
+                  "SMAPE_mean": 105.16408086087363,
+                  "SMAPE_std": 18.244995564993122,
+                  "R2_mean": 0.3123114322436934,
+                  "R2_std": 0.27971214491885626,
+                  "slope_mean": 2.3214688955550784,
+                  "intercept_mean": -2589.509084541778
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 607.574836251395,
+                  "MAE_std": 53.1319681955073,
+                  "SMAPE_mean": 114.39781006881117,
+                  "SMAPE_std": 6.428871080285973,
+                  "R2_mean": 0.45819004988931367,
+                  "R2_std": 0.09329427061686059,
+                  "slope_mean": 2.686730425039931,
+                  "intercept_mean": -3018.976209755382
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 622.396458129883,
+                  "MAE_std": 57.120763677338,
+                  "SMAPE_mean": 115.40226623844282,
+                  "SMAPE_std": 6.918860012949315,
+                  "R2_mean": 0.451480849393392,
+                  "R2_std": 0.10550387381590311,
+                  "slope_mean": 2.527560323624793,
+                  "intercept_mean": -2760.12646406184
+                }
+              }
+            }
+          },
+          "catboost": {
+            "baseline": {
+              "MAE": 1115.8284499439449,
+              "SMAPE": 122.22737008708629,
+              "R2": -0.12358519410757185
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 722.0904850469909,
+                  "MAE_std": 157.37455874168208,
+                  "SMAPE_mean": 95.9081069777573,
+                  "SMAPE_std": 14.67616425952704,
+                  "R2_mean": 0.1148048188233111,
+                  "R2_std": 0.19939030499434723,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -739.9386590419621
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 747.9947284716551,
+                  "MAE_std": 92.80598905314103,
+                  "SMAPE_mean": 96.87930390472917,
+                  "SMAPE_std": 14.709855100566763,
+                  "R2_mean": 0.15296548852321637,
+                  "R2_std": 0.12493405880512286,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -624.5587732687786
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 729.4119665275574,
+                  "MAE_std": 76.91424801632644,
+                  "SMAPE_mean": 92.18870576117416,
+                  "SMAPE_std": 16.895451265358343,
+                  "R2_mean": 0.12854103358957372,
+                  "R2_std": 0.09240510494529852,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -707.5472974934055
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 719.2042611485367,
+                  "MAE_std": 52.275913648904684,
+                  "SMAPE_mean": 95.68544622315564,
+                  "SMAPE_std": 11.164525915042887,
+                  "R2_mean": 0.19365213952454713,
+                  "R2_std": 0.12190151180995365,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -636.5922651367598
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 630.9998715102006,
+                  "MAE_std": 147.16323403967428,
+                  "SMAPE_mean": 97.94883447035173,
+                  "SMAPE_std": 22.38395532704446,
+                  "R2_mean": 0.15830490981052697,
+                  "R2_std": 0.4173053147491554,
+                  "slope_mean": 3.214522433197908,
+                  "intercept_mean": -3955.0838780574027
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 603.7515671536086,
+                  "MAE_std": 77.82723161639878,
+                  "SMAPE_mean": 101.16891781207553,
+                  "SMAPE_std": 16.07423499122892,
+                  "R2_mean": 0.3247998312860558,
+                  "R2_std": 0.3144729821935417,
+                  "slope_mean": 2.9509318241965286,
+                  "intercept_mean": -3557.250148219322
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 553.4630908722302,
+                  "MAE_std": 70.05520007834042,
+                  "SMAPE_mean": 105.85595699051248,
+                  "SMAPE_std": 9.184191633954825,
+                  "R2_mean": 0.4997809432915276,
+                  "R2_std": 0.10132107332043709,
+                  "slope_mean": 3.559737514403384,
+                  "intercept_mean": -4390.06277880937
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 581.4388945507011,
+                  "MAE_std": 48.081958619598645,
+                  "SMAPE_mean": 108.57996324976992,
+                  "SMAPE_std": 8.412846324209065,
+                  "R2_mean": 0.48820183363338776,
+                  "R2_std": 0.11932732823573658,
+                  "slope_mean": 3.34260021893655,
+                  "intercept_mean": -4018.6417580933194
+                }
+              }
+            }
+          },
+          "gaussian_process": {
+            "baseline": {
+              "MAE": 1256.4059499991906,
+              "SMAPE": 128.4908285251545,
+              "R2": -0.41166077016523284
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 831.8096311134626,
+                  "MAE_std": 208.42799751678876,
+                  "SMAPE_mean": 96.07589236341371,
+                  "SMAPE_std": 25.08378052200743,
+                  "R2_mean": -0.1899068227466391,
+                  "R2_std": 0.28608629693557996,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -772.209131733702
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 881.7627310697586,
+                  "MAE_std": 142.2106314390498,
+                  "SMAPE_mean": 106.62751408571405,
+                  "SMAPE_std": 17.616266209750034,
+                  "R2_mean": -0.16487540515697882,
+                  "R2_std": 0.2175047609725768,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -641.9259653492192
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 864.3205558069207,
+                  "MAE_std": 103.31478147704465,
+                  "SMAPE_mean": 103.7702686709928,
+                  "SMAPE_std": 18.068656254572343,
+                  "R2_mean": -0.17558537388948695,
+                  "R2_std": 0.15978965223924652,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -719.2707740575718
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 861.8008328695389,
+                  "MAE_std": 53.2582371096278,
+                  "SMAPE_mean": 110.06437758692334,
+                  "SMAPE_std": 9.404017490422031,
+                  "R2_mean": -0.08876305110036048,
+                  "R2_std": 0.15108804656602756,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -649.3740696489864
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 1812.155552120971,
+                  "MAE_std": 3276.066967632523,
+                  "SMAPE_mean": 80.89516629690198,
+                  "SMAPE_std": 26.36174578966361,
+                  "R2_mean": -147.8417030861395,
+                  "R2_std": 451.28979795109996,
+                  "slope_mean": 18040.55474400512,
+                  "intercept_mean": -26244468.32152236
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 790.8748437269544,
+                  "MAE_std": 245.41217413508136,
+                  "SMAPE_mean": 81.76740618201224,
+                  "SMAPE_std": 21.774386236612248,
+                  "R2_mean": -1.220128557611511,
+                  "R2_std": 2.782443334062669,
+                  "slope_mean": 3293.9869695613343,
+                  "intercept_mean": -4791537.0583946835
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 1544.0279483080637,
+                  "MAE_std": 3396.5858936907352,
+                  "SMAPE_mean": 91.41909249367046,
+                  "SMAPE_std": 17.71185036236168,
+                  "R2_mean": -97.70819689771773,
+                  "R2_std": 424.1045488411064,
+                  "slope_mean": 11152.829086918113,
+                  "intercept_mean": -16224292.481226888
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 758.5520214144033,
+                  "MAE_std": 133.22892705739605,
+                  "SMAPE_mean": 95.13605399404722,
+                  "SMAPE_std": 17.6199435057041,
+                  "R2_mean": -0.24197608468930606,
+                  "R2_std": 0.4048060436168988,
+                  "slope_mean": 1019.5988313336336,
+                  "intercept_mean": -1482681.3969657444
+                }
+              }
+            }
+          },
+          "stacking": {
+            "baseline": {
+              "MAE": 1231.5875601666867,
+              "SMAPE": 126.7888684651836,
+              "R2": -0.3677127858469109
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 799.959015571015,
+                  "MAE_std": 186.94497662681897,
+                  "SMAPE_mean": 104.13043582574794,
+                  "SMAPE_std": 11.194761241463572,
+                  "R2_mean": -0.08307645348191194,
+                  "R2_std": 0.28563571247453307,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -822.5296719280705
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 834.047178429992,
+                  "MAE_std": 102.27489099857944,
+                  "SMAPE_mean": 104.65657221128602,
+                  "SMAPE_std": 13.345794863683679,
+                  "R2_mean": -0.0268845990810316,
+                  "R2_std": 0.1458985305644112,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -689.0856668326492
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 806.9308361388639,
+                  "MAE_std": 91.12395039425137,
+                  "SMAPE_mean": 100.61470249093158,
+                  "SMAPE_std": 15.495173858011489,
+                  "R2_mean": -0.05815186951535153,
+                  "R2_std": 0.11804810434065965,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -791.1113813175787
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 805.8857986755046,
+                  "MAE_std": 62.581315096986145,
+                  "SMAPE_mean": 103.37421698677394,
+                  "SMAPE_std": 10.20905012662469,
+                  "R2_mean": 0.01945773021592871,
+                  "R2_std": 0.15470823444125217,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -700.9654970658611
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 971.213546968522,
+                  "MAE_std": 506.12869006130467,
+                  "SMAPE_mean": 107.16085148703674,
+                  "SMAPE_std": 30.78677832526851,
+                  "R2_mean": -0.9200882390529106,
+                  "R2_std": 2.0258629899167233,
+                  "slope_mean": 3.2860650374016713,
+                  "intercept_mean": -4356.130816598294
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 812.8636259380553,
+                  "MAE_std": 110.51960242239919,
+                  "SMAPE_mean": 107.71559465755297,
+                  "SMAPE_std": 22.12015377586992,
+                  "R2_mean": -0.11465935604253921,
+                  "R2_std": 0.2435588092939867,
+                  "slope_mean": 1.7484638819325231,
+                  "intercept_mean": -1925.0472129203918
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 787.1303715383078,
+                  "MAE_std": 48.42591569795007,
+                  "SMAPE_mean": 112.15822424690191,
+                  "SMAPE_std": 17.388871111227303,
+                  "R2_mean": 0.04189167489320123,
+                  "R2_std": 0.11790963512237017,
+                  "slope_mean": 2.149704932380705,
+                  "intercept_mean": -2487.7284284996454
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 797.8412406780961,
+                  "MAE_std": 48.98425778300005,
+                  "SMAPE_mean": 110.06362901056787,
+                  "SMAPE_std": 16.966943743156687,
+                  "R2_mean": 0.013117673969133515,
+                  "R2_std": 0.19481890740663768,
+                  "slope_mean": 2.0013418261932427,
+                  "intercept_mean": -2248.428981981274
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "1011": {
+      "100": {
+        "n_cycles": 100,
+        "train_cells": 53,
+        "target_cells": 50,
+        "models": {
+          "elastic_net": {
+            "baseline": {
+              "MAE": 1263.3812438750276,
+              "SMAPE": 128.62874312060185,
+              "R2": -0.42508523040418655
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 894.672888888889,
+                  "MAE_std": 234.0084639701714,
+                  "SMAPE_mean": 103.6229258974004,
+                  "SMAPE_std": 23.520474850271782,
+                  "R2_mean": -0.23765392960863457,
+                  "R2_std": 0.5071052809597364,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -653.5454064583795
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 822.7557499999999,
+                  "MAE_std": 108.25453994261626,
+                  "SMAPE_mean": 99.18210229925894,
+                  "SMAPE_std": 19.126698545750216,
+                  "R2_mean": -0.11112079050049864,
+                  "R2_std": 0.10369309875311525,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -782.0754064583795
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 836.1550476190478,
+                  "MAE_std": 55.46457834373282,
+                  "SMAPE_mean": 105.22450728152926,
+                  "SMAPE_std": 9.635966382839209,
+                  "R2_mean": -0.05113978763434211,
+                  "R2_std": 0.049318278297496056,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -738.7787397917127
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 844.7831666666667,
+                  "MAE_std": 39.114370781579694,
+                  "SMAPE_mean": 106.24686984963223,
+                  "SMAPE_std": 8.80592218169014,
+                  "R2_mean": -0.08138663568317192,
+                  "R2_std": 0.1505560273277974,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -729.5304064583795
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 946.2146666666667,
+                  "MAE_std": 273.57339800319096,
+                  "SMAPE_mean": 111.37686299069564,
+                  "SMAPE_std": 16.509439386732026,
+                  "R2_mean": -0.28082006688203065,
+                  "R2_std": 0.8656126685592392,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -545.3954064583794
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 850.38925,
+                  "MAE_std": 111.66077007251691,
+                  "SMAPE_mean": 105.26541839171469,
+                  "SMAPE_std": 14.765831740110837,
+                  "R2_mean": -0.08975708896740446,
+                  "R2_std": 0.12698130839307062,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -717.7354064583794
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 873.3411428571428,
+                  "MAE_std": 64.18229895604738,
+                  "SMAPE_mean": 111.53492454850524,
+                  "SMAPE_std": 8.64989351143119,
+                  "R2_mean": -0.07656105289877822,
+                  "R2_std": 0.1253290135592439,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -628.2587397917129
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 857.8018333333333,
+                  "MAE_std": 46.425592732110296,
+                  "SMAPE_mean": 108.72396386293966,
+                  "SMAPE_std": 9.67416497221568,
+                  "R2_mean": -0.0983017645562775,
+                  "R2_std": 0.21963334455661923,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -707.6654064583796
+                }
+              }
+            }
+          },
+          "pls": {
+            "baseline": {
+              "MAE": 1223.840265740259,
+              "SMAPE": 108.39933215617434,
+              "R2": -2.9185932418885785
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 1178.4873914762052,
+                  "MAE_std": 219.0791769037585,
+                  "SMAPE_mean": 128.31238123653205,
+                  "SMAPE_std": 40.92397218546708,
+                  "R2_mean": -3.0661937527918317,
+                  "R2_std": 1.327402369184779,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -589.1432722327918
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 1059.0222839945347,
+                  "MAE_std": 155.83487645749958,
+                  "SMAPE_mean": 123.04880139068787,
+                  "SMAPE_std": 37.16664184696614,
+                  "R2_mean": -2.6957005094475175,
+                  "R2_std": 1.053636383395572,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -736.3973172491621
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 1006.0126849911142,
+                  "MAE_std": 160.7329797804108,
+                  "SMAPE_mean": 135.09440384319421,
+                  "SMAPE_std": 33.1648102910115,
+                  "R2_mean": -2.404532355446402,
+                  "R2_std": 1.2578184254964027,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -803.9109355666529
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 1036.264286675032,
+                  "MAE_std": 226.71885424323983,
+                  "SMAPE_mean": 130.52695341823667,
+                  "SMAPE_std": 39.49038346332345,
+                  "R2_mean": -2.7340837003546694,
+                  "R2_std": 2.2192893118758765,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -749.5880790831733
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 1704.244500197814,
+                  "MAE_std": 611.5897314039305,
+                  "SMAPE_mean": 110.95771684335973,
+                  "SMAPE_std": 16.18499015013141,
+                  "R2_mean": -20.17961541719876,
+                  "R2_std": 18.28044937056173,
+                  "slope_mean": 2.016715715689089,
+                  "intercept_mean": -1073.1922948907022
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 1062.946693824969,
+                  "MAE_std": 462.93824188891557,
+                  "SMAPE_mean": 101.85176039064032,
+                  "SMAPE_std": 16.389761393442033,
+                  "R2_mean": -4.600383886324307,
+                  "R2_std": 13.463501625362706,
+                  "slope_mean": 0.500547795658162,
+                  "intercept_mean": 261.7313280200643
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 1176.8301910004993,
+                  "MAE_std": 494.31896754235765,
+                  "SMAPE_mean": 106.56695950956396,
+                  "SMAPE_std": 8.98573957725376,
+                  "R2_mean": -7.2076288005097195,
+                  "R2_std": 12.348268854636853,
+                  "slope_mean": 0.6523819814512427,
+                  "intercept_mean": 181.42958153079445
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 1127.9359149469155,
+                  "MAE_std": 448.0466568468911,
+                  "SMAPE_mean": 106.19385310895268,
+                  "SMAPE_std": 12.06626786021901,
+                  "R2_mean": -3.520662357119362,
+                  "R2_std": 6.551208635466431,
+                  "slope_mean": 0.47982995697102526,
+                  "intercept_mean": 283.1940318252063
+                }
+              }
+            }
+          },
+          "random_forest": {
+            "baseline": {
+              "MAE": 1214.980598507745,
+              "SMAPE": 126.54039360760221,
+              "R2": -0.34029412379780544
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 862.2308661216906,
+                  "MAE_std": 220.4092557804737,
+                  "SMAPE_mean": 106.47562406064276,
+                  "SMAPE_std": 17.430579614466968,
+                  "R2_mean": -0.14347958958809692,
+                  "R2_std": 0.5498095428831673,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -645.5942405244979
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 791.6269296756046,
+                  "MAE_std": 95.70337966612334,
+                  "SMAPE_mean": 100.7779211576321,
+                  "SMAPE_std": 18.082543661344953,
+                  "R2_mean": -0.0199933452222947,
+                  "R2_std": 0.10920578227425673,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -774.9132297494731
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 785.1344962951522,
+                  "MAE_std": 66.03870794907425,
+                  "SMAPE_mean": 97.20395165115124,
+                  "SMAPE_std": 13.431226253982723,
+                  "R2_mean": 0.024542828856592102,
+                  "R2_std": 0.061489840634041726,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -746.5502526934101
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 795.469069012479,
+                  "MAE_std": 46.29766513273427,
+                  "SMAPE_mean": 98.9063172200315,
+                  "SMAPE_std": 11.219537920672446,
+                  "R2_mean": 0.008970587354708653,
+                  "R2_std": 0.13198649856238323,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -727.2125719295507
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 909.448280588462,
+                  "MAE_std": 267.0921923701559,
+                  "SMAPE_mean": 111.74868113632142,
+                  "SMAPE_std": 25.470139222580528,
+                  "R2_mean": -0.3239282161170114,
+                  "R2_std": 0.8024469179974599,
+                  "slope_mean": 1.6268294804321233,
+                  "intercept_mean": -1515.1461388431162
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 826.2904685683964,
+                  "MAE_std": 79.63823476974419,
+                  "SMAPE_mean": 111.62183829182375,
+                  "SMAPE_std": 22.234731867824504,
+                  "R2_mean": -0.0716436565756893,
+                  "R2_std": 0.14841624570611858,
+                  "slope_mean": 2.0932895930129485,
+                  "intercept_mean": -2338.003475466949
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 822.333154931888,
+                  "MAE_std": 47.30043422081968,
+                  "SMAPE_mean": 112.33447652231123,
+                  "SMAPE_std": 17.311526933542556,
+                  "R2_mean": -0.09761499445483122,
+                  "R2_std": 0.19472379399352818,
+                  "slope_mean": 1.7988199139665884,
+                  "intercept_mean": -1843.955919625211
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 800.2382752231085,
+                  "MAE_std": 63.65910633009819,
+                  "SMAPE_mean": 98.35799512852462,
+                  "SMAPE_std": 11.909010210629198,
+                  "R2_mean": -0.01585831719409861,
+                  "R2_std": 0.16475274230914033,
+                  "slope_mean": 1.722235495626979,
+                  "intercept_mean": -1765.2254430574776
+                }
+              }
+            }
+          },
+          "xgboost": {
+            "baseline": {
+              "MAE": 1237.0901220703124,
+              "SMAPE": 126.50934801456157,
+              "R2": -0.37356153561978656
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 818.294399617513,
+                  "MAE_std": 207.08773225538337,
+                  "SMAPE_mean": 102.82700045676401,
+                  "SMAPE_std": 14.957373674239458,
+                  "R2_mean": -0.038176128411917934,
+                  "R2_std": 0.4783917217008641,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -740.50357421875
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 742.7213423919678,
+                  "MAE_std": 87.3490187797488,
+                  "SMAPE_mean": 94.61209951389864,
+                  "SMAPE_std": 14.986475143070937,
+                  "R2_mean": 0.07699267464927731,
+                  "R2_std": 0.09328111032805207,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -868.2554333496093
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 745.3747446114678,
+                  "MAE_std": 57.76055221347099,
+                  "SMAPE_mean": 93.99318046647105,
+                  "SMAPE_std": 12.590475700003077,
+                  "R2_mean": 0.11250777572015805,
+                  "R2_std": 0.05360737362460861,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -836.1418306477865
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 757.0266575113932,
+                  "MAE_std": 45.88643944663367,
+                  "SMAPE_mean": 95.52788968645665,
+                  "SMAPE_std": 11.37688408582421,
+                  "R2_mean": 0.09636853272286669,
+                  "R2_std": 0.12392788474123081,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -815.3038381958008
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 801.3890563964844,
+                  "MAE_std": 234.78211557527447,
+                  "SMAPE_mean": 113.17181590388252,
+                  "SMAPE_std": 18.324104140988332,
+                  "R2_mean": 0.013216997446759688,
+                  "R2_std": 0.6374775781740304,
+                  "slope_mean": 2.4765614708957115,
+                  "intercept_mean": -2994.921852196184
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 724.193434867859,
+                  "MAE_std": 88.36061968172696,
+                  "SMAPE_mean": 115.63312378361688,
+                  "SMAPE_std": 16.66213708554192,
+                  "R2_mean": 0.142923954969295,
+                  "R2_std": 0.22073599479792733,
+                  "slope_mean": 2.8874746947091294,
+                  "intercept_mean": -3808.54498181054
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 724.7127165004184,
+                  "MAE_std": 47.05355210096431,
+                  "SMAPE_mean": 113.34220514534586,
+                  "SMAPE_std": 14.905213916049798,
+                  "R2_mean": 0.15238752837569028,
+                  "R2_std": 0.13325281590123741,
+                  "slope_mean": 2.8968799696189467,
+                  "intercept_mean": -3731.771132399323
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 723.3633430989584,
+                  "MAE_std": 53.2298516561568,
+                  "SMAPE_mean": 110.6610889885427,
+                  "SMAPE_std": 15.220891937451224,
+                  "R2_mean": 0.18840193768869223,
+                  "R2_std": 0.15850912828245842,
+                  "slope_mean": 2.666204936358861,
+                  "intercept_mean": -3395.5583270994657
+                }
+              }
+            }
+          },
+          "catboost": {
+            "baseline": {
+              "MAE": 1416.4081482418849,
+              "SMAPE": 131.4911064615131,
+              "R2": -0.783792704131465
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 893.0700722389017,
+                  "MAE_std": 230.3530631187088,
+                  "SMAPE_mean": 106.39120163632772,
+                  "SMAPE_std": 18.350461333593795,
+                  "R2_mean": -0.229948920037974,
+                  "R2_std": 0.5437858701556493,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -907.3570000696748
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 815.4556225872903,
+                  "MAE_std": 106.61900052321701,
+                  "SMAPE_mean": 99.52988710295347,
+                  "SMAPE_std": 17.04213519188805,
+                  "R2_mean": -0.09549587690156751,
+                  "R2_std": 0.1185450052719452,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -1039.2944710913255
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 822.2763996091038,
+                  "MAE_std": 62.13892451063817,
+                  "SMAPE_mean": 102.3631989683453,
+                  "SMAPE_std": 12.230765277633871,
+                  "R2_mean": -0.044142934280645155,
+                  "R2_std": 0.04362796365018372,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -1002.5666722488653
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 836.003602563931,
+                  "MAE_std": 43.90953735300177,
+                  "SMAPE_mean": 104.49813773004155,
+                  "SMAPE_std": 9.72710837035906,
+                  "R2_mean": -0.07428134809230878,
+                  "R2_std": 0.14314362964356583,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -987.9237282280019
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 991.7183487960513,
+                  "MAE_std": 322.64796509062273,
+                  "SMAPE_mean": 115.63207812116973,
+                  "SMAPE_std": 19.26192503156652,
+                  "R2_mean": -0.5831009109792341,
+                  "R2_std": 1.1283374314523635,
+                  "slope_mean": 2.112572969657182,
+                  "intercept_mean": -2748.591030062332
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 896.3806147987785,
+                  "MAE_std": 173.4536423125109,
+                  "SMAPE_mean": 110.95153089801087,
+                  "SMAPE_std": 16.146116592807516,
+                  "R2_mean": -0.32895377254405894,
+                  "R2_std": 0.6392564684652634,
+                  "slope_mean": 1.129557621803809,
+                  "intercept_mean": -1210.792371402702
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 885.436131237461,
+                  "MAE_std": 62.55501216190651,
+                  "SMAPE_mean": 111.05940073689703,
+                  "SMAPE_std": 8.633769700111436,
+                  "R2_mean": -0.17190367537959803,
+                  "R2_std": 0.16563286675408237,
+                  "slope_mean": 0.7440657803181783,
+                  "intercept_mean": -459.5491633659993
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 865.7988724728366,
+                  "MAE_std": 62.852415106659585,
+                  "SMAPE_mean": 108.23123577441784,
+                  "SMAPE_std": 11.204088326583863,
+                  "R2_mean": -0.1560223078016528,
+                  "R2_std": 0.2200983417066113,
+                  "slope_mean": 0.8335696665152991,
+                  "intercept_mean": -683.6079224379107
+                }
+              }
+            }
+          },
+          "gaussian_process": {
+            "baseline": {
+              "MAE": 1263.4134185050693,
+              "SMAPE": 128.6305666666268,
+              "R2": -0.42520809980275054
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 894.7324940826402,
+                  "MAE_std": 234.11135801530432,
+                  "SMAPE_mean": 103.62522230817316,
+                  "SMAPE_std": 23.52082953820418,
+                  "R2_mean": -0.23799275686021898,
+                  "R2_std": 0.5079089400916277,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -653.5111323677162
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 822.8409723600059,
+                  "MAE_std": 108.23069861293965,
+                  "SMAPE_mean": 99.19204872928222,
+                  "SMAPE_std": 19.127354583500882,
+                  "R2_mean": -0.11113591840436052,
+                  "R2_std": 0.1038848452973789,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -781.9357301648762
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 836.1982515800152,
+                  "MAE_std": 55.490259035406815,
+                  "SMAPE_mean": 105.22577681446592,
+                  "SMAPE_std": 9.63700810135735,
+                  "R2_mean": -0.051483889208935395,
+                  "R2_std": 0.04910415315856655,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -738.8264891728209
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 844.8354513488235,
+                  "MAE_std": 39.11928895950613,
+                  "SMAPE_mean": 106.25145189058522,
+                  "SMAPE_std": 8.804655170116844,
+                  "R2_mean": -0.08166193021470132,
+                  "R2_std": 0.15047279445509912,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -729.5315947740781
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 5175.29845809574,
+                  "MAE_std": 12825.713777978715,
+                  "SMAPE_mean": 72.77711823027775,
+                  "SMAPE_std": 30.362436097533894,
+                  "R2_mean": -2122.171940825136,
+                  "R2_std": 6606.657138169994,
+                  "slope_mean": 25433.226534303547,
+                  "intercept_mean": -37313508.14743349
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 6631.188685208135,
+                  "MAE_std": 16425.166323808768,
+                  "SMAPE_mean": 81.42644571650837,
+                  "SMAPE_std": 21.364770764386012,
+                  "R2_mean": -2764.6135758903524,
+                  "R2_std": 8258.187582596804,
+                  "slope_mean": 29844.14230719761,
+                  "intercept_mean": -43784916.72155019
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 3750.2460093984,
+                  "MAE_std": 12620.86418791639,
+                  "SMAPE_mean": 94.24221126089618,
+                  "SMAPE_std": 19.01083724701976,
+                  "R2_mean": -1335.4158681291663,
+                  "R2_std": 5807.733253270801,
+                  "slope_mean": 13368.06196735123,
+                  "intercept_mean": -19612134.026621982
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 879.4012998829721,
+                  "MAE_std": 485.47618606148234,
+                  "SMAPE_mean": 91.67641672031296,
+                  "SMAPE_std": 19.6114540013736,
+                  "R2_mean": -3.0010760285893743,
+                  "R2_std": 10.034386208553878,
+                  "slope_mean": 1477.9454373143667,
+                  "intercept_mean": -2167757.3774452256
+                }
+              }
+            }
+          },
+          "stacking": {
+            "baseline": {
+              "MAE": 1182.6609125741895,
+              "SMAPE": 125.31094411509342,
+              "R2": -0.2707236910267119
+            },
+            "rescaled": {
+              "residual_mean": {
+                "5": {
+                  "adapter_type": "residual_mean",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 838.6163987386392,
+                  "MAE_std": 213.59319365072216,
+                  "SMAPE_mean": 104.37672998141913,
+                  "SMAPE_std": 16.677947013033762,
+                  "R2_mean": -0.0862691299114136,
+                  "R2_std": 0.5139003338047353,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -627.0954722390313
+                },
+                "10": {
+                  "adapter_type": "residual_mean",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 767.1093294054798,
+                  "MAE_std": 91.94217379438234,
+                  "SMAPE_mean": 97.18399793242386,
+                  "SMAPE_std": 16.17394000594485,
+                  "R2_mean": 0.03162000243879271,
+                  "R2_std": 0.10159500504702199,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -754.2718418794717
+                },
+                "15": {
+                  "adapter_type": "residual_mean",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 765.5557248523604,
+                  "MAE_std": 62.084529681120294,
+                  "SMAPE_mean": 95.88955039117423,
+                  "SMAPE_std": 12.83694175066215,
+                  "R2_mean": 0.07277831682895389,
+                  "R2_std": 0.057901594709979055,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -723.5484565068294
+                },
+                "20": {
+                  "adapter_type": "residual_mean",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 775.6870558722801,
+                  "MAE_std": 45.03893528931799,
+                  "SMAPE_mean": 97.31346175142696,
+                  "SMAPE_std": 11.108631855139418,
+                  "R2_mean": 0.056772010062966206,
+                  "R2_std": 0.12773888495742236,
+                  "slope_mean": 1.0,
+                  "intercept_mean": -704.6112128758481
+                }
+              },
+              "linear": {
+                "5": {
+                  "adapter_type": "linear",
+                  "k": 5,
+                  "n_repeats": 20,
+                  "MAE_mean": 860.562967393169,
+                  "MAE_std": 241.66760993086686,
+                  "SMAPE_mean": 114.7573607428748,
+                  "SMAPE_std": 19.109808581579905,
+                  "R2_mean": -0.14889947010304744,
+                  "R2_std": 0.7049866731901374,
+                  "slope_mean": 2.1489710904236743,
+                  "intercept_mean": -2236.91598419568
+                },
+                "10": {
+                  "adapter_type": "linear",
+                  "k": 10,
+                  "n_repeats": 20,
+                  "MAE_mean": 775.123541140769,
+                  "MAE_std": 74.13640378240835,
+                  "SMAPE_mean": 113.20854091083564,
+                  "SMAPE_std": 19.06370756601311,
+                  "R2_mean": 0.039228166112243786,
+                  "R2_std": 0.16788439861316184,
+                  "slope_mean": 2.619461255756652,
+                  "intercept_mean": -3070.8038719438746
+                },
+                "15": {
+                  "adapter_type": "linear",
+                  "k": 15,
+                  "n_repeats": 20,
+                  "MAE_mean": 776.4763802628142,
+                  "MAE_std": 51.3274978510361,
+                  "SMAPE_mean": 113.46482731959868,
+                  "SMAPE_std": 16.68359705365417,
+                  "R2_mean": 0.00824520206165531,
+                  "R2_std": 0.193074831230958,
+                  "slope_mean": 2.442501569548223,
+                  "intercept_mean": -2751.3001219890757
+                },
+                "20": {
+                  "adapter_type": "linear",
+                  "k": 20,
+                  "n_repeats": 20,
+                  "MAE_mean": 758.1251331612705,
+                  "MAE_std": 64.92771186044139,
+                  "SMAPE_mean": 104.17168450751237,
+                  "SMAPE_std": 15.635837443341593,
+                  "R2_mean": 0.07949465587976998,
+                  "R2_std": 0.17275098122950938,
+                  "slope_mean": 2.324780454073108,
+                  "intercept_mean": -2602.671455586592
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
