@@ -1,5 +1,5 @@
 """
-Hankel-DMD / Koopman-style pilot for MATR vs HUST capacity trajectories.
+Hankel-DMD / Koopman-style pilot for capacity trajectories.
 
 This is a dynamical-systems diagnostic for the transfer-learning story, not a
 replacement for the supervised predictors. Each cell's early Q_discharge curve
@@ -12,7 +12,10 @@ datasets.
 Inputs:
     data/intermediate/matr_cycles_tidy.csv
     data/intermediate/hust_cycles_tidy.csv
-    data/intermediate/features_sop12_combined.csv  (labels/censoring metadata)
+    data/intermediate/sandia_cycles_tidy.csv       (optional)
+    data/intermediate/luh_cycles_tidy.csv          (optional)
+    data/intermediate/features_sop12_combined.csv or
+    data/intermediate/features_sop12_four_dataset.csv  (labels/censoring metadata)
 
 Outputs:
     data/intermediate/koopman_dmd_cell_modes.csv
@@ -27,6 +30,11 @@ Outputs:
 Usage:
     python 3_analysis/koopman_dmd_pilot.py
     python 3_analysis/koopman_dmd_pilot.py --n-cycles 100 --delay-dim 12 --rank 4
+    python 3_analysis/koopman_dmd_pilot.py \
+        --datasets matr hust sandia luh \
+        --features-path data/intermediate/features_sop12_four_dataset.csv \
+        --output-prefix four_dataset_koopman_dmd \
+        --output-dir outputs/results_v2_four_dataset_koopman_dmd
 """
 
 from __future__ import annotations
@@ -52,9 +60,19 @@ PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_koopman_dmd"
 
-MATR_CYCLES_PATH = INTERMEDIATE_DIR / "matr_cycles_tidy.csv"
-HUST_CYCLES_PATH = INTERMEDIATE_DIR / "hust_cycles_tidy.csv"
 FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+DATASET_CYCLE_PATHS = {
+    "matr": INTERMEDIATE_DIR / "matr_cycles_tidy.csv",
+    "hust": INTERMEDIATE_DIR / "hust_cycles_tidy.csv",
+    "sandia": INTERMEDIATE_DIR / "sandia_cycles_tidy.csv",
+    "luh": INTERMEDIATE_DIR / "luh_cycles_tidy.csv",
+}
+DATASET_COLORS = {
+    "matr": "#4c78a8",
+    "hust": "#f58518",
+    "sandia": "#54a24b",
+    "luh": "#b279a2",
+}
 
 
 def compute_q0(qd: np.ndarray) -> float:
@@ -80,10 +98,17 @@ def load_cycle_table(path: Path, dataset: str) -> dict[str, np.ndarray]:
     return out
 
 
-def load_label_metadata(n_cycles: int) -> pd.DataFrame:
-    if not FEATURES_PATH.exists():
-        raise SystemExit(f"[error] missing {FEATURES_PATH.relative_to(PROJECT_ROOT)}")
-    df = pd.read_csv(FEATURES_PATH)
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def load_label_metadata(n_cycles: int, features_path: Path) -> pd.DataFrame:
+    if not features_path.exists():
+        raise SystemExit(f"[error] missing {display_path(features_path)}")
+    df = pd.read_csv(features_path)
     cols = ["dataset", "cell_id", "n_cycles", "q0", "cycle_life", "is_censored"]
     return df.loc[df["n_cycles"] == n_cycles, cols].copy()
 
@@ -161,11 +186,14 @@ def dmd_cell_rows(
     observable: str,
 ) -> tuple[list[dict], list[dict], dict[str, np.ndarray]]:
     label_lookup = labels.set_index(["dataset", "cell_id"]).to_dict("index")
+    allowed_cells = set(labels.loc[labels["dataset"].eq(dataset), "cell_id"].astype(str))
     mode_rows: list[dict] = []
     summary_rows: list[dict] = []
     trajectories: dict[str, np.ndarray] = {}
 
     for cell_id in sorted(qd_by_cell):
+        if allowed_cells and cell_id not in allowed_cells:
+            continue
         series, q0 = trajectory_from_qd(qd_by_cell[cell_id], n_cycles, observable)
         if len(series) <= delay_dim + 1:
             continue
@@ -351,36 +379,68 @@ def operator_summary(
     return out
 
 
-def safe_test(name: str, matr: np.ndarray, hust: np.ndarray) -> dict:
-    matr = np.asarray(matr, dtype=float)
-    hust = np.asarray(hust, dtype=float)
-    matr = matr[np.isfinite(matr)]
-    hust = hust[np.isfinite(hust)]
-    if len(matr) < 2 or len(hust) < 2:
+def safe_test(name: str, dataset_a: str, values_a: np.ndarray, dataset_b: str, values_b: np.ndarray) -> dict:
+    values_a = np.asarray(values_a, dtype=float)
+    values_b = np.asarray(values_b, dtype=float)
+    values_a = values_a[np.isfinite(values_a)]
+    values_b = values_b[np.isfinite(values_b)]
+    if len(values_a) < 2 or len(values_b) < 2:
         return {
             "metric": name,
-            "matr_mean": float("nan"),
-            "hust_mean": float("nan"),
-            "mean_delta_hust_minus_matr": float("nan"),
+            "dataset_a": dataset_a,
+            "dataset_b": dataset_b,
+            "dataset_a_mean": float("nan"),
+            "dataset_b_mean": float("nan"),
+            "mean_delta_b_minus_a": float("nan"),
             "ks_stat": float("nan"),
             "ks_p": float("nan"),
             "mannwhitney_u_p": float("nan"),
+            "n_a": int(len(values_a)),
+            "n_b": int(len(values_b)),
         }
-    ks = ks_2samp(matr, hust)
+    ks = ks_2samp(values_a, values_b)
     try:
-        mw = mannwhitneyu(matr, hust, alternative="two-sided")
+        mw = mannwhitneyu(values_a, values_b, alternative="two-sided")
         mw_p = float(mw.pvalue)
     except Exception:
         mw_p = float("nan")
     return {
         "metric": name,
-        "matr_mean": float(np.mean(matr)),
-        "hust_mean": float(np.mean(hust)),
-        "mean_delta_hust_minus_matr": float(np.mean(hust) - np.mean(matr)),
+        "dataset_a": dataset_a,
+        "dataset_b": dataset_b,
+        "dataset_a_mean": float(np.mean(values_a)),
+        "dataset_b_mean": float(np.mean(values_b)),
+        "mean_delta_b_minus_a": float(np.mean(values_b) - np.mean(values_a)),
         "ks_stat": float(ks.statistic),
         "ks_p": float(ks.pvalue),
         "mannwhitney_u_p": mw_p,
+        "n_a": int(len(values_a)),
+        "n_b": int(len(values_b)),
     }
+
+
+def distribution_pairwise_tests(cell_summary: pd.DataFrame, datasets: list[str]) -> list[dict]:
+    rows = []
+    metrics = [
+        "dominant_eig_abs",
+        "dominant_decay_rate",
+        "dominant_coeff_fraction",
+        "spectral_radius",
+        "eig_abs_mean",
+    ]
+    for metric in metrics:
+        for i, dataset_a in enumerate(datasets):
+            for dataset_b in datasets[i + 1:]:
+                rows.append(
+                    safe_test(
+                        metric,
+                        dataset_a,
+                        cell_summary[cell_summary["dataset"] == dataset_a][metric].to_numpy(dtype=float),
+                        dataset_b,
+                        cell_summary[cell_summary["dataset"] == dataset_b][metric].to_numpy(dtype=float),
+                    )
+                )
+    return rows
 
 
 def dmd_discriminator_auc(summary: pd.DataFrame, rank: int, seed: int) -> dict:
@@ -397,25 +457,49 @@ def dmd_discriminator_auc(summary: pd.DataFrame, rank: int, seed: int) -> dict:
     ]
     available = [c for c in cols if c in summary.columns]
     sub = summary.dropna(subset=available + ["dataset"]).copy()
-    if sub["dataset"].nunique() != 2 or len(sub) < 20:
+    n_classes = int(sub["dataset"].nunique())
+    if n_classes < 2 or len(sub) < 20:
         return {"auc_mean": float("nan"), "auc_std": float("nan"), "n_cells": int(len(sub))}
     x = sub[available].to_numpy(dtype=float)
-    y = (sub["dataset"] == "hust").astype(int).to_numpy()
-    min_class = int(min(np.sum(y == 0), np.sum(y == 1)))
+    y, class_labels = pd.factorize(sub["dataset"])
+    min_class = int(pd.Series(y).value_counts().min())
     folds = max(2, min(5, min_class))
+    scoring = "roc_auc" if n_classes == 2 else "roc_auc_ovr_weighted"
     model = make_pipeline(
         StandardScaler(),
         LogisticRegression(C=1.0, solver="lbfgs", max_iter=2000, random_state=seed),
     )
     cv = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
-    scores = cross_val_score(model, x, y, cv=cv, scoring="roc_auc")
+    scores = cross_val_score(model, x, y, cv=cv, scoring=scoring)
     return {
         "auc_mean": float(np.mean(scores)),
         "auc_std": float(np.std(scores)),
         "n_cells": int(len(sub)),
         "features": available,
         "rank_requested": int(rank),
+        "n_classes": n_classes,
+        "class_labels": [str(label) for label in class_labels],
+        "scoring": scoring,
     }
+
+
+def pairwise_dmd_discriminator_auc(summary: pd.DataFrame, datasets: list[str], rank: int, seed: int) -> list[dict]:
+    rows = []
+    for i, dataset_a in enumerate(datasets):
+        for dataset_b in datasets[i + 1:]:
+            sub = summary[summary["dataset"].isin([dataset_a, dataset_b])].copy()
+            auc = dmd_discriminator_auc(sub, rank, seed)
+            rows.append(
+                {
+                    "dataset_a": dataset_a,
+                    "dataset_b": dataset_b,
+                    "auc_mean": auc["auc_mean"],
+                    "auc_std": auc["auc_std"],
+                    "n_cells": auc["n_cells"],
+                    "scoring": auc.get("scoring", "roc_auc"),
+                }
+            )
+    return rows
 
 
 def mode_life_correlations(summary: pd.DataFrame) -> list[dict]:
@@ -449,7 +533,9 @@ def write_json(path: Path, obj: dict) -> None:
 def write_report(path: Path, summary: dict) -> None:
     tests = summary["distribution_tests"]
     auc = summary["dmd_discriminator_auc"]
+    pairwise_auc = summary.get("pairwise_dmd_discriminator_auc", [])
     pred = summary["operator_prediction"]
+    datasets = summary["config"]["datasets"]
 
     lines = [
         "Koopman / Hankel-DMD Pilot",
@@ -457,20 +543,31 @@ def write_report(path: Path, summary: dict) -> None:
         "",
         f"Observable: {summary['config']['observable']}",
         f"Cycles: 2..{summary['config']['n_cycles']}  | delay_dim={summary['config']['delay_dim']}  | rank={summary['config']['rank']}",
-        f"Cells analyzed: MATR={summary['n_cells']['matr']}, HUST={summary['n_cells']['hust']}",
+        "Cells analyzed: " + ", ".join(f"{dataset.upper()}={summary['n_cells'].get(dataset, 0)}" for dataset in datasets),
         "",
-        "Per-cell spectrum distribution tests (HUST minus MATR):",
+        "Per-cell spectrum distribution tests (dataset B minus dataset A):",
     ]
     for row in tests:
         lines.append(
-            f"- {row['metric']}: mean_delta={row['mean_delta_hust_minus_matr']:.4g}, "
-            f"KS={row['ks_stat']:.3f}, p={row['ks_p']:.3g}"
+            f"- {row['dataset_a']} -> {row['dataset_b']} {row['metric']}: "
+            f"mean_delta={row['mean_delta_b_minus_a']:.4g}, KS={row['ks_stat']:.3f}, p={row['ks_p']:.3g}"
         )
     lines.extend(
         [
             "",
             "Dataset separability from DMD summaries:",
-            f"- Logistic AUC = {auc['auc_mean']:.3f} +/- {auc['auc_std']:.3f} across CV folds",
+            f"- Logistic {auc.get('scoring', 'roc_auc')} = {auc['auc_mean']:.3f} +/- {auc['auc_std']:.3f} across CV folds",
+            "",
+            "Pairwise DMD-summary dataset separability:",
+        ]
+    )
+    for row in pairwise_auc:
+        lines.append(
+            f"- {row['dataset_a']} vs {row['dataset_b']}: "
+            f"AUC={row['auc_mean']:.3f} +/- {row['auc_std']:.3f} (n={row['n_cells']})"
+        )
+    lines.extend(
+        [
             "",
             "Dataset-level operator one-step RMSE on retention-delay snapshots:",
         ]
@@ -506,7 +603,8 @@ def write_plots(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
-    colors = {"matr": "#4c78a8", "hust": "#f58518"}
+    datasets = list(cell_summary["dataset"].dropna().drop_duplicates())
+    colors = {dataset: DATASET_COLORS.get(dataset, None) for dataset in datasets}
 
     top_modes = cell_modes[cell_modes["mode_rank_by_amplitude"] <= 2].copy()
     fig, ax = plt.subplots(figsize=(7.0, 6.2))
@@ -518,7 +616,7 @@ def write_plots(
             sub["eig_imag"],
             s=18 + 95 * sub["coefficient_fraction"],
             alpha=0.55,
-            color=colors.get(dataset, None),
+            color=colors.get(dataset),
             label=f"{dataset.upper()} modes",
             edgecolor="white",
             linewidth=0.25,
@@ -545,12 +643,12 @@ def write_plots(
     ]
     fig, axes = plt.subplots(2, 2, figsize=(10.5, 7.4))
     for ax, (metric, title) in zip(axes.ravel(), metrics, strict=False):
-        values = [cell_summary[cell_summary["dataset"] == ds][metric].dropna().to_numpy() for ds in ["matr", "hust"]]
-        ax.boxplot(values, tick_labels=["MATR", "HUST"], patch_artist=True, widths=0.55)
-        for pos, vals, ds in zip([1, 2], values, ["matr", "hust"], strict=False):
+        values = [cell_summary[cell_summary["dataset"] == ds][metric].dropna().to_numpy() for ds in datasets]
+        ax.boxplot(values, tick_labels=[ds.upper() for ds in datasets], patch_artist=True, widths=0.55)
+        for pos, vals, ds in zip(range(1, len(datasets) + 1), values, datasets, strict=False):
             rng = np.random.default_rng(17 + pos)
             jitter = rng.uniform(-0.08, 0.08, size=len(vals))
-            ax.scatter(np.full(len(vals), pos) + jitter, vals, s=12, alpha=0.42, color=colors[ds], edgecolor="none")
+            ax.scatter(np.full(len(vals), pos) + jitter, vals, s=12, alpha=0.42, color=colors.get(ds), edgecolor="none")
         ax.set_title(title)
         ax.grid(axis="y", alpha=0.25)
     fig.suptitle("Per-cell DMD summary distributions", fontsize=14)
@@ -562,7 +660,7 @@ def write_plots(
 
     pred = operator_rows[operator_rows["row_type"] == "operator_prediction"].copy()
     pred["label"] = pred["source_operator"].str.upper() + " operator\non " + pred["eval_dataset"].str.upper()
-    fig, ax = plt.subplots(figsize=(8.2, 4.8))
+    fig, ax = plt.subplots(figsize=(max(8.2, 1.05 * len(pred)), 4.8))
     bar_colors = ["#4c78a8" if s == e else "#e45756" for s, e in zip(pred["source_operator"], pred["eval_dataset"], strict=False)]
     ax.bar(pred["label"], pred["rmse_ratio_vs_target_self"], color=bar_colors, alpha=0.88)
     for idx, row in enumerate(pred.itertuples(index=False)):
@@ -593,6 +691,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-cycles", type=int, default=100, help="Use cycles 2..N. Default: 100")
     parser.add_argument("--delay-dim", type=int, default=12, help="Hankel delay embedding dimension. Default: 12")
     parser.add_argument("--rank", type=int, default=4, help="Truncated DMD rank. Default: 4")
+    parser.add_argument("--features-path", type=Path, default=FEATURES_PATH)
+    parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=list(DATASET_CYCLE_PATHS))
+    parser.add_argument("--output-prefix", default="koopman_dmd")
     parser.add_argument(
         "--observable",
         choices=["retention", "fade", "retention_centered"],
@@ -611,12 +712,14 @@ def main() -> int:
         return 1
 
     INTERMEDIATE_DIR.mkdir(parents=True, exist_ok=True)
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = args.output_dir if args.output_dir.is_absolute() else PROJECT_ROOT / args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    labels = load_label_metadata(args.n_cycles)
+    features_path = args.features_path if args.features_path.is_absolute() else PROJECT_ROOT / args.features_path
+    labels = load_label_metadata(args.n_cycles, features_path)
     qd_by_dataset = {
-        "matr": load_cycle_table(MATR_CYCLES_PATH, "matr"),
-        "hust": load_cycle_table(HUST_CYCLES_PATH, "hust"),
+        dataset: load_cycle_table(DATASET_CYCLE_PATHS[dataset], dataset)
+        for dataset in args.datasets
     }
 
     mode_rows: list[dict] = []
@@ -640,27 +743,16 @@ def main() -> int:
     cell_summary = pd.DataFrame(summary_rows)
     operator_rows = operator_summary(trajectories_by_dataset, delay_dim=args.delay_dim, rank=args.rank)
 
-    mode_path = INTERMEDIATE_DIR / "koopman_dmd_cell_modes.csv"
-    summary_path = INTERMEDIATE_DIR / "koopman_dmd_cell_summary.csv"
-    operator_path = INTERMEDIATE_DIR / "koopman_dmd_operator_summary.csv"
+    mode_path = INTERMEDIATE_DIR / f"{args.output_prefix}_cell_modes.csv"
+    summary_path = INTERMEDIATE_DIR / f"{args.output_prefix}_cell_summary.csv"
+    operator_path = INTERMEDIATE_DIR / f"{args.output_prefix}_operator_summary.csv"
     cell_modes.to_csv(mode_path, index=False)
     cell_summary.to_csv(summary_path, index=False)
     operator_rows.to_csv(operator_path, index=False)
 
-    tests = [
-        safe_test(metric, *[
-            cell_summary[cell_summary["dataset"] == ds][metric].to_numpy(dtype=float)
-            for ds in ["matr", "hust"]
-        ])
-        for metric in [
-            "dominant_eig_abs",
-            "dominant_decay_rate",
-            "dominant_coeff_fraction",
-            "spectral_radius",
-            "eig_abs_mean",
-        ]
-    ]
+    tests = distribution_pairwise_tests(cell_summary, args.datasets)
     auc = dmd_discriminator_auc(cell_summary, args.rank, args.seed)
+    pairwise_auc = pairwise_dmd_discriminator_auc(cell_summary, args.datasets, args.rank, args.seed)
     life_corr = mode_life_correlations(cell_summary)
     pred_rows = operator_rows[operator_rows["row_type"] == "operator_prediction"].copy()
     pred_summary = pred_rows[
@@ -676,7 +768,7 @@ def main() -> int:
             "n_cells_eval",
         ]
     ].to_dict("records")
-    plot_paths = write_plots(cell_modes, cell_summary, operator_rows, args.output_dir)
+    plot_paths = write_plots(cell_modes, cell_summary, operator_rows, output_dir)
 
     summary = {
         "protocol": "hankel_dmd_pilot_v1",
@@ -686,6 +778,8 @@ def main() -> int:
             "rank": int(args.rank),
             "observable": args.observable,
             "seed": int(args.seed),
+            "datasets": args.datasets,
+            "features_path": display_path(features_path),
         },
         "n_cells": {
             dataset: int(len(trajectories))
@@ -699,15 +793,17 @@ def main() -> int:
         },
         "distribution_tests": tests,
         "dmd_discriminator_auc": auc,
+        "pairwise_dmd_discriminator_auc": pairwise_auc,
         "operator_prediction": pred_summary,
         "mode_life_correlations": life_corr,
     }
-    json_path = INTERMEDIATE_DIR / "koopman_dmd_summary.json"
-    report_path = INTERMEDIATE_DIR / "koopman_dmd_report.txt"
+    json_path = INTERMEDIATE_DIR / f"{args.output_prefix}_summary.json"
+    report_path = INTERMEDIATE_DIR / f"{args.output_prefix}_report.txt"
     write_json(json_path, summary)
     write_report(report_path, summary)
 
-    print(f"[koopman_dmd] cells: MATR={summary['n_cells'].get('matr', 0)}, HUST={summary['n_cells'].get('hust', 0)}")
+    cell_text = ", ".join(f"{dataset.upper()}={summary['n_cells'].get(dataset, 0)}" for dataset in args.datasets)
+    print(f"[koopman_dmd] cells: {cell_text}")
     print(f"[koopman_dmd] wrote {mode_path.relative_to(PROJECT_ROOT)}")
     print(f"[koopman_dmd] wrote {summary_path.relative_to(PROJECT_ROOT)}")
     print(f"[koopman_dmd] wrote {operator_path.relative_to(PROJECT_ROOT)}")

@@ -268,6 +268,21 @@ should be framed cautiously as a pilot/diagnostic until D3/D4 show whether the
 operator asymmetry generalizes. Outputs are in
 `data/intermediate/koopman_dmd_*` and `outputs/results_v2_koopman_dmd/`.
 
+The four-dataset extension now runs the same Hankel-DMD protocol on MATR,
+HUST, Sandia, and Luh/KIT using `features_sop12_four_dataset.csv` for labels
+and censoring. It analyzes MATR 135, HUST 77, Sandia 61, and Luh 108 cells.
+The four-class DMD-summary discriminator reaches weighted OvR AUC=0.915 ±
+0.019, and pairwise Sandia-vs-Luh separability is AUC=1.000 ± 0.000. For the
+recent two datasets, the dominant eigenvalue magnitude differs modestly
+(KS=0.268, p=0.0057; mean Δ|λ|=-1.05e-4), but mean eigenvalue magnitude is
+fully separated (KS=1.000, p=3.15e-47). Dominant |λ| is also strongly
+lifetime-informative: r=0.80 in Sandia and r=0.58 in Luh. Operator transfer is
+asymmetric: Luh->Sandia is close to Sandia self-dynamics (1.07x RMSE), while
+Sandia->Luh is 6.99x Luh self-RMSE. Because Luh's self-RMSE is extremely
+small, this ratio should be interpreted alongside the absolute RMSE
+(0.00037). Outputs are in `data/intermediate/four_dataset_koopman_dmd_*` and
+`outputs/results_v2_four_dataset_koopman_dmd/`.
+
 ### Importance-weighted CP falsifier (§7 diagnostic)
 
 `3_analysis/importance_weighted_conformal.py` tests whether a standard
@@ -631,6 +646,11 @@ python 3_analysis/concept_shift_diagnostics.py
 python 3_analysis/conditional_shift_decomposition.py
 python 3_analysis/conditional_shift_four_dataset.py
 python 3_analysis/koopman_dmd_pilot.py
+python 3_analysis/koopman_dmd_pilot.py \
+    --datasets matr hust sandia luh \
+    --features-path data/intermediate/features_sop12_four_dataset.csv \
+    --output-prefix four_dataset_koopman_dmd \
+    --output-dir outputs/results_v2_four_dataset_koopman_dmd
 
 # Target calibration
 python 3_analysis/target_rescaling.py

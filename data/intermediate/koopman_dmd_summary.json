@@ -5,7 +5,12 @@
     "delay_dim": 12,
     "rank": 4,
     "observable": "retention",
-    "seed": 42
+    "seed": 42,
+    "datasets": [
+      "matr",
+      "hust"
+    ],
+    "features_path": "data/intermediate/features_sop12_combined.csv"
   },
   "n_cells": {
     "matr": 135,
@@ -24,48 +29,68 @@
   "distribution_tests": [
     {
       "metric": "dominant_eig_abs",
-      "matr_mean": 0.9999355556495624,
-      "hust_mean": 0.9999034935704416,
-      "mean_delta_hust_minus_matr": -3.2062079120764864e-05,
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9999034935704416,
+      "mean_delta_b_minus_a": -3.2062079120764864e-05,
       "ks_stat": 0.8258778258778259,
       "ks_p": 1.1993272010944308e-34,
-      "mannwhitney_u_p": 4.828504732226048e-20
+      "mannwhitney_u_p": 4.828504732226048e-20,
+      "n_a": 135,
+      "n_b": 77
     },
     {
       "metric": "dominant_decay_rate",
-      "matr_mean": 6.448594439798357e-05,
-      "hust_mean": 9.651131132277198e-05,
-      "mean_delta_hust_minus_matr": 3.202536692478841e-05,
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 6.448594439798357e-05,
+      "dataset_b_mean": 9.651131132277198e-05,
+      "mean_delta_b_minus_a": 3.202536692478841e-05,
       "ks_stat": 0.8258778258778259,
       "ks_p": 1.1993272010944308e-34,
-      "mannwhitney_u_p": 4.828504732226048e-20
+      "mannwhitney_u_p": 4.828504732226048e-20,
+      "n_a": 135,
+      "n_b": 77
     },
     {
       "metric": "dominant_coeff_fraction",
-      "matr_mean": 0.9932538980528921,
-      "hust_mean": 0.991860768863502,
-      "mean_delta_hust_minus_matr": -0.0013931291893900521,
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.9932538980528921,
+      "dataset_b_mean": 0.991860768863502,
+      "mean_delta_b_minus_a": -0.0013931291893900521,
       "ks_stat": 0.4379028379028379,
       "ks_p": 5.4309914398929495e-09,
-      "mannwhitney_u_p": 0.3168012319860234
+      "mannwhitney_u_p": 0.3168012319860234,
+      "n_a": 135,
+      "n_b": 77
     },
     {
       "metric": "spectral_radius",
-      "matr_mean": 0.9999355556495624,
-      "hust_mean": 0.9999034935704416,
-      "mean_delta_hust_minus_matr": -3.2062079120764864e-05,
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9999034935704416,
+      "mean_delta_b_minus_a": -3.2062079120764864e-05,
       "ks_stat": 0.8258778258778259,
       "ks_p": 1.1993272010944308e-34,
-      "mannwhitney_u_p": 4.828504732226048e-20
+      "mannwhitney_u_p": 4.828504732226048e-20,
+      "n_a": 135,
+      "n_b": 77
     },
     {
       "metric": "eig_abs_mean",
-      "matr_mean": 0.8608264733689107,
-      "hust_mean": 0.848777217152601,
-      "mean_delta_hust_minus_matr": -0.0120492562163097,
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.8608264733689107,
+      "dataset_b_mean": 0.848777217152601,
+      "mean_delta_b_minus_a": -0.0120492562163097,
       "ks_stat": 0.1619047619047619,
       "ks_p": 0.13458955020531022,
-      "mannwhitney_u_p": 0.6331868503057618
+      "mannwhitney_u_p": 0.6331868503057618,
+      "n_a": 135,
+      "n_b": 77
     }
   ],
   "dmd_discriminator_auc": {
@@ -83,8 +108,24 @@
       "top2_eig_abs",
       "top3_eig_abs"
     ],
-    "rank_requested": 4
+    "rank_requested": 4,
+    "n_classes": 2,
+    "class_labels": [
+      "matr",
+      "hust"
+    ],
+    "scoring": "roc_auc"
   },
+  "pairwise_dmd_discriminator_auc": [
+    {
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "auc_mean": 0.7953086419753086,
+      "auc_std": 0.038902799785147914,
+      "n_cells": 212,
+      "scoring": "roc_auc"
+    }
+  ],
   "operator_prediction": [
     {
       "source_operator": "matr",

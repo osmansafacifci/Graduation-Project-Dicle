@@ -1,0 +1,71 @@
+Koopman / Hankel-DMD Pilot
+===========================
+
+Observable: retention
+Cycles: 2..100  | delay_dim=12  | rank=4
+Cells analyzed: MATR=135, HUST=77, SANDIA=61, LUH=108
+
+Per-cell spectrum distribution tests (dataset B minus dataset A):
+- matr -> hust dominant_eig_abs: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
+- matr -> sandia dominant_eig_abs: mean_delta=-0.0004341, KS=0.725, p=4.43e-22
+- matr -> luh dominant_eig_abs: mean_delta=-0.000539, KS=0.770, p=1.3e-35
+- hust -> sandia dominant_eig_abs: mean_delta=-0.000402, KS=0.656, p=1.97e-14
+- hust -> luh dominant_eig_abs: mean_delta=-0.000507, KS=0.839, p=5.77e-33
+- sandia -> luh dominant_eig_abs: mean_delta=-0.0001049, KS=0.268, p=0.00568
+- matr -> hust dominant_decay_rate: mean_delta=3.203e-05, KS=0.826, p=1.2e-34
+- matr -> sandia dominant_decay_rate: mean_delta=0.0004343, KS=0.725, p=4.43e-22
+- matr -> luh dominant_decay_rate: mean_delta=0.0005397, KS=0.770, p=1.3e-35
+- hust -> sandia dominant_decay_rate: mean_delta=0.0004022, KS=0.656, p=1.97e-14
+- hust -> luh dominant_decay_rate: mean_delta=0.0005077, KS=0.839, p=5.77e-33
+- sandia -> luh dominant_decay_rate: mean_delta=0.0001055, KS=0.268, p=0.00568
+- matr -> hust dominant_coeff_fraction: mean_delta=-0.001393, KS=0.438, p=5.43e-09
+- matr -> sandia dominant_coeff_fraction: mean_delta=-0.01914, KS=0.727, p=3.68e-22
+- matr -> luh dominant_coeff_fraction: mean_delta=-0.05876, KS=0.970, p=1.03e-64
+- hust -> sandia dominant_coeff_fraction: mean_delta=-0.01775, KS=0.454, p=7.17e-07
+- hust -> luh dominant_coeff_fraction: mean_delta=-0.05737, KS=0.617, p=1.36e-16
+- sandia -> luh dominant_coeff_fraction: mean_delta=-0.03962, KS=0.380, p=1.5e-05
+- matr -> hust spectral_radius: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
+- matr -> sandia spectral_radius: mean_delta=-0.0004341, KS=0.725, p=4.43e-22
+- matr -> luh spectral_radius: mean_delta=-0.000539, KS=0.770, p=1.3e-35
+- hust -> sandia spectral_radius: mean_delta=-0.000402, KS=0.656, p=1.97e-14
+- hust -> luh spectral_radius: mean_delta=-0.000507, KS=0.839, p=5.77e-33
+- sandia -> luh spectral_radius: mean_delta=-0.0001049, KS=0.268, p=0.00568
+- matr -> hust eig_abs_mean: mean_delta=-0.01205, KS=0.162, p=0.135
+- matr -> sandia eig_abs_mean: mean_delta=-0.08334, KS=0.446, p=4.62e-08
+- matr -> luh eig_abs_mean: mean_delta=0.1016, KS=0.956, p=1.1e-61
+- hust -> sandia eig_abs_mean: mean_delta=-0.07129, KS=0.329, p=0.000856
+- hust -> luh eig_abs_mean: mean_delta=0.1137, KS=0.978, p=1.05e-49
+- sandia -> luh eig_abs_mean: mean_delta=0.1849, KS=1.000, p=3.15e-47
+
+Dataset separability from DMD summaries:
+- Logistic roc_auc_ovr_weighted = 0.915 +/- 0.019 across CV folds
+
+Pairwise DMD-summary dataset separability:
+- matr vs hust: AUC=0.795 +/- 0.039 (n=212)
+- matr vs sandia: AUC=0.917 +/- 0.059 (n=196)
+- matr vs luh: AUC=0.988 +/- 0.025 (n=243)
+- hust vs sandia: AUC=0.941 +/- 0.038 (n=138)
+- hust vs luh: AUC=1.000 +/- 0.000 (n=185)
+- sandia vs luh: AUC=1.000 +/- 0.000 (n=169)
+
+Dataset-level operator one-step RMSE on retention-delay snapshots:
+- K_matr on matr: RMSE=0.01370, MAE=0.00050, RMSE ratio vs target-self=1.00x
+- K_matr on hust: RMSE=0.00050, MAE=0.00028, RMSE ratio vs target-self=1.84x
+- K_matr on sandia: RMSE=0.00418, MAE=0.00124, RMSE ratio vs target-self=1.32x
+- K_matr on luh: RMSE=0.00237, MAE=0.00104, RMSE ratio vs target-self=45.31x
+- K_hust on matr: RMSE=0.01398, MAE=0.00044, RMSE ratio vs target-self=1.02x
+- K_hust on hust: RMSE=0.00027, MAE=0.00019, RMSE ratio vs target-self=1.00x
+- K_hust on sandia: RMSE=0.00333, MAE=0.00061, RMSE ratio vs target-self=1.05x
+- K_hust on luh: RMSE=0.00033, MAE=0.00012, RMSE ratio vs target-self=6.32x
+- K_sandia on matr: RMSE=0.01397, MAE=0.00055, RMSE ratio vs target-self=1.02x
+- K_sandia on hust: RMSE=0.00040, MAE=0.00026, RMSE ratio vs target-self=1.46x
+- K_sandia on sandia: RMSE=0.00317, MAE=0.00062, RMSE ratio vs target-self=1.00x
+- K_sandia on luh: RMSE=0.00037, MAE=0.00013, RMSE ratio vs target-self=6.99x
+- K_luh on matr: RMSE=0.01486, MAE=0.00046, RMSE ratio vs target-self=1.08x
+- K_luh on hust: RMSE=0.00029, MAE=0.00020, RMSE ratio vs target-self=1.07x
+- K_luh on sandia: RMSE=0.00339, MAE=0.00058, RMSE ratio vs target-self=1.07x
+- K_luh on luh: RMSE=0.00005, MAE=0.00002, RMSE ratio vs target-self=1.00x
+
+Interpretation guide:
+- If spectra and operator errors differ by dataset, this supports a dynamics-level version of conditional shift.
+- If spectra overlap, keep the result as a negative pilot and avoid adding Koopman language to the paper's main claim.

@@ -186,6 +186,11 @@ python 3_analysis/survival_censoring.py
 # Concept-shift and dynamics diagnostics
 python 3_analysis/concept_shift_diagnostics.py
 python 3_analysis/koopman_dmd_pilot.py
+python 3_analysis/koopman_dmd_pilot.py \
+    --datasets matr hust sandia luh \
+    --features-path data/intermediate/features_sop12_four_dataset.csv \
+    --output-prefix four_dataset_koopman_dmd \
+    --output-dir outputs/results_v2_four_dataset_koopman_dmd
 
 # Target calibration
 python 3_analysis/target_rescaling.py
@@ -213,7 +218,7 @@ python 3_analysis/summarize_conformal_results.py
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
 | **Paper extension** | Four-dataset conditional-shift diagnostics: pairwise feature-slope shifts, naive-best source-prediction rank signal, residual-vs-linear calibration regime labels | `3_analysis/conditional_shift_four_dataset.py` | `data/intermediate/four_dataset_conditional_shift_*`, `outputs/results_v2_four_dataset_conditional_shift/...` |
-| **§6+++** | Hankel-DMD / Koopman-style dynamics pilot on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer | `3_analysis/koopman_dmd_pilot.py` | `data/intermediate/koopman_dmd_*`, `outputs/results_v2_koopman_dmd/...` |
+| **§6+++** | Hankel-DMD / Koopman-style dynamics pilot on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer; includes four-dataset extension | `3_analysis/koopman_dmd_pilot.py` | `data/intermediate/koopman_dmd_*`, `data/intermediate/four_dataset_koopman_dmd_*`, `outputs/results_v2_koopman_dmd/...`, `outputs/results_v2_four_dataset_koopman_dmd/...` |
 | **Paper extension** | Four-dataset validation: Sandia 0-100 subset, Luh standard-cycling subset, feature-table counts, split completeness, and full within/cross result matrix checks | `3_analysis/validate_four_dataset_extension.py` | `data/intermediate/four_dataset_validation_*` |
 | **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
 | **§7−** | Target calibration baseline (k=5/10/15/20 calibration cells; residual-mean and linear adapters; MATR/HUST default or four-dataset extension via CLI) | `3_analysis/target_rescaling.py`, `3_analysis/summarize_target_rescaling.py` | `outputs/results_v2_target_rescale/...`, `outputs/results_v2_four_dataset_target_rescale/...`, `data/intermediate/four_dataset_target_rescale_*` |
@@ -493,6 +498,28 @@ per-cycle magnitude, so the effect is useful for mechanistic framing but should
 be presented as a pilot/diagnostic until third and fourth datasets confirm
 whether the operator asymmetry is stable.
 Figures are in `outputs/results_v2_koopman_dmd/`.
+
+Four-dataset extension reruns the same protocol on MATR, HUST, Sandia, and
+Luh/KIT using the paper-extension feature table for labels and censoring.
+
+| Diagnostic | Four-dataset result |
+|---|---|
+| Cells analyzed | MATR 135, HUST 77, Sandia 61, Luh 108 |
+| DMD-summary dataset separability | four-class weighted OvR AUC = 0.915 ± 0.019 |
+| Pairwise Sandia vs. Luh separability | AUC = 1.000 ± 0.000 |
+| Sandia vs. Luh dominant \|λ\| shift | KS = 0.268, p = 0.0057; mean Δ\|λ\| = −1.05e-4 |
+| Sandia vs. Luh mean eigenvalue magnitude | KS = 1.000, p = 3.15e-47 |
+| Dominant \|λ\| vs. log-life | r = 0.80 in Sandia, r = 0.58 in Luh |
+| Luh operator on Sandia | 1.07× Sandia self-operator one-step RMSE |
+| Sandia operator on Luh | 6.99× Luh self-operator one-step RMSE |
+
+Interpretation: the new datasets strengthen the mechanistic diagnostic rather
+than weakening it. DMD summaries are strongly dataset-specific, and the
+dominant eigenvalue is lifetime-informative in Sandia/Luh. The Sandia/Luh
+operator transfer asymmetry should be read with absolute errors too, because
+Luh has an extremely low self-operator RMSE; ratios against that tiny baseline
+inflate quickly. Outputs are in `data/intermediate/four_dataset_koopman_dmd_*`
+and `outputs/results_v2_four_dataset_koopman_dmd/`.
 
 ### Importance-Weighted CP Falsifier
 

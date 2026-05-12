@@ -5,15 +5,18 @@ Observable: retention
 Cycles: 2..100  | delay_dim=12  | rank=4
 Cells analyzed: MATR=135, HUST=77
 
-Per-cell spectrum distribution tests (HUST minus MATR):
-- dominant_eig_abs: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
-- dominant_decay_rate: mean_delta=3.203e-05, KS=0.826, p=1.2e-34
-- dominant_coeff_fraction: mean_delta=-0.001393, KS=0.438, p=5.43e-09
-- spectral_radius: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
-- eig_abs_mean: mean_delta=-0.01205, KS=0.162, p=0.135
+Per-cell spectrum distribution tests (dataset B minus dataset A):
+- matr -> hust dominant_eig_abs: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
+- matr -> hust dominant_decay_rate: mean_delta=3.203e-05, KS=0.826, p=1.2e-34
+- matr -> hust dominant_coeff_fraction: mean_delta=-0.001393, KS=0.438, p=5.43e-09
+- matr -> hust spectral_radius: mean_delta=-3.206e-05, KS=0.826, p=1.2e-34
+- matr -> hust eig_abs_mean: mean_delta=-0.01205, KS=0.162, p=0.135
 
 Dataset separability from DMD summaries:
-- Logistic AUC = 0.795 +/- 0.039 across CV folds
+- Logistic roc_auc = 0.795 +/- 0.039 across CV folds
+
+Pairwise DMD-summary dataset separability:
+- matr vs hust: AUC=0.795 +/- 0.039 (n=212)
 
 Dataset-level operator one-step RMSE on retention-delay snapshots:
 - K_matr on matr: RMSE=0.01370, MAE=0.00050, RMSE ratio vs target-self=1.00x

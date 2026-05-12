@@ -1,0 +1,792 @@
+{
+  "protocol": "hankel_dmd_pilot_v1",
+  "config": {
+    "n_cycles": 100,
+    "delay_dim": 12,
+    "rank": 4,
+    "observable": "retention",
+    "seed": 42,
+    "datasets": [
+      "matr",
+      "hust",
+      "sandia",
+      "luh"
+    ],
+    "features_path": "data/intermediate/features_sop12_four_dataset.csv"
+  },
+  "n_cells": {
+    "matr": 135,
+    "hust": 77,
+    "sandia": 61,
+    "luh": 108
+  },
+  "outputs": {
+    "cell_modes_csv": "data/intermediate/four_dataset_koopman_dmd_cell_modes.csv",
+    "cell_summary_csv": "data/intermediate/four_dataset_koopman_dmd_cell_summary.csv",
+    "operator_summary_csv": "data/intermediate/four_dataset_koopman_dmd_operator_summary.csv",
+    "plots": [
+      "outputs/results_v2_four_dataset_koopman_dmd/dmd_eigenvalue_complex_plane.png",
+      "outputs/results_v2_four_dataset_koopman_dmd/dmd_dominant_distributions.png",
+      "outputs/results_v2_four_dataset_koopman_dmd/dmd_operator_cross_prediction.png"
+    ]
+  },
+  "distribution_tests": [
+    {
+      "metric": "dominant_eig_abs",
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9999034935704416,
+      "mean_delta_b_minus_a": -3.2062079120764864e-05,
+      "ks_stat": 0.8258778258778259,
+      "ks_p": 1.1993272010944308e-34,
+      "mannwhitney_u_p": 4.828504732226048e-20,
+      "n_a": 135,
+      "n_b": 77
+    },
+    {
+      "metric": "dominant_eig_abs",
+      "dataset_a": "matr",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9995014649761252,
+      "mean_delta_b_minus_a": -0.0004340906734371375,
+      "ks_stat": 0.7254401942926533,
+      "ks_p": 4.42835377784949e-22,
+      "mannwhitney_u_p": 6.08572304563763e-21,
+      "n_a": 135,
+      "n_b": 61
+    },
+    {
+      "metric": "dominant_eig_abs",
+      "dataset_a": "matr",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9993965277921343,
+      "mean_delta_b_minus_a": -0.0005390278574280982,
+      "ks_stat": 0.7703703703703704,
+      "ks_p": 1.3041126498659236e-35,
+      "mannwhitney_u_p": 2.898310026866069e-25,
+      "n_a": 135,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_eig_abs",
+      "dataset_a": "hust",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.9999034935704416,
+      "dataset_b_mean": 0.9995014649761252,
+      "mean_delta_b_minus_a": -0.0004020285943163726,
+      "ks_stat": 0.6557377049180327,
+      "ks_p": 1.966596897788395e-14,
+      "mannwhitney_u_p": 1.3768569588112995e-08,
+      "n_a": 77,
+      "n_b": 61
+    },
+    {
+      "metric": "dominant_eig_abs",
+      "dataset_a": "hust",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9999034935704416,
+      "dataset_b_mean": 0.9993965277921343,
+      "mean_delta_b_minus_a": -0.0005069657783073334,
+      "ks_stat": 0.8388648388648389,
+      "ks_p": 5.769702770956046e-33,
+      "mannwhitney_u_p": 4.391141440297669e-17,
+      "n_a": 77,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_eig_abs",
+      "dataset_a": "sandia",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9995014649761252,
+      "dataset_b_mean": 0.9993965277921343,
+      "mean_delta_b_minus_a": -0.00010493718399096075,
+      "ks_stat": 0.26821493624772313,
+      "ks_p": 0.005678783033478665,
+      "mannwhitney_u_p": 0.2678526931431049,
+      "n_a": 61,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_decay_rate",
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 6.448594439798357e-05,
+      "dataset_b_mean": 9.651131132277198e-05,
+      "mean_delta_b_minus_a": 3.202536692478841e-05,
+      "ks_stat": 0.8258778258778259,
+      "ks_p": 1.1993272010944308e-34,
+      "mannwhitney_u_p": 4.828504732226048e-20,
+      "n_a": 135,
+      "n_b": 77
+    },
+    {
+      "metric": "dominant_decay_rate",
+      "dataset_a": "matr",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 6.448594439798357e-05,
+      "dataset_b_mean": 0.0004987461354443862,
+      "mean_delta_b_minus_a": 0.0004342601910464026,
+      "ks_stat": 0.7254401942926533,
+      "ks_p": 4.42835377784949e-22,
+      "mannwhitney_u_p": 6.08572304563763e-21,
+      "n_a": 135,
+      "n_b": 61
+    },
+    {
+      "metric": "dominant_decay_rate",
+      "dataset_a": "matr",
+      "dataset_b": "luh",
+      "dataset_a_mean": 6.448594439798357e-05,
+      "dataset_b_mean": 0.0006042209936940641,
+      "mean_delta_b_minus_a": 0.0005397350492960806,
+      "ks_stat": 0.7703703703703704,
+      "ks_p": 1.3041126498659236e-35,
+      "mannwhitney_u_p": 2.898310026866069e-25,
+      "n_a": 135,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_decay_rate",
+      "dataset_a": "hust",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 9.651131132277198e-05,
+      "dataset_b_mean": 0.0004987461354443862,
+      "mean_delta_b_minus_a": 0.00040223482412161417,
+      "ks_stat": 0.6557377049180327,
+      "ks_p": 1.966596897788395e-14,
+      "mannwhitney_u_p": 1.3768569588112995e-08,
+      "n_a": 77,
+      "n_b": 61
+    },
+    {
+      "metric": "dominant_decay_rate",
+      "dataset_a": "hust",
+      "dataset_b": "luh",
+      "dataset_a_mean": 9.651131132277198e-05,
+      "dataset_b_mean": 0.0006042209936940641,
+      "mean_delta_b_minus_a": 0.0005077096823712921,
+      "ks_stat": 0.8388648388648389,
+      "ks_p": 5.769702770956046e-33,
+      "mannwhitney_u_p": 4.391141440297669e-17,
+      "n_a": 77,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_decay_rate",
+      "dataset_a": "sandia",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.0004987461354443862,
+      "dataset_b_mean": 0.0006042209936940641,
+      "mean_delta_b_minus_a": 0.00010547485824967796,
+      "ks_stat": 0.26821493624772313,
+      "ks_p": 0.005678783033478665,
+      "mannwhitney_u_p": 0.2678526931431049,
+      "n_a": 61,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_coeff_fraction",
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.9932538980528921,
+      "dataset_b_mean": 0.991860768863502,
+      "mean_delta_b_minus_a": -0.0013931291893900521,
+      "ks_stat": 0.4379028379028379,
+      "ks_p": 5.4309914398929495e-09,
+      "mannwhitney_u_p": 0.3168012319860234,
+      "n_a": 135,
+      "n_b": 77
+    },
+    {
+      "metric": "dominant_coeff_fraction",
+      "dataset_a": "matr",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.9932538980528921,
+      "dataset_b_mean": 0.974114296292581,
+      "mean_delta_b_minus_a": -0.019139601760311153,
+      "ks_stat": 0.7265330904675167,
+      "ks_p": 3.676648228437878e-22,
+      "mannwhitney_u_p": 2.3028851854309665e-17,
+      "n_a": 135,
+      "n_b": 61
+    },
+    {
+      "metric": "dominant_coeff_fraction",
+      "dataset_a": "matr",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9932538980528921,
+      "dataset_b_mean": 0.9344952953060216,
+      "mean_delta_b_minus_a": -0.0587586027468705,
+      "ks_stat": 0.9703703703703703,
+      "ks_p": 1.0317463258065562e-64,
+      "mannwhitney_u_p": 3.645261433571214e-39,
+      "n_a": 135,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_coeff_fraction",
+      "dataset_a": "hust",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.991860768863502,
+      "dataset_b_mean": 0.974114296292581,
+      "mean_delta_b_minus_a": -0.0177464725709211,
+      "ks_stat": 0.4539067489887162,
+      "ks_p": 7.166419233284733e-07,
+      "mannwhitney_u_p": 9.997576307504443e-07,
+      "n_a": 77,
+      "n_b": 61
+    },
+    {
+      "metric": "dominant_coeff_fraction",
+      "dataset_a": "hust",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.991860768863502,
+      "dataset_b_mean": 0.9344952953060216,
+      "mean_delta_b_minus_a": -0.05736547355748045,
+      "ks_stat": 0.6165223665223665,
+      "ks_p": 1.361264496178404e-16,
+      "mannwhitney_u_p": 1.1214325233942278e-20,
+      "n_a": 77,
+      "n_b": 108
+    },
+    {
+      "metric": "dominant_coeff_fraction",
+      "dataset_a": "sandia",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.974114296292581,
+      "dataset_b_mean": 0.9344952953060216,
+      "mean_delta_b_minus_a": -0.03961900098655935,
+      "ks_stat": 0.379933211900425,
+      "ks_p": 1.5023012770106846e-05,
+      "mannwhitney_u_p": 0.00028872736317576986,
+      "n_a": 61,
+      "n_b": 108
+    },
+    {
+      "metric": "spectral_radius",
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9999034935704416,
+      "mean_delta_b_minus_a": -3.2062079120764864e-05,
+      "ks_stat": 0.8258778258778259,
+      "ks_p": 1.1993272010944308e-34,
+      "mannwhitney_u_p": 4.828504732226048e-20,
+      "n_a": 135,
+      "n_b": 77
+    },
+    {
+      "metric": "spectral_radius",
+      "dataset_a": "matr",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9995014649761252,
+      "mean_delta_b_minus_a": -0.0004340906734371375,
+      "ks_stat": 0.7254401942926533,
+      "ks_p": 4.42835377784949e-22,
+      "mannwhitney_u_p": 6.08572304563763e-21,
+      "n_a": 135,
+      "n_b": 61
+    },
+    {
+      "metric": "spectral_radius",
+      "dataset_a": "matr",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9999355556495624,
+      "dataset_b_mean": 0.9993965277921343,
+      "mean_delta_b_minus_a": -0.0005390278574280982,
+      "ks_stat": 0.7703703703703704,
+      "ks_p": 1.3041126498659236e-35,
+      "mannwhitney_u_p": 2.898310026866069e-25,
+      "n_a": 135,
+      "n_b": 108
+    },
+    {
+      "metric": "spectral_radius",
+      "dataset_a": "hust",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.9999034935704416,
+      "dataset_b_mean": 0.9995014649761252,
+      "mean_delta_b_minus_a": -0.0004020285943163726,
+      "ks_stat": 0.6557377049180327,
+      "ks_p": 1.966596897788395e-14,
+      "mannwhitney_u_p": 1.3768569588112995e-08,
+      "n_a": 77,
+      "n_b": 61
+    },
+    {
+      "metric": "spectral_radius",
+      "dataset_a": "hust",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9999034935704416,
+      "dataset_b_mean": 0.9993965277921343,
+      "mean_delta_b_minus_a": -0.0005069657783073334,
+      "ks_stat": 0.8388648388648389,
+      "ks_p": 5.769702770956046e-33,
+      "mannwhitney_u_p": 4.391141440297669e-17,
+      "n_a": 77,
+      "n_b": 108
+    },
+    {
+      "metric": "spectral_radius",
+      "dataset_a": "sandia",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.9995014649761252,
+      "dataset_b_mean": 0.9993965277921343,
+      "mean_delta_b_minus_a": -0.00010493718399096075,
+      "ks_stat": 0.26821493624772313,
+      "ks_p": 0.005678783033478665,
+      "mannwhitney_u_p": 0.2678526931431049,
+      "n_a": 61,
+      "n_b": 108
+    },
+    {
+      "metric": "eig_abs_mean",
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "dataset_a_mean": 0.8608264733689107,
+      "dataset_b_mean": 0.848777217152601,
+      "mean_delta_b_minus_a": -0.0120492562163097,
+      "ks_stat": 0.1619047619047619,
+      "ks_p": 0.13458955020531022,
+      "mannwhitney_u_p": 0.6331868503057618,
+      "n_a": 135,
+      "n_b": 77
+    },
+    {
+      "metric": "eig_abs_mean",
+      "dataset_a": "matr",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.8608264733689107,
+      "dataset_b_mean": 0.7774891022757441,
+      "mean_delta_b_minus_a": -0.08333737109316663,
+      "ks_stat": 0.445658773527626,
+      "ks_p": 4.621003737987378e-08,
+      "mannwhitney_u_p": 2.1740495838203654e-07,
+      "n_a": 135,
+      "n_b": 61
+    },
+    {
+      "metric": "eig_abs_mean",
+      "dataset_a": "matr",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.8608264733689107,
+      "dataset_b_mean": 0.962438676870711,
+      "mean_delta_b_minus_a": 0.10161220350180034,
+      "ks_stat": 0.9555555555555556,
+      "ks_p": 1.1012717068322086e-61,
+      "mannwhitney_u_p": 3.911500156384119e-37,
+      "n_a": 135,
+      "n_b": 108
+    },
+    {
+      "metric": "eig_abs_mean",
+      "dataset_a": "hust",
+      "dataset_b": "sandia",
+      "dataset_a_mean": 0.848777217152601,
+      "dataset_b_mean": 0.7774891022757441,
+      "mean_delta_b_minus_a": -0.07128811487685693,
+      "ks_stat": 0.3291462635724931,
+      "ks_p": 0.0008558111954956885,
+      "mannwhitney_u_p": 4.559702657655276e-05,
+      "n_a": 77,
+      "n_b": 61
+    },
+    {
+      "metric": "eig_abs_mean",
+      "dataset_a": "hust",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.848777217152601,
+      "dataset_b_mean": 0.962438676870711,
+      "mean_delta_b_minus_a": 0.11366145971811004,
+      "ks_stat": 0.9777537277537277,
+      "ks_p": 1.048973896103586e-49,
+      "mannwhitney_u_p": 7.680578906021995e-31,
+      "n_a": 77,
+      "n_b": 108
+    },
+    {
+      "metric": "eig_abs_mean",
+      "dataset_a": "sandia",
+      "dataset_b": "luh",
+      "dataset_a_mean": 0.7774891022757441,
+      "dataset_b_mean": 0.962438676870711,
+      "mean_delta_b_minus_a": 0.18494957459496697,
+      "ks_stat": 1.0,
+      "ks_p": 3.149923948786331e-47,
+      "mannwhitney_u_p": 4.2463339215554835e-27,
+      "n_a": 61,
+      "n_b": 108
+    }
+  ],
+  "dmd_discriminator_auc": {
+    "auc_mean": 0.9151769980959745,
+    "auc_std": 0.019318584127111134,
+    "n_cells": 381,
+    "features": [
+      "dominant_eig_abs",
+      "dominant_eig_angle",
+      "dominant_decay_rate",
+      "dominant_coeff_fraction",
+      "spectral_radius",
+      "eig_abs_mean",
+      "eig_abs_std",
+      "top2_eig_abs",
+      "top3_eig_abs"
+    ],
+    "rank_requested": 4,
+    "n_classes": 4,
+    "class_labels": [
+      "matr",
+      "hust",
+      "sandia",
+      "luh"
+    ],
+    "scoring": "roc_auc_ovr_weighted"
+  },
+  "pairwise_dmd_discriminator_auc": [
+    {
+      "dataset_a": "matr",
+      "dataset_b": "hust",
+      "auc_mean": 0.7953086419753086,
+      "auc_std": 0.038902799785147914,
+      "n_cells": 212,
+      "scoring": "roc_auc"
+    },
+    {
+      "dataset_a": "matr",
+      "dataset_b": "sandia",
+      "auc_mean": 0.9167141500474834,
+      "auc_std": 0.05927219402506269,
+      "n_cells": 196,
+      "scoring": "roc_auc"
+    },
+    {
+      "dataset_a": "matr",
+      "dataset_b": "luh",
+      "auc_mean": 0.9875420875420875,
+      "auc_std": 0.024915824915824912,
+      "n_cells": 243,
+      "scoring": "roc_auc"
+    },
+    {
+      "dataset_a": "hust",
+      "dataset_b": "sandia",
+      "auc_mean": 0.9405822649572648,
+      "auc_std": 0.03846321369808447,
+      "n_cells": 138,
+      "scoring": "roc_auc"
+    },
+    {
+      "dataset_a": "hust",
+      "dataset_b": "luh",
+      "auc_mean": 1.0,
+      "auc_std": 0.0,
+      "n_cells": 185,
+      "scoring": "roc_auc"
+    },
+    {
+      "dataset_a": "sandia",
+      "dataset_b": "luh",
+      "auc_mean": 1.0,
+      "auc_std": 0.0,
+      "n_cells": 169,
+      "scoring": "roc_auc"
+    }
+  ],
+  "operator_prediction": [
+    {
+      "source_operator": "matr",
+      "eval_dataset": "matr",
+      "one_step_rmse": 0.013698250169340006,
+      "one_step_mae": 0.0005049303073721873,
+      "target_self_rmse": 0.013698250169340006,
+      "rmse_ratio_vs_target_self": 1.0,
+      "target_self_mae": 0.0005049303073721873,
+      "mae_ratio_vs_target_self": 1.0,
+      "n_cells_eval": 135
+    },
+    {
+      "source_operator": "matr",
+      "eval_dataset": "hust",
+      "one_step_rmse": 0.0004979107090566355,
+      "one_step_mae": 0.0002776780647948827,
+      "target_self_rmse": 0.00027010981364139844,
+      "rmse_ratio_vs_target_self": 1.8433640094160693,
+      "target_self_mae": 0.00018866005994295538,
+      "mae_ratio_vs_target_self": 1.4718434038388593,
+      "n_cells_eval": 77
+    },
+    {
+      "source_operator": "matr",
+      "eval_dataset": "sandia",
+      "one_step_rmse": 0.004180463588418956,
+      "one_step_mae": 0.0012403618899624288,
+      "target_self_rmse": 0.003170698069345186,
+      "rmse_ratio_vs_target_self": 1.3184678884553354,
+      "target_self_mae": 0.0006186938983627678,
+      "mae_ratio_vs_target_self": 2.00480705118438,
+      "n_cells_eval": 61
+    },
+    {
+      "source_operator": "matr",
+      "eval_dataset": "luh",
+      "one_step_rmse": 0.002373219653728975,
+      "one_step_mae": 0.0010416937897309018,
+      "target_self_rmse": 5.2372188168581525e-05,
+      "rmse_ratio_vs_target_self": 45.314502538824364,
+      "target_self_mae": 1.558573399623692e-05,
+      "mae_ratio_vs_target_self": 66.83636394554227,
+      "n_cells_eval": 108
+    },
+    {
+      "source_operator": "hust",
+      "eval_dataset": "matr",
+      "one_step_rmse": 0.013979055920024642,
+      "one_step_mae": 0.00043927389050902113,
+      "target_self_rmse": 0.013698250169340006,
+      "rmse_ratio_vs_target_self": 1.020499388404597,
+      "target_self_mae": 0.0005049303073721873,
+      "mae_ratio_vs_target_self": 0.8699693484337228,
+      "n_cells_eval": 135
+    },
+    {
+      "source_operator": "hust",
+      "eval_dataset": "hust",
+      "one_step_rmse": 0.00027010981364139844,
+      "one_step_mae": 0.00018866005994295538,
+      "target_self_rmse": 0.00027010981364139844,
+      "rmse_ratio_vs_target_self": 1.0,
+      "target_self_mae": 0.00018866005994295538,
+      "mae_ratio_vs_target_self": 1.0,
+      "n_cells_eval": 77
+    },
+    {
+      "source_operator": "hust",
+      "eval_dataset": "sandia",
+      "one_step_rmse": 0.0033301668214957107,
+      "one_step_mae": 0.0006070963053907142,
+      "target_self_rmse": 0.003170698069345186,
+      "rmse_ratio_vs_target_self": 1.0502945246323812,
+      "target_self_mae": 0.0006186938983627678,
+      "mae_ratio_vs_target_self": 0.9812547157766645,
+      "n_cells_eval": 61
+    },
+    {
+      "source_operator": "hust",
+      "eval_dataset": "luh",
+      "one_step_rmse": 0.00033117146040165257,
+      "one_step_mae": 0.00011882250801116992,
+      "target_self_rmse": 5.2372188168581525e-05,
+      "rmse_ratio_vs_target_self": 6.323422258692732,
+      "target_self_mae": 1.558573399623692e-05,
+      "mae_ratio_vs_target_self": 7.62379930517606,
+      "n_cells_eval": 108
+    },
+    {
+      "source_operator": "sandia",
+      "eval_dataset": "matr",
+      "one_step_rmse": 0.013973860086548603,
+      "one_step_mae": 0.0005531355543573483,
+      "target_self_rmse": 0.013698250169340006,
+      "rmse_ratio_vs_target_self": 1.0201200820397833,
+      "target_self_mae": 0.0005049303073721873,
+      "mae_ratio_vs_target_self": 1.0954691098580236,
+      "n_cells_eval": 135
+    },
+    {
+      "source_operator": "sandia",
+      "eval_dataset": "hust",
+      "one_step_rmse": 0.0003953460604598041,
+      "one_step_mae": 0.0002623031710618942,
+      "target_self_rmse": 0.00027010981364139844,
+      "rmse_ratio_vs_target_self": 1.4636493770073495,
+      "target_self_mae": 0.00018866005994295538,
+      "mae_ratio_vs_target_self": 1.390348180432075,
+      "n_cells_eval": 77
+    },
+    {
+      "source_operator": "sandia",
+      "eval_dataset": "sandia",
+      "one_step_rmse": 0.003170698069345186,
+      "one_step_mae": 0.0006186938983627678,
+      "target_self_rmse": 0.003170698069345186,
+      "rmse_ratio_vs_target_self": 1.0,
+      "target_self_mae": 0.0006186938983627678,
+      "mae_ratio_vs_target_self": 1.0,
+      "n_cells_eval": 61
+    },
+    {
+      "source_operator": "sandia",
+      "eval_dataset": "luh",
+      "one_step_rmse": 0.00036600825608982553,
+      "one_step_mae": 0.00012766706759653103,
+      "target_self_rmse": 5.2372188168581525e-05,
+      "rmse_ratio_vs_target_self": 6.988599653535131,
+      "target_self_mae": 1.558573399623692e-05,
+      "mae_ratio_vs_target_self": 8.191277204355949,
+      "n_cells_eval": 108
+    },
+    {
+      "source_operator": "luh",
+      "eval_dataset": "matr",
+      "one_step_rmse": 0.014859349279762757,
+      "one_step_mae": 0.00046493736311021194,
+      "target_self_rmse": 0.013698250169340006,
+      "rmse_ratio_vs_target_self": 1.0847625861748074,
+      "target_self_mae": 0.0005049303073721873,
+      "mae_ratio_vs_target_self": 0.9207951202808345,
+      "n_cells_eval": 135
+    },
+    {
+      "source_operator": "luh",
+      "eval_dataset": "hust",
+      "one_step_rmse": 0.00028803506868134015,
+      "one_step_mae": 0.00019763083699863857,
+      "target_self_rmse": 0.00027010981364139844,
+      "rmse_ratio_vs_target_self": 1.06636284257239,
+      "target_self_mae": 0.00018866005994295538,
+      "mae_ratio_vs_target_self": 1.047549953383857,
+      "n_cells_eval": 77
+    },
+    {
+      "source_operator": "luh",
+      "eval_dataset": "sandia",
+      "one_step_rmse": 0.0033936779110082505,
+      "one_step_mae": 0.000578985132432548,
+      "target_self_rmse": 0.003170698069345186,
+      "rmse_ratio_vs_target_self": 1.0703251576739108,
+      "target_self_mae": 0.0006186938983627678,
+      "mae_ratio_vs_target_self": 0.9358183973766349,
+      "n_cells_eval": 61
+    },
+    {
+      "source_operator": "luh",
+      "eval_dataset": "luh",
+      "one_step_rmse": 5.2372188168581525e-05,
+      "one_step_mae": 1.558573399623692e-05,
+      "target_self_rmse": 5.2372188168581525e-05,
+      "rmse_ratio_vs_target_self": 1.0,
+      "target_self_mae": 1.558573399623692e-05,
+      "mae_ratio_vs_target_self": 1.0,
+      "n_cells_eval": 108
+    }
+  ],
+  "mode_life_correlations": [
+    {
+      "dataset": "hust",
+      "metric": "dominant_eig_abs",
+      "pearson_r_with_log_life": 0.3169004197953538,
+      "pearson_p": 0.004983920339965531,
+      "n_uncensored": 77
+    },
+    {
+      "dataset": "hust",
+      "metric": "dominant_decay_rate",
+      "pearson_r_with_log_life": -0.31690334814697435,
+      "pearson_p": 0.0049834967176793825,
+      "n_uncensored": 77
+    },
+    {
+      "dataset": "hust",
+      "metric": "dominant_coeff_fraction",
+      "pearson_r_with_log_life": -0.21189372387268407,
+      "pearson_p": 0.06431137281199868,
+      "n_uncensored": 77
+    },
+    {
+      "dataset": "hust",
+      "metric": "spectral_radius",
+      "pearson_r_with_log_life": 0.3169004197953538,
+      "pearson_p": 0.004983920339965531,
+      "n_uncensored": 77
+    },
+    {
+      "dataset": "luh",
+      "metric": "dominant_eig_abs",
+      "pearson_r_with_log_life": 0.577346193355224,
+      "pearson_p": 9.257859054347046e-11,
+      "n_uncensored": 106
+    },
+    {
+      "dataset": "luh",
+      "metric": "dominant_decay_rate",
+      "pearson_r_with_log_life": -0.5769139127109851,
+      "pearson_p": 9.631965025653585e-11,
+      "n_uncensored": 106
+    },
+    {
+      "dataset": "luh",
+      "metric": "dominant_coeff_fraction",
+      "pearson_r_with_log_life": 0.5637507637168573,
+      "pearson_p": 3.1319260252681864e-10,
+      "n_uncensored": 106
+    },
+    {
+      "dataset": "luh",
+      "metric": "spectral_radius",
+      "pearson_r_with_log_life": 0.5773461933552271,
+      "pearson_p": 9.257859054344412e-11,
+      "n_uncensored": 106
+    },
+    {
+      "dataset": "matr",
+      "metric": "dominant_eig_abs",
+      "pearson_r_with_log_life": 0.366998490423262,
+      "pearson_p": 1.8859431979102452e-05,
+      "n_uncensored": 129
+    },
+    {
+      "dataset": "matr",
+      "metric": "dominant_decay_rate",
+      "pearson_r_with_log_life": -0.3669482802990815,
+      "pearson_p": 1.8912845994680235e-05,
+      "n_uncensored": 129
+    },
+    {
+      "dataset": "matr",
+      "metric": "dominant_coeff_fraction",
+      "pearson_r_with_log_life": 0.33387680619074694,
+      "pearson_p": 0.00011028886108411684,
+      "n_uncensored": 129
+    },
+    {
+      "dataset": "matr",
+      "metric": "spectral_radius",
+      "pearson_r_with_log_life": 0.36699849042326294,
+      "pearson_p": 1.8859431979101023e-05,
+      "n_uncensored": 129
+    },
+    {
+      "dataset": "sandia",
+      "metric": "dominant_eig_abs",
+      "pearson_r_with_log_life": 0.8003166911612158,
+      "pearson_p": 3.073414531501224e-12,
+      "n_uncensored": 50
+    },
+    {
+      "dataset": "sandia",
+      "metric": "dominant_decay_rate",
+      "pearson_r_with_log_life": -0.8002040232367846,
+      "pearson_p": 3.111040870382347e-12,
+      "n_uncensored": 50
+    },
+    {
+      "dataset": "sandia",
+      "metric": "dominant_coeff_fraction",
+      "pearson_r_with_log_life": 0.3934434444220217,
+      "pearson_p": 0.00470328269435626,
+      "n_uncensored": 50
+    },
+    {
+      "dataset": "sandia",
+      "metric": "spectral_radius",
+      "pearson_r_with_log_life": 0.8003166911612158,
+      "pearson_p": 3.073414531501224e-12,
+      "n_uncensored": 50
+    }
+  ]
+}
