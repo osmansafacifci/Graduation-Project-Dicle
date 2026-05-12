@@ -13,7 +13,9 @@ features.
 > Koopman/DMD dynamics pilot, target-side recalibration baselines, and standard
 > MAPIE split conformal prediction are all in place.
 > Four-dataset feature tables, within/cross metrics, k-shot target calibration,
-> and survival/censoring audit are also committed for the paper extension.
+> conformal prediction, geometric-shift diagnostics, feature-transfer stability,
+> raw-vs-capnorm ablation, and survival/censoring audit are also committed for
+> the paper extension.
 
 ---
 
@@ -228,6 +230,9 @@ python 3_analysis/summarize_conformal_results.py \
 | §5.2 | Cross-dataset transfer (MATR ↔ HUST), three feature-set ablations × two directions | `2_models/run_experiments.py --cross-dataset` | `outputs/results_v2_cross_*/...` |
 | §6.3 | Distribution shift: MMD with RBF + median bandwidth, Mahalanobis with pooled covariance, per-feature attribution | `3_analysis/shift_metrics.py` | `data/intermediate/shift_metrics*.json`, `shift_report*.txt` |
 | **§6.3+** | Feature transfer/stability: per-feature shift, correlation stability, univariate transfer, residual-mean-adapted transfer | `3_analysis/feature_transfer_stability.py` | `data/intermediate/feature_transfer_stability*` |
+| **Paper extension** | Four-dataset geometric shift: cross-fitted dataset-discriminator AUC, MMD, Mahalanobis, and feature-level centroid shifts on raw and Q0-normalized tables | `3_analysis/four_dataset_geometric_shift.py` | `data/intermediate/four_dataset_geometric_shift_*` |
+| **Paper extension** | Four-dataset feature-transfer/stability: exact direction-aware stability score for all ordered dataset pairs | `3_analysis/four_dataset_feature_transfer_stability.py` | `data/intermediate/four_dataset_feature_transfer_stability*` |
+| **Paper extension** | Four-dataset raw-vs-capnorm 34-feature cross ablation and best-model comparison | `2_models/run_experiments.py`, `3_analysis/summarize_four_dataset_raw_capnorm.py` | `outputs/results_v2_four_dataset_cross_34feat_raw_log/...`, `data/intermediate/four_dataset_raw_vs_capnorm_34feat_cross*` |
 | **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability or conditional-slope classes; includes Sandia/Luh extension | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `data/intermediate/four_dataset_shap_feature_importance*`, `outputs/results_v2_shap/...`, `outputs/results_v2_four_dataset_shap/...` |
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
@@ -330,6 +335,14 @@ directions are strong.
 The full 12-direction matrix is in
 `outputs/results_v2_four_dataset_cross_34feat_capnorm_log/results_summary.csv`.
 
+Raw-vs-capacity-normalized 34-feature cross transfer was also run across all
+seven models, both windows, and all ordered pairs. Capnorm improves the
+best-model MAE in 14/24 direction-window cases and the best-model R² in 15/24.
+It is therefore useful but not a universal fix: for example HUST/Luh and
+Luh/HUST improve sharply, Sandia/Luh improves, but HUST/MATR and Luh/MATR can
+be worse after capnorm. Full comparison:
+`data/intermediate/four_dataset_raw_vs_capnorm_34feat_cross_report.md`.
+
 ### Distribution shift quantification (§6.3)
 
 | Setting | Feature set | MMD | Mahalanobis |
@@ -342,6 +355,22 @@ The full 12-direction matrix is in
 `Qdis_cycle10` alone contributes 10.84 σ of pooled-z mean shift (MATR Q0
 ≈ 1.07 Ah, HUST Q0 ≈ 1.20 Ah; tight within-dataset clustering at cycle 10).
 SOP §2.3 capacity normalization closes 71% of the geometric gap.
+
+Four-dataset geometric-shift diagnostics extend the same calculation to all
+six unordered pairs. At N=100, Q0 normalization cuts the worst Mahalanobis
+distances sharply but leaves near-perfect dataset separability:
+
+| Pair | Raw Mahalanobis | Capnorm Mahalanobis | Capnorm AUC | Capnorm MMD |
+|---|---:|---:|---:|---:|
+| MATR vs HUST | 16.0 | 6.7 | 0.981 | 0.431 |
+| MATR vs Luh | 231.4 | 22.6 | 1.000 | 0.811 |
+| HUST vs Luh | 188.4 | 38.0 | 1.000 | 0.773 |
+| Sandia vs Luh | 8.9 | 9.8 | 0.975 | 0.473 |
+
+So capnorm removes a large scale artifact, especially against Luh, but the
+feature supports remain highly separable. Outputs:
+`data/intermediate/four_dataset_geometric_shift_capnorm_report.md` and
+`data/intermediate/four_dataset_geometric_shift_raw_report.md`.
 
 ### Feature Transfer/Stability
 
@@ -360,6 +389,16 @@ Least-fragile candidates include `cycle_to_98pct`, `exp_decay_k`,
 `slope_linear`, `linearity_r2`, and `cycle_to_99pct`. This is the bridge to
 SHAP/XAI: separate features that are important within-domain from features
 whose distributions and target relationships remain stable across datasets.
+
+The four-dataset all-pairs extension confirms that transferable features are
+direction-specific, not globally stable. Sandia ↔ Luh is the cleanest pair:
+Sandia → Luh has 14 stable candidates and Luh → Sandia has 18, with
+`slope_linear`, `exp_decay_k`, `Qdis_N`, `retention_ratio`, `delta_Qdis`, and
+`range_Qdis` repeatedly near the top. MATR/HUST remains much weaker: MATR →
+HUST has 8 stable candidates but no positive adapted univariate R² among the
+top features; HUST → MATR has no stable candidates under the exact score. Full
+all-pairs table:
+`data/intermediate/four_dataset_feature_transfer_stability_report.md`.
 
 ### SHAP/XAI bridge
 
@@ -711,6 +750,26 @@ python 3_analysis/conditional_shift_four_dataset.py
 python 3_analysis/koopman_dmd_pilot.py
 python 3_analysis/importance_weighted_conformal.py
 
+# Four-dataset geometric shift + feature-transfer stability
+python 3_analysis/four_dataset_geometric_shift.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --output-prefix four_dataset_geometric_shift_capnorm
+python 3_analysis/four_dataset_geometric_shift.py \
+    --features-path data/intermediate/features_sop12_four_dataset.csv \
+    --output-prefix four_dataset_geometric_shift_raw
+python 3_analysis/four_dataset_feature_transfer_stability.py
+
+# Four-dataset raw-vs-capnorm 34-feature cross ablation
+python 2_models/run_experiments.py \
+    --features-path data/intermediate/features_sop12_four_dataset.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --models elastic_net pls random_forest xgboost catboost gaussian_process stacking \
+    --windows 50 100 \
+    --cross-dataset \
+    --output-dir outputs/results_v2_four_dataset_cross_34feat_raw_log
+python 3_analysis/summarize_four_dataset_raw_capnorm.py
+
 # Target calibration (R² = -10 → -0.02 with k=20)
 python 3_analysis/target_rescaling.py
 
@@ -752,6 +811,8 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §5.2 Cross-dataset experiments (raw + capacity-normalized, three feature-set ablations)
 - [x] §6.3 Shift metrics (MMD, Mahalanobis, per-feature attribution)
 - [x] §6.3+ Feature transfer/stability analysis
+- [x] Paper extension: four-dataset geometric shift + all-pairs feature-transfer stability
+- [x] Paper extension: four-dataset raw-vs-capnorm 34-feature cross ablation
 - [x] §6.3++ SHAP/XAI attribution joined to transfer-stability classes
 - [x] §6+ Survival/censoring sensitivity analysis
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
