@@ -116,6 +116,8 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
                 "median_width_no_adapter": base["median_width_mean"],
                 "median_width_adapted": row["median_width_mean"],
                 "median_width_reduction_pct": 100.0 * (1.0 - row["median_width_mean"] / base["median_width_mean"]),
+                "finite_interval_fraction_no_adapter": base.get("finite_interval_fraction_mean", float("nan")),
+                "finite_interval_fraction_adapted": row.get("finite_interval_fraction_mean", float("nan")),
                 "MAE_no_adapter": base["MAE_mean"],
                 "MAE_adapted": row["MAE_mean"],
                 "MAE_reduction_pct": 100.0 * (1.0 - row["MAE_mean"] / base["MAE_mean"]),
@@ -162,6 +164,7 @@ def build_k_sweep(summary: pd.DataFrame) -> pd.DataFrame:
         "coverage_mean",
         "coverage_wilson95_lower_mean",
         "coverage_wilson95_upper_mean",
+        "finite_interval_fraction_mean",
         "coverage_short_life_mean",
         "coverage_long_life_mean",
         "short_long_coverage_gap_mean",
@@ -189,6 +192,7 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
         "coverage_mean",
         "coverage_wilson95_lower_mean",
         "coverage_wilson95_upper_mean",
+        "finite_interval_fraction_mean",
         "coverage_short_life_mean",
         "coverage_long_life_mean",
         "short_long_coverage_gap_mean",
@@ -209,6 +213,7 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
         "Coverage",
         "Wilson low",
         "Wilson high",
+        "Finite interval frac.",
         "Short-life cov.",
         "Long-life cov.",
         "Short/long gap",
@@ -219,7 +224,7 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
         "R2",
         "Runs",
     ][: len(table.columns)]
-    for col in ["Confidence", "Coverage", "Wilson low", "Wilson high", "Short-life cov.", "Long-life cov.", "Short/long gap", "R2"]:
+    for col in ["Confidence", "Coverage", "Wilson low", "Wilson high", "Finite interval frac.", "Short-life cov.", "Long-life cov.", "Short/long gap", "R2"]:
         if col in table.columns:
             table[col] = table[col].map(lambda x: fmt(x, 3))
     for col in ["Median width", "Winkler", "MAE", "sMAPE"]:
@@ -238,7 +243,7 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
     lines.append("")
     if not delta.empty:
         d = delta.copy()
-        for col in ["confidence_level", "coverage_no_adapter", "coverage_adapted", "R2_no_adapter", "R2_adapted", "short_life_coverage_adapted", "long_life_coverage_adapted", "short_long_coverage_gap_adapted"]:
+        for col in ["confidence_level", "coverage_no_adapter", "coverage_adapted", "finite_interval_fraction_no_adapter", "finite_interval_fraction_adapted", "R2_no_adapter", "R2_adapted", "short_life_coverage_adapted", "long_life_coverage_adapted", "short_long_coverage_gap_adapted"]:
             if col in d.columns:
                 d[col] = d[col].map(lambda x: fmt(x, 3))
         for col in [
@@ -370,6 +375,7 @@ def write_stratified_summary(primary: pd.DataFrame, path: Path) -> None:
         "short_long_coverage_gap_mean",
         "coverage_wilson95_lower_mean",
         "coverage_wilson95_upper_mean",
+        "finite_interval_fraction_mean",
         "n_runs",
     ]
     cols = [c for c in cols if c in primary.columns]

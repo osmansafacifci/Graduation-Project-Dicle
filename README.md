@@ -198,6 +198,21 @@ python 3_analysis/target_rescaling.py
 # Standard split conformal prediction (MAPIE)
 python 3_analysis/conformal_prediction.py
 python 3_analysis/summarize_conformal_results.py
+python 3_analysis/conformal_prediction.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --models primary \
+    --windows 100 \
+    --target-k-values 5 10 15 20 \
+    --adapter-k-values 5 10 15 20 \
+    --target-repeats 20 \
+    --confidence-levels 0.90 0.95 \
+    --output-dir outputs/results_v2_four_dataset_conformal
+python 3_analysis/summarize_conformal_results.py \
+    --results-dir outputs/results_v2_four_dataset_conformal \
+    --k-target 20 \
+    --k-adapter 20
 ```
 
 ---
@@ -223,7 +238,7 @@ python 3_analysis/summarize_conformal_results.py
 | **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
 | **§7−** | Target calibration baseline (k=5/10/15/20 calibration cells; residual-mean and linear adapters; MATR/HUST default or four-dataset extension via CLI) | `3_analysis/target_rescaling.py`, `3_analysis/summarize_target_rescaling.py` | `outputs/results_v2_target_rescale/...`, `outputs/results_v2_four_dataset_target_rescale/...`, `data/intermediate/four_dataset_target_rescale_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
-| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
+| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional four-dataset primary-model extension) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` |
 
 ---
 
@@ -612,6 +627,28 @@ coverage while preserving the same point-prediction repair. Paper-ready
 outputs are in `outputs/results_v2_conformal/paper_cp_summary.*`,
 `outputs/results_v2_conformal/paper_cp_k_sweep.*`, and
 `outputs/results_v2_conformal/paper_cp_stratified_coverage.csv`.
+
+Four-dataset CP uses each source dataset's primary model (MATR CatBoost, HUST
+Random Forest, Sandia XGBoost, Luh Gaussian Process) on the capacity-normalized
+four-dataset feature table. The same MAPIE split-CP protocol is run for all 12
+cross directions, with `k_target,k_adapter ∈ {5, 10, 15, 20}` and 20 random
+target draws.
+
+| Four-dataset protocol at 90% | Coverage range | Median width summary | Interpretation |
+|---|---:|---:|---|
+| Within-dataset CP | 0.89–0.97 | 623–1121 | Standard CP remains well behaved on Sandia and Luh. |
+| Naive source-calibrated cross CP | 0.00–0.73 | 623–1121 | Source-calibrated CP fails under shift in every cross direction. |
+| Target-domain CP, k=20 | 0.89–0.92 | median 2872 | Target calibration restores nominal coverage, often with very wide intervals. |
+| Residual-mean adapted CP, k=20+20 | 0.89–0.93 | median 1467 | Coverage stays near nominal and intervals shrink in most directions. |
+
+At 90%, all k=20 four-dataset target/adapted intervals are finite
+(`finite_interval_fraction=1.0`). The easiest pair, Sandia↔Luh, still shows the
+same pattern: naive source CP under-covers (0.71–0.73), target-domain CP restores
+coverage (~0.91), and residual-mean adaptation gives the useful point/interval
+trade-off especially for Sandia→Luh (coverage 0.906, median width 1316,
+R²=0.158). Outputs are in
+`outputs/results_v2_four_dataset_conformal/paper_cp_summary.*`,
+`paper_cp_k_sweep.*`, and `paper_cp_stratified_coverage.csv`.
 
 ---
 

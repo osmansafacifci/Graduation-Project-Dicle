@@ -435,11 +435,14 @@ the fix only needs ~20 labeled cells. This is a 50× to 500× MSE reduction.
 
 ### Conformal prediction (§7)
 
-Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
-Forest. Target rows use `k_target=20`; adapted rows use residual-mean
-`k_adapter=20` on a disjoint target subset before CP calibration. Outputs
-include 95% Wilson score intervals for empirical coverage and short-/long-life
-stratified coverage. The reproducibility sweep covers
+Primary policy: MAPIE split CP at 90% and 95%, N=100. The original MATR/HUST
+run uses CatBoost + Random Forest; the four-dataset extension uses each
+source dataset's primary model (MATR CatBoost, HUST Random Forest, Sandia
+XGBoost, Luh Gaussian Process). Target rows use `k_target=20`; adapted rows
+use residual-mean `k_adapter=20` on a disjoint target subset before CP
+calibration. Outputs include 95% Wilson score intervals for empirical coverage,
+finite-interval fraction, and short-/long-life stratified coverage. The
+reproducibility sweep covers
 `k_target,k_adapter ∈ {5, 10, 15, 20}`; `paper_cp_k_sweep.csv` and
 `paper_cp_k_sweep_coverage.png` expose the recalibration coverage curve while
 the manuscript headline stays at the stable `k=20` policy. Small-k rows are
@@ -459,6 +462,20 @@ without the adapter at 90%. At 95%, adapted CP stays close to nominal
 coverage while preserving the same point-prediction repair. This completes
 the uncertainty leg of the thesis arc: point calibration repairs the center;
 CP repairs uncertainty. The remaining SOP-letter k-grid loose end is closed.
+
+Four-dataset CP repeats the same standard MAPIE protocol on MATR, HUST,
+Sandia, and Luh/KIT using the capacity-normalized feature table and all 12
+cross directions. At 90%, within-dataset coverage is 0.89–0.97. Naive
+source-calibrated cross CP under-covers everywhere (coverage range 0.00–0.73),
+including the easier Sandia↔Luh pair (0.71–0.73). Target-domain CP with
+`k_target=20` restores nominal coverage across directions (0.89–0.92) but
+often with wide intervals. Residual-mean adapted CP with `k_adapter=20` and
+`k_target=20` keeps coverage near nominal (0.89–0.93), all intervals finite,
+and reduces median width in most directions. Key examples at 90%: MATR→HUST
+improves from source-CP coverage 0.164 to adapted-CP coverage 0.910 with
+median width 1015; HUST→MATR from 0.202 to 0.914 with width 1303;
+Sandia→Luh from 0.713 to 0.906 with width 1316 and R²=0.158. Outputs are in
+`outputs/results_v2_four_dataset_conformal/`.
 
 ---
 
@@ -676,6 +693,21 @@ python 3_analysis/importance_weighted_conformal.py
 # Standard split conformal prediction (MAPIE)
 python 3_analysis/conformal_prediction.py
 python 3_analysis/summarize_conformal_results.py
+python 3_analysis/conformal_prediction.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --models primary \
+    --windows 100 \
+    --target-k-values 5 10 15 20 \
+    --adapter-k-values 5 10 15 20 \
+    --target-repeats 20 \
+    --confidence-levels 0.90 0.95 \
+    --output-dir outputs/results_v2_four_dataset_conformal
+python 3_analysis/summarize_conformal_results.py \
+    --results-dir outputs/results_v2_four_dataset_conformal \
+    --k-target 20 \
+    --k-adapter 20
 ```
 
 All output JSONs and summary CSVs are committed under `outputs/results_v2*/`

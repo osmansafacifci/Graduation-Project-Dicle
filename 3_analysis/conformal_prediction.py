@@ -35,6 +35,9 @@ The cross-dataset modes are labeled by their calibration domain:
 Inputs:
     data/intermediate/features_sop12_combined.csv
     splits/sop_v2/{matr,hust}_{seed}.json
+    Optional four-dataset extension:
+    data/intermediate/features_sop12_four_dataset_capnorm.csv
+    splits/sop_v2_four_dataset/{matr,hust,sandia,luh}_{seed}.json
 
 Outputs:
     outputs/results_v2_conformal/results_detailed.csv
@@ -47,6 +50,12 @@ Usage:
     python 3_analysis/conformal_prediction.py --target-k-values 5 10 15 20
     python 3_analysis/conformal_prediction.py --adapter-k-values 5 10 15 20
     python 3_analysis/conformal_prediction.py --confidence-levels 0.90 0.95
+    python 3_analysis/conformal_prediction.py \
+        --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+        --splits-dir splits/sop_v2_four_dataset \
+        --datasets matr hust sandia luh \
+        --models primary \
+        --output-dir outputs/results_v2_four_dataset_conformal
 """
 
 from __future__ import annotations
@@ -102,6 +111,7 @@ ALL_MODELS = [
 ]
 DEFAULT_MODELS = ["catboost", "random_forest"]
 DEFAULT_DATASETS = ["matr", "hust"]
+ALL_DATASETS = ["matr", "hust", "sandia", "luh"]
 DEFAULT_WINDOWS = [100]
 DEFAULT_TARGET_KS = [5, 10, 15, 20]
 DEFAULT_TARGET_REPEATS = 20
@@ -117,6 +127,13 @@ FITTERS = {
     "xgboost": fit_xgboost,
     "catboost": fit_catboost,
     "stacking": fit_stacking,
+}
+
+PRIMARY_MODEL_BY_DATASET = {
+    "matr": "catboost",
+    "hust": "random_forest",
+    "sandia": "xgboost",
+    "luh": "gaussian_process",
 }
 
 
@@ -405,6 +422,7 @@ def evaluate_interval(
     alpha = 1.0 - confidence_level
     covered = (y_test >= lower) & (y_test <= upper)
     width = upper - lower
+    finite_interval = np.isfinite(lower) & np.isfinite(upper)
     wis = winkler_score(y_test, lower, upper, alpha)
     point_metrics = compute_metrics(y_test, pred_test)
     cov = coverage_stats(covered)
@@ -437,6 +455,7 @@ def evaluate_interval(
         "coverage_gap": float(abs(confidence_level - cov["coverage"])) if not pd.isna(cov["coverage"]) else float("nan"),
         "coverage_wilson95_lower": cov["coverage_wilson95_lower"],
         "coverage_wilson95_upper": cov["coverage_wilson95_upper"],
+        "finite_interval_fraction": float(np.mean(finite_interval)) if len(finite_interval) else float("nan"),
         "mean_width": float(np.mean(width)) if len(width) else float("nan"),
         "median_width": float(np.median(width)) if len(width) else float("nan"),
         "winkler_mean": float(np.mean(wis)) if len(wis) else float("nan"),
@@ -449,8 +468,15 @@ def evaluate_interval(
     return row
 
 
-def load_split(dataset: str, seed: int) -> dict:
-    split_path = SPLITS_DIR / f"{dataset}_{seed}.json"
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
+    split_path = splits_dir / f"{dataset}_{seed}.json"
     if not split_path.exists():
         raise FileNotFoundError(f"Missing split file: {split_path}")
     with split_path.open() as f:
@@ -473,6 +499,16 @@ def stable_seed(*parts: object) -> int:
     return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
 
 
+def model_list_for_source(models: list[str], dataset: str) -> list[str]:
+    expanded: list[str] = []
+    for model in models:
+        if model == "primary":
+            expanded.append(PRIMARY_MODEL_BY_DATASET[dataset])
+        else:
+            expanded.append(model)
+    return list(dict.fromkeys(expanded))
+
+
 def within_split_cp(
     df: pd.DataFrame,
     feature_cols: list[str],
@@ -481,19 +517,20 @@ def within_split_cp(
     windows: list[int],
     models: list[str],
     seeds: list[int],
+    splits_dir: Path,
     confidence_levels: list[float],
     log_target: bool,
 ) -> list[dict]:
     rows: list[dict] = []
     for dataset in datasets:
         for seed in seeds:
-            split = load_split(dataset, seed)
+            split = load_split(dataset, seed, splits_dir)
             for n_cycles in windows:
                 sub = dataset_window(df, dataset, n_cycles)
                 train_df, cal_df, test_df = split_frames(sub, split)
                 if len(train_df) < 5 or len(cal_df) < 2 or len(test_df) < 2:
                     continue
-                for model_name in models:
+                for model_name in model_list_for_source(models, dataset):
                     print(f"  within {dataset} seed={seed} N={n_cycles} model={model_name}")
                     predictor = fit_predictor(
                         train_df,
@@ -548,6 +585,7 @@ def cross_cp(
     windows: list[int],
     models: list[str],
     seeds: list[int],
+    splits_dir: Path,
     confidence_levels: list[float],
     log_target: bool,
     target_k_values: list[int],
@@ -556,25 +594,31 @@ def cross_cp(
     target_repeats: int,
 ) -> list[dict]:
     rows: list[dict] = []
+    predictor_cache: dict[tuple[str, int, int, str], tuple[FittedPredictor, pd.DataFrame, pd.DataFrame]] = {}
     pairs = [(s, t) for s in datasets for t in datasets if s != t]
     for src, tgt in pairs:
         for seed in seeds:
-            src_split = load_split(src, seed)
+            src_split = load_split(src, seed, splits_dir)
             for n_cycles in windows:
                 src_sub = dataset_window(df, src, n_cycles)
                 tgt_sub = dataset_window(df, tgt, n_cycles)
                 src_train, src_cal, _ = split_frames(src_sub, src_split)
                 if len(src_train) < 5 or len(src_cal) < 2 or len(tgt_sub) < 3:
                     continue
-                for model_name in models:
+                for model_name in model_list_for_source(models, src):
                     print(f"  cross {src}->{tgt} seed={seed} N={n_cycles} model={model_name}")
-                    predictor = fit_predictor(
-                        src_train,
-                        feature_cols,
-                        model_name=model_name,
-                        seed=seed,
-                        log_target=log_target,
-                    )
+                    cache_key = (src, seed, n_cycles, model_name)
+                    if cache_key in predictor_cache:
+                        predictor, src_train, src_cal = predictor_cache[cache_key]
+                    else:
+                        predictor = fit_predictor(
+                            src_train,
+                            feature_cols,
+                            model_name=model_name,
+                            seed=seed,
+                            log_target=log_target,
+                        )
+                        predictor_cache[cache_key] = (predictor, src_train, src_cal)
                     target_y = tgt_sub["cycle_life"].to_numpy(dtype=float)
                     for confidence_level in confidence_levels:
                         src_pred_test, src_lower, src_upper, src_q_hat, src_finite_q, src_quantile_rank = mapie_split_interval(
@@ -767,6 +811,7 @@ def summarize(rows: list[dict]) -> pd.DataFrame:
         "coverage_gap",
         "coverage_wilson95_lower",
         "coverage_wilson95_upper",
+        "finite_interval_fraction",
         "mean_width",
         "median_width",
         "winkler_mean",
@@ -829,8 +874,10 @@ def json_clean(value):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--datasets", nargs="+", default=DEFAULT_DATASETS, choices=DEFAULT_DATASETS)
-    parser.add_argument("--models", nargs="+", default=DEFAULT_MODELS, choices=ALL_MODELS)
+    parser.add_argument("--features-path", type=Path, default=FEATURES_PATH)
+    parser.add_argument("--splits-dir", type=Path, default=SPLITS_DIR)
+    parser.add_argument("--datasets", nargs="+", default=DEFAULT_DATASETS, choices=ALL_DATASETS)
+    parser.add_argument("--models", nargs="+", default=DEFAULT_MODELS, choices=["primary", *ALL_MODELS])
     parser.add_argument("--windows", type=int, nargs="+", default=DEFAULT_WINDOWS)
     parser.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     parser.add_argument("--features-from", type=Path, default=None)
@@ -894,8 +941,14 @@ def main() -> int:
     if args.within_only and args.cross_only:
         print("[error] choose at most one of --within-only / --cross-only")
         return 1
-    if not FEATURES_PATH.exists():
-        print(f"[error] {FEATURES_PATH} missing — run build_features.py first.")
+    features_path = args.features_path if args.features_path.is_absolute() else PROJECT_ROOT / args.features_path
+    splits_dir = args.splits_dir if args.splits_dir.is_absolute() else PROJECT_ROOT / args.splits_dir
+    output_dir = args.output_dir if args.output_dir.is_absolute() else PROJECT_ROOT / args.output_dir
+    if not features_path.exists():
+        print(f"[error] {features_path} missing — run build_features.py first.")
+        return 1
+    if not splits_dir.exists():
+        print(f"[error] {splits_dir} missing — run generate_splits.py first.")
         return 1
     confidence_levels = [float(args.confidence_level)] if args.confidence_level is not None else args.confidence_levels
     confidence_levels = sorted(dict.fromkeys(confidence_levels))
@@ -904,14 +957,22 @@ def main() -> int:
         print(f"[error] confidence levels must be in (0, 1): {bad_conf}")
         return 1
 
-    df = pd.read_csv(FEATURES_PATH)
+    df = pd.read_csv(features_path)
     feature_cols, feature_source = resolve_features(df, args.features_from)
-    out_dir = args.output_dir
+    out_dir = output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    expanded_primary = {
+        dataset: model_list_for_source(args.models, dataset)
+        for dataset in args.datasets
+    }
     print(f"[setup] features: {feature_source}")
+    print(f"[setup] features_path: {features_path}")
+    print(f"[setup] splits_dir: {splits_dir}")
     print(f"[setup] output_dir: {out_dir}")
     print(f"[setup] models={args.models}, windows={args.windows}, seeds={args.seeds}")
+    if "primary" in args.models:
+        print(f"[setup] primary model expansion={expanded_primary}")
     print(
         f"[setup] confidence_levels={confidence_levels}, "
         f"target_k={args.target_k_values}, adapter_k={args.adapter_k_values}, "
@@ -929,6 +990,7 @@ def main() -> int:
                 windows=args.windows,
                 models=args.models,
                 seeds=args.seeds,
+                splits_dir=splits_dir,
                 confidence_levels=confidence_levels,
                 log_target=args.log_target,
             )
@@ -943,6 +1005,7 @@ def main() -> int:
                 windows=args.windows,
                 models=args.models,
                 seeds=args.seeds,
+                splits_dir=splits_dir,
                 confidence_levels=confidence_levels,
                 log_target=args.log_target,
                 target_k_values=args.target_k_values,
@@ -965,6 +1028,8 @@ def main() -> int:
         "conformal_library": "MAPIE SplitConformalRegressor",
         "mapie_version": mapie.__version__,
         "sklearn_version": sklearn.__version__,
+        "features_path": display_path(features_path),
+        "splits_dir": display_path(splits_dir),
         "feature_set": feature_source,
         "feature_columns": feature_cols,
         "confidence_levels": confidence_levels,
@@ -972,6 +1037,7 @@ def main() -> int:
         "datasets": args.datasets,
         "windows": args.windows,
         "models": args.models,
+        "primary_model_by_dataset": PRIMARY_MODEL_BY_DATASET,
         "seeds": args.seeds,
         "target_k_values": args.target_k_values,
         "adapter_k_values": args.adapter_k_values,
@@ -1010,6 +1076,7 @@ def main() -> int:
             "coverage_mean",
             "coverage_wilson95_lower_mean",
             "coverage_wilson95_upper_mean",
+            "finite_interval_fraction_mean",
             "coverage_short_life_mean",
             "coverage_long_life_mean",
             "median_width_mean",
