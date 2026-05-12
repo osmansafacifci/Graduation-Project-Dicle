@@ -9,6 +9,8 @@ Scope is intentionally narrow and reproducible:
   - Primary paper models by within-dataset R2:
       MATR -> CatBoost
       HUST -> Random Forest
+      Sandia -> XGBoost
+      Luh -> CatBoost (best single-tree SHAP-compatible model; GP is champion)
 
 SHAP values are computed in the fitted log-cycle prediction space. Reported
 model metrics remain in original cycle units so they can be compared directly
@@ -24,6 +26,15 @@ Outputs:
 Usage:
     python 3_analysis/shap_feature_importance.py
     python 3_analysis/shap_feature_importance.py --models catboost random_forest
+    python 3_analysis/shap_feature_importance.py \
+        --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+        --splits-dir splits/sop_v2_four_dataset \
+        --datasets sandia luh \
+        --output-prefix four_dataset_shap_feature_importance \
+        --output-dir outputs/results_v2_four_dataset_shap \
+        --skip-transfer-stability \
+        --conditional-shift-path data/intermediate/four_dataset_conditional_shift_feature_slopes.csv \
+        --conditional-pairs sandia_vs_luh
 """
 
 from __future__ import annotations
@@ -51,6 +62,7 @@ from run_experiments import (  # noqa: E402
     SEEDS,
     fit_catboost,
     fit_random_forest,
+    fit_xgboost,
 )
 
 FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_combined.csv"
@@ -59,16 +71,26 @@ TRANSFER_PATH = INTERMEDIATE_DIR / "feature_transfer_stability.csv"
 PRIMARY_MODEL_BY_DATASET = {
     "matr": "catboost",
     "hust": "random_forest",
+    "sandia": "xgboost",
+    "luh": "catboost",
 }
 
 MODEL_FITTERS = {
     "catboost": fit_catboost,
     "random_forest": fit_random_forest,
+    "xgboost": fit_xgboost,
 }
 
 
-def load_split(dataset: str, seed: int) -> dict:
-    path = SPLITS_DIR / f"{dataset}_{seed}.json"
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
+    path = splits_dir / f"{dataset}_{seed}.json"
     with path.open() as f:
         return json.load(f)
 
@@ -117,8 +139,9 @@ def evaluate_and_explain(
     n_cycles: int,
     seed: int,
     model_name: str,
+    splits_dir: Path,
 ) -> tuple[list[dict], dict]:
-    split = load_split(dataset, seed)
+    split = load_split(dataset, seed, splits_dir)
     sub = dataset_window(df, dataset, n_cycles)
     train_df = sub[sub["cell_id"].isin(split["train"])].copy()
     test_df = sub[sub["cell_id"].isin(split["test"])].copy()
@@ -230,10 +253,10 @@ def summarize_importance(detailed: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
-def join_transfer_stability(summary: pd.DataFrame) -> pd.DataFrame:
-    if not TRANSFER_PATH.exists():
+def join_transfer_stability(summary: pd.DataFrame, path: Path) -> pd.DataFrame:
+    if not path.exists():
         return summary
-    transfer = pd.read_csv(TRANSFER_PATH)
+    transfer = pd.read_csv(path)
     keep = [
         "feature",
         "n_cycles",
@@ -250,6 +273,36 @@ def join_transfer_stability(summary: pd.DataFrame) -> pd.DataFrame:
     ]
     keep = [c for c in keep if c in transfer.columns]
     return summary.merge(transfer[keep], on=["feature", "n_cycles"], how="left")
+
+
+def join_conditional_shift(summary: pd.DataFrame, path: Path | None, pairs: list[str]) -> pd.DataFrame:
+    if path is None or not path.exists() or not pairs:
+        return summary
+    shifts = pd.read_csv(path)
+    out = summary.copy()
+    for pair in pairs:
+        pair_rows = shifts[shifts["pair"].eq(pair)].copy()
+        if pair_rows.empty:
+            continue
+        keep = [
+            "feature",
+            "shift_class",
+            "delta_slope_b_minus_a",
+            "delta_slope_fdr_bh",
+            "log_life_offset_b_minus_a",
+            "life_ratio_b_over_a",
+        ]
+        pair_rows = pair_rows[[c for c in keep if c in pair_rows.columns]].rename(
+            columns={
+                "shift_class": f"{pair}_shift_class",
+                "delta_slope_b_minus_a": f"{pair}_delta_slope",
+                "delta_slope_fdr_bh": f"{pair}_delta_slope_fdr_bh",
+                "log_life_offset_b_minus_a": f"{pair}_log_life_offset",
+                "life_ratio_b_over_a": f"{pair}_life_ratio",
+            }
+        )
+        out = out.merge(pair_rows, on="feature", how="left")
+    return out
 
 
 def write_report(summary: pd.DataFrame, run_metrics: list[dict], out_path: Path, *, top_k: int) -> None:
@@ -278,12 +331,21 @@ def write_report(summary: pd.DataFrame, run_metrics: list[dict], out_path: Path,
     for (n_cycles, dataset, model), block in summary.groupby(["n_cycles", "dataset", "model"], sort=True):
         lines.append(f"N={int(n_cycles)} {dataset.upper()} {model} top SHAP features:")
         for _, row in block.head(top_k).iterrows():
-            stability = row.get("stability_class", "n/a")
+            annotations = []
             shift = row.get("abs_mean_shift_z_raw", np.nan)
+            if pd.notna(shift):
+                annotations.append(f"shift_z={shift:.2f}")
+            stability = row.get("stability_class", np.nan)
+            if pd.notna(stability):
+                annotations.append(f"class={stability}")
+            for col in block.columns:
+                if col.endswith("_shift_class") and pd.notna(row.get(col)):
+                    annotations.append(f"{col.removesuffix('_shift_class')}={row[col]}")
+            annotation_text = (" " + " ".join(annotations)) if annotations else ""
             lines.append(
                 f"  {row['feature']:<24} rank={row['rank_mean']:.1f} "
-                f"rel={100.0 * row['relative_importance_mean']:.1f}% "
-                f"shift_z={shift:.2f} class={stability}"
+                f"rel={100.0 * row['relative_importance_mean']:.1f}%"
+                f"{annotation_text}"
             )
         lines.append("")
 
@@ -318,35 +380,57 @@ def make_top_feature_plot(summary: pd.DataFrame, output_dir: Path, *, top_k: int
     fig, axes = plt.subplots(1, len(blocks), figsize=(6.2 * len(blocks), 5.5), squeeze=False)
     for ax, ((dataset, model), block) in zip(axes[0], blocks):
         top = block.sort_values("mean_abs_shap_log_cycles_mean", ascending=True).tail(top_k)
-        colors = top["stability_class"].map(
-            {
+        shift_cols = [c for c in top.columns if c.endswith("_shift_class")]
+        if shift_cols and top[shift_cols[0]].notna().any():
+            color_labels = top[shift_cols[0]]
+            palette = {
+                "slope_stable": "#2f7d32",
+                "slope_shifted": "#a142f4",
+            }
+        elif "stability_class" in top.columns and top["stability_class"].notna().any():
+            color_labels = top["stability_class"]
+            palette = {
                 "stable_candidate": "#2f7d32",
                 "weak_or_mixed": "#5f6368",
                 "scale_shift_fragile": "#b3261e",
                 "relationship_unstable": "#a142f4",
             }
-        ).fillna("#5f6368")
+        else:
+            color_labels = pd.Series([""] * len(top), index=top.index)
+            palette = {}
+        colors = color_labels.map(palette).fillna("#5f6368")
         ax.barh(top["feature"], top["mean_abs_shap_log_cycles_mean"], color=colors)
         ax.set_title(f"{dataset.upper()} {model}")
         ax.set_xlabel("Mean |SHAP| (log-cycle units)")
         ax.grid(axis="x", alpha=0.25)
     fig.tight_layout()
     output_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_dir / "shap_importance_top_features.png", dpi=200)
+    fig.savefig(output_dir / f"{make_top_feature_plot.filename}", dpi=200)
     plt.close(fig)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--features-path", type=Path, default=FEATURES_PATH)
+    parser.add_argument("--splits-dir", type=Path, default=SPLITS_DIR)
+    parser.add_argument("--transfer-path", type=Path, default=TRANSFER_PATH)
+    parser.add_argument(
+        "--skip-transfer-stability",
+        action="store_true",
+        help="Do not join the MATR/HUST feature_transfer_stability reference table.",
+    )
+    parser.add_argument("--conditional-shift-path", type=Path, default=None)
+    parser.add_argument("--conditional-pairs", nargs="+", default=[])
+    parser.add_argument("--output-prefix", default="shap_feature_importance")
     parser.add_argument("--windows", type=int, nargs="+", default=[100])
-    parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=["matr", "hust"])
+    parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=["matr", "hust", "sandia", "luh"])
     parser.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     parser.add_argument(
         "--models",
         nargs="+",
         default=["primary"],
-        choices=["primary", "catboost", "random_forest"],
-        help="'primary' runs CatBoost for MATR and Random Forest for HUST.",
+        choices=["primary", "catboost", "random_forest", "xgboost"],
+        help="'primary' runs the configured TreeSHAP-compatible model for each dataset.",
     )
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -355,15 +439,24 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if not FEATURES_PATH.exists():
-        print(f"[error] missing {FEATURES_PATH}")
+    features_path = args.features_path if args.features_path.is_absolute() else PROJECT_ROOT / args.features_path
+    splits_dir = args.splits_dir if args.splits_dir.is_absolute() else PROJECT_ROOT / args.splits_dir
+    transfer_path = args.transfer_path if args.transfer_path.is_absolute() else PROJECT_ROOT / args.transfer_path
+    conditional_shift_path = (
+        args.conditional_shift_path if args.conditional_shift_path is None or args.conditional_shift_path.is_absolute()
+        else PROJECT_ROOT / args.conditional_shift_path
+    )
+    if not features_path.exists():
+        print(f"[error] missing {features_path}")
         return 1
-    if not SPLITS_DIR.exists():
-        print(f"[error] missing {SPLITS_DIR}")
+    if not splits_dir.exists():
+        print(f"[error] missing {splits_dir}")
         return 1
 
-    df = pd.read_csv(FEATURES_PATH)
+    df = pd.read_csv(features_path)
     feature_cols = [c for c in df.columns if c not in META_COLS]
+
+    make_top_feature_plot.filename = f"{args.output_prefix}_top_features.png"
 
     detailed_rows: list[dict] = []
     run_metrics: list[dict] = []
@@ -380,6 +473,7 @@ def main() -> int:
                         n_cycles=n_cycles,
                         seed=seed,
                         model_name=model_name,
+                        splits_dir=splits_dir,
                     )
                     detailed_rows.extend(rows)
                     run_metrics.append(run_row)
@@ -389,12 +483,15 @@ def main() -> int:
         return 1
 
     detailed_df = pd.DataFrame(detailed_rows)
-    summary_df = join_transfer_stability(summarize_importance(detailed_df))
+    summary_df = summarize_importance(detailed_df)
+    if not args.skip_transfer_stability:
+        summary_df = join_transfer_stability(summary_df, transfer_path)
+    summary_df = join_conditional_shift(summary_df, conditional_shift_path, args.conditional_pairs)
 
-    out_summary = INTERMEDIATE_DIR / "shap_feature_importance.csv"
-    out_detailed = INTERMEDIATE_DIR / "shap_feature_importance_detailed.csv"
-    out_json = INTERMEDIATE_DIR / "shap_feature_importance.json"
-    out_report = INTERMEDIATE_DIR / "shap_feature_importance_report.txt"
+    out_summary = INTERMEDIATE_DIR / f"{args.output_prefix}.csv"
+    out_detailed = INTERMEDIATE_DIR / f"{args.output_prefix}_detailed.csv"
+    out_json = INTERMEDIATE_DIR / f"{args.output_prefix}.json"
+    out_report = INTERMEDIATE_DIR / f"{args.output_prefix}_report.txt"
 
     summary_df.to_csv(out_summary, index=False)
     detailed_df.to_csv(out_detailed, index=False)
@@ -403,6 +500,12 @@ def main() -> int:
 
     payload = {
         "protocol": "shap_feature_importance_v1",
+        "features_path": display_path(features_path),
+        "splits_dir": display_path(splits_dir),
+        "transfer_path": None if args.skip_transfer_stability else display_path(transfer_path) if transfer_path.exists() else None,
+        "skip_transfer_stability": args.skip_transfer_stability,
+        "conditional_shift_path": display_path(conditional_shift_path) if conditional_shift_path is not None and conditional_shift_path.exists() else None,
+        "conditional_pairs": args.conditional_pairs,
         "windows": args.windows,
         "datasets": args.datasets,
         "seeds": args.seeds,
@@ -420,7 +523,7 @@ def main() -> int:
     print(f"[save] {out_detailed}")
     print(f"[save] {out_json}")
     print(f"[save] {out_report}")
-    plot_path = args.output_dir / "shap_importance_top_features.png"
+    plot_path = args.output_dir / f"{args.output_prefix}_top_features.png"
     if plot_path.exists():
         print(f"[save] {plot_path}")
     print("\n" + out_report.read_text())

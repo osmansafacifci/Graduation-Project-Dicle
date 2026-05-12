@@ -208,7 +208,7 @@ python 3_analysis/summarize_conformal_results.py
 | §5.2 | Cross-dataset transfer (MATR ↔ HUST), three feature-set ablations × two directions | `2_models/run_experiments.py --cross-dataset` | `outputs/results_v2_cross_*/...` |
 | §6.3 | Distribution shift: MMD with RBF + median bandwidth, Mahalanobis with pooled covariance, per-feature attribution | `3_analysis/shift_metrics.py` | `data/intermediate/shift_metrics*.json`, `shift_report*.txt` |
 | **§6.3+** | Feature transfer/stability: per-feature shift, correlation stability, univariate transfer, residual-mean-adapted transfer | `3_analysis/feature_transfer_stability.py` | `data/intermediate/feature_transfer_stability*` |
-| **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability classes | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `outputs/results_v2_shap/...` |
+| **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability or conditional-slope classes; includes Sandia/Luh extension | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `data/intermediate/four_dataset_shap_feature_importance*`, `outputs/results_v2_shap/...`, `outputs/results_v2_four_dataset_shap/...` |
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
@@ -356,6 +356,19 @@ space and match the headline table.
 This strengthens the transfer story: the models do learn meaningful
 within-domain signals, but many high-attribution features are exactly the
 features that do not carry stable cross-dataset semantics.
+
+Four-dataset SHAP extension explains the newer Sandia/Luh runs with
+TreeSHAP-compatible primary models on the capacity-normalized four-dataset
+table. Sandia uses XGBoost and is highly concentrated on `Qdis_N` (55.0% of
+relative attribution; R²=0.927 across five splits). Luh uses CatBoost and is
+more distributed, led by `slope_last_quarter`, `slope_linear`, `mad_Qdis`,
+`cycle_to_95pct`, and `poly2_b` (R²=0.773). Against the Sandia-vs-Luh
+centered-log slope test, almost all top-10 SHAP features are slope-stable;
+the main exception is Sandia `cycle_to_98pct`. This makes the extension a
+useful contrast: the new pair has stronger local feature-slope agreement
+among important features than MATR/HUST, while still needing the cross-dataset
+and target-calibration checks to decide whether that agreement transfers into
+usable prediction.
 
 ### Geometric alignment is not prediction alignment
 

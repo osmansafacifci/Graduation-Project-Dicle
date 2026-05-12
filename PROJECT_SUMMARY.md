@@ -75,7 +75,7 @@ the SOP12 capacity-only features.
 | **+** | Koopman/DMD dynamics pilot | ✅ | Hankel-DMD on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
-| **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR CatBoost and HUST RF, joined to transfer-stability classes |
+| **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR/HUST champions and Sandia/Luh TreeSHAP-compatible primary models, joined to transfer-stability or conditional-slope classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
 | **Paper extension** | Four-dataset validation | ✅ | MATR/HUST/Sandia/Luh feature counts, split completeness, and 56-row within / 168-row cross result matrices pass |
@@ -305,6 +305,18 @@ This is useful for the manuscript because it prevents a vague "black-box
 transfer failed" explanation. The models learn real within-domain signal, but
 many of their most important features are not semantically stable across MATR
 and HUST.
+
+The four-dataset SHAP extension adds Sandia and Luh/KIT on the
+capacity-normalized four-dataset table. Sandia XGBoost reaches R²=0.927 across
+the five official splits and is dominated by `Qdis_N` (55.0% relative SHAP
+importance), followed by `mad_Qdis`, `slope_linear`, and `variance_Qdis`.
+Luh/KIT CatBoost reaches R²=0.773 and is more distributed, led by
+`slope_last_quarter`, `slope_linear`, `mad_Qdis`, `cycle_to_95pct`, and
+`poly2_b`. Joined to the Sandia-vs-Luh centered-log slope test, almost all
+top-10 SHAP features are slope-stable; the notable top-10 exception is Sandia
+`cycle_to_98pct`. This gives a cleaner feature-importance companion for the
+new two datasets without reusing the MATR/HUST fragility labels as if they
+were Sandia/Luh-specific.
 
 ### Survival/censoring sensitivity
 
@@ -664,7 +676,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `2_models/run_experiments.py` | Within + cross-dataset experiments, 7 models |
 | `3_analysis/shift_metrics.py` | §6.3 MMD + Mahalanobis + per-feature attribution |
 | `3_analysis/feature_transfer_stability.py` | feature-level transfer/stability analysis and SHAP bridge |
-| `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
+| `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability or conditional-slope classes |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/survival_censoring_four_dataset.py` | four-dataset Kaplan-Meier/RMST/log-rank/KS censoring audit |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
