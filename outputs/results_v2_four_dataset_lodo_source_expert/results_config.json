@@ -1,0 +1,50 @@
+{
+  "protocol": "four_dataset_lodo_source_expert_v1",
+  "features_path": "data/intermediate/features_sop12_four_dataset_capnorm.csv",
+  "splits_dir": "splits/sop_v2_four_dataset",
+  "datasets": [
+    "matr",
+    "hust",
+    "sandia",
+    "luh"
+  ],
+  "windows": [
+    100
+  ],
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1011
+  ],
+  "models": [
+    "elastic_net",
+    "pls",
+    "random_forest",
+    "xgboost",
+    "catboost",
+    "gaussian_process",
+    "stacking"
+  ],
+  "source_primary_model": {
+    "matr": "catboost",
+    "hust": "random_forest",
+    "sandia": "xgboost",
+    "luh": "gaussian_process"
+  },
+  "k_values": [
+    5,
+    10,
+    15,
+    20
+  ],
+  "adapter_types": [
+    "none",
+    "residual_mean",
+    "linear"
+  ],
+  "n_repeats": 20,
+  "convex_step": 0.05,
+  "log_target": true
+}

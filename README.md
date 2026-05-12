@@ -13,9 +13,10 @@ features.
 > Koopman/DMD dynamics pilot, target-side recalibration baselines, and standard
 > MAPIE split conformal prediction are all in place.
 > Four-dataset feature tables, within/cross metrics, k-shot target calibration,
-> conformal prediction, geometric-shift diagnostics, feature-transfer stability,
-> raw-vs-capnorm ablation, and survival/censoring audit are also committed for
-> the paper extension.
+> leave-one-dataset-out source-expert adaptation, conformal prediction,
+> geometric-shift diagnostics, feature-transfer stability, raw-vs-capnorm
+> ablation, and survival/censoring audit are also committed for the paper
+> extension.
 
 ---
 
@@ -91,6 +92,7 @@ recovers the bulk of the loss.
 │   ├── summarize_target_rescaling.py
 │   ├── validate_four_dataset_extension.py
 │   ├── importance_weighted_conformal.py
+│   ├── lodo_source_expert_transfer.py
 │   ├── conformal_prediction.py
 │   └── summarize_conformal_results.py
 ├── notebooks/
@@ -242,6 +244,7 @@ python 3_analysis/summarize_conformal_results.py \
 | **Paper extension** | Four-dataset validation: Sandia 0-100 subset, Luh standard-cycling subset, feature-table counts, split completeness, and full within/cross result matrix checks | `3_analysis/validate_four_dataset_extension.py` | `data/intermediate/four_dataset_validation_*` |
 | **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
 | **§7−** | Target calibration baseline (k=5/10/15/20 calibration cells; residual-mean and linear adapters; MATR/HUST default or four-dataset extension via CLI) | `3_analysis/target_rescaling.py`, `3_analysis/summarize_target_rescaling.py` | `outputs/results_v2_target_rescale/...`, `outputs/results_v2_four_dataset_target_rescale/...`, `data/intermediate/four_dataset_target_rescale_*` |
+| **Paper extension** | Leave-one-dataset-out pooled/source-expert adaptation: hold out each target, train on the other three datasets, and use k-shot target labels for pooled ERM, source-expert selection, convex source-expert weighting, or source+model selection | `3_analysis/lodo_source_expert_transfer.py` | `outputs/results_v2_four_dataset_lodo_source_expert/...`, `data/intermediate/four_dataset_lodo_source_expert_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional four-dataset primary-model extension) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` |
 
@@ -638,6 +641,33 @@ Full tables are in
 `data/intermediate/four_dataset_target_rescale_naive_best_k20.csv`, and
 `data/intermediate/four_dataset_target_rescale_report_k20.md`.
 
+### Leave-one-dataset-out source-expert adaptation
+
+The paper-facing multi-source experiment holds out one target dataset and
+trains on the other three. It compares pooled ERM, pooled ERM with k-shot
+target adapters, fixed source-primary experts, k-shot expert selection,
+convex source-expert weighting, and source+model selection. This is a more
+realistic deployment protocol than choosing the best single source after the
+fact.
+
+Best k=20 results at N=100:
+
+| Target | Best protocol | Model / expert | Adapter | MAE | sMAPE | R² |
+|---|---|---|---|---:|---:|---:|
+| HUST | Pooled ERM + k-shot | Elastic Net | Linear | 237.1 | 16.16 | -0.115 |
+| Luh/KIT | Pooled ERM + k-shot | CatBoost | Linear | 177.6 | 49.98 | 0.667 |
+| MATR | Convex source experts | Primary-source experts | Residual mean | 278.0 | 35.92 | -0.018 |
+| Sandia | Pooled ERM + k-shot | Stacking | Linear | 272.5 | 69.10 | 0.862 |
+
+The result is useful but deliberately nuanced. Multi-source adaptation improves
+over naive single-source transfer for every held-out target and shows a clear
+k-shot curve, but it does not uniformly beat an oracle that is allowed to pick
+the best single source/model/adapter for each target. That makes it a rigorous
+AI contribution: a feasible source-selection/pooling protocol, plus evidence
+that source relevance and conditional shift still constrain transfer. Outputs
+are in `outputs/results_v2_four_dataset_lodo_source_expert/` and
+`data/intermediate/four_dataset_lodo_source_expert_report.md`.
+
 ### Conformal Prediction
 
 Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
@@ -794,6 +824,18 @@ python 3_analysis/target_rescaling.py \
     --output-dir outputs/results_v2_four_dataset_target_rescale
 python 3_analysis/summarize_target_rescaling.py \
     --results outputs/results_v2_four_dataset_target_rescale/results_summary.csv
+
+# Leave-one-dataset-out pooled/source-expert adaptation
+python 3_analysis/lodo_source_expert_transfer.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --windows 100 \
+    --models elastic_net pls random_forest xgboost catboost gaussian_process stacking \
+    --k-values 5 10 15 20 \
+    --n-repeats 20 \
+    --output-dir outputs/results_v2_four_dataset_lodo_source_expert \
+    --k-report 20
 ```
 
 Each script writes a JSON with the per-seed numbers and a summary CSV.
@@ -818,6 +860,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
 - [x] §6+++ Koopman/DMD early-capacity dynamics pilot
 - [x] §7− Target calibration baseline (k = 5 / 10 / 15 / 20; residual-mean + linear)
+- [x] Paper extension LODO pooled/source-expert k-shot adaptation
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 - [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
 - [x] Paper extension conditional-shift diagnostics (four-dataset feature-slope and rank-signal regimes)

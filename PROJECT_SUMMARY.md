@@ -1,8 +1,8 @@
 # Project Summary — Battery Lifetime Prediction (Dicle Çoban Thesis)
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
-> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, geometric-shift diagnostics, all-pairs feature-transfer stability, raw-vs-capnorm ablation, conditional-shift/rank-signal diagnostics, k-shot target calibration, conformal prediction, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
-> **Last updated**: 2026-05-11
+> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, geometric-shift diagnostics, all-pairs feature-transfer stability, raw-vs-capnorm ablation, conditional-shift/rank-signal diagnostics, k-shot target calibration, leave-one-dataset-out source-expert adaptation, conformal prediction, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
+> **Last updated**: 2026-05-12
 
 ---
 
@@ -22,8 +22,9 @@ The pipeline runs in two phases:
 - **Phase B (laptop)** — splits, VIF, experiments, shift metrics,
   feature-transfer/XAI diagnostics, survival/censoring sensitivity,
   Koopman/DMD dynamics pilot, target rescaling, four-dataset extension checks,
-  and conformal prediction. Pure CPU, seconds-to-minutes per light experiment;
-  full four-dataset model/calibration sweeps are longer laptop runs.
+  leave-one-dataset-out source-expert adaptation, and conformal prediction.
+  Pure CPU, seconds-to-minutes per light experiment; full four-dataset
+  model/calibration sweeps are longer laptop runs.
 
 Phase A is run only when feature definitions change. Phase B is iterated freely
 on the committed CSVs without ever re-touching the raw data.
@@ -75,6 +76,7 @@ the SOP12 capacity-only features.
 | **+** | Koopman/DMD dynamics pilot | ✅ | Hankel-DMD on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
+| **Paper extension** | LODO pooled/source-expert k-shot adaptation | ✅ | Holds out each target dataset, trains on the other three, and compares pooled ERM, source-expert selection/weighting, and source+model selection with k={5,10,15,20} target labels |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR/HUST champions and Sandia/Luh TreeSHAP-compatible primary models, joined to transfer-stability or conditional-slope classes |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
@@ -460,6 +462,32 @@ tree-based models. The cross-dataset failure is recovered from "catastrophic"
 to "approximately equivalent to predicting the target's marginal mean" — and
 the fix only needs ~20 labeled cells. This is a 50× to 500× MSE reduction.
 
+### LODO source-expert adaptation
+
+`3_analysis/lodo_source_expert_transfer.py` turns the four-dataset extension
+into a practical multi-source protocol. For each held-out target, the script
+trains on the other three datasets and compares pooled ERM, pooled ERM with
+k-shot residual/linear adapters, fixed source-primary experts, k-shot
+source-expert selection, convex source-expert weighting, and source+model
+selection.
+
+Best k=20 results at N=100:
+
+| Target | Best protocol | Model / expert | Adapter | MAE | sMAPE | R² |
+|---|---|---|---|---:|---:|---:|
+| HUST | Pooled ERM + k-shot | Elastic Net | Linear | 237.1 | 16.16 | -0.115 |
+| Luh/KIT | Pooled ERM + k-shot | CatBoost | Linear | 177.6 | 49.98 | 0.667 |
+| MATR | Convex source experts | Primary-source experts | Residual mean | 278.0 | 35.92 | -0.018 |
+| Sandia | Pooled ERM + k-shot | Stacking | Linear | 272.5 | 69.10 | 0.862 |
+
+This is a strong but not over-claimed AI contribution. It improves over naive
+single-source transfer for every held-out target and shows clear gains as k
+increases from 5 to 20. It does not uniformly beat an oracle that is allowed
+to choose the best single source/model/adapter after seeing the target. The
+paper framing should therefore be: feasible source pooling/selection with
+small target calibration, plus evidence that source relevance and conditional
+shift still bound transfer.
+
 ### Conformal prediction (§7)
 
 Primary policy: MAPIE split CP at 90% and 95%, N=100. The original MATR/HUST
@@ -619,9 +647,12 @@ domain study — it suits applied-ML venues better than pure mech-eng venues.
 10. **Target-side calibration works** — k=20 label fix recovers R² from
    −10 to near 0 in the hard MATR/HUST directions and lifts the easier
    Sandia/Luh directions above their naive baselines.
-11. **Conformal prediction** — source CP fails under shift; target-domain CP
+11. **Multi-source deployment protocol** — leave-one-dataset-out pooled ERM
+   and source-expert weighting improve over naive single-source transfer, but
+   do not erase the need for source relevance and target calibration.
+12. **Conformal prediction** — source CP fails under shift; target-domain CP
    restores coverage; residual-mean target adaptation narrows intervals.
-12. **Practical recommendation** — quantify shift, take a small target
+13. **Practical recommendation** — quantify shift, take a small target
    sample, recalibrate. No need for voltage curves, no need for
    adversarial domain adaptation.
 
@@ -734,6 +765,18 @@ python 3_analysis/target_rescaling.py \
 python 3_analysis/summarize_target_rescaling.py \
     --results outputs/results_v2_four_dataset_target_rescale/results_summary.csv
 
+# Leave-one-dataset-out pooled/source-expert adaptation
+python 3_analysis/lodo_source_expert_transfer.py \
+    --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
+    --splits-dir splits/sop_v2_four_dataset \
+    --datasets matr hust sandia luh \
+    --windows 100 \
+    --models elastic_net pls random_forest xgboost catboost gaussian_process stacking \
+    --k-values 5 10 15 20 \
+    --n-repeats 20 \
+    --output-dir outputs/results_v2_four_dataset_lodo_source_expert \
+    --k-report 20
+
 # Covariate-shift CP falsifier
 python 3_analysis/importance_weighted_conformal.py
 
@@ -788,6 +831,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/importance_weighted_conformal.py` | importance-weighted source CP falsifier with ESS, target-mass fraction, clipping sweep, and target-adapted comparison figure/table |
 | `3_analysis/target_rescaling.py` | k-shot residual-mean/linear target-calibration baseline (§7 precursor) |
 | `3_analysis/summarize_target_rescaling.py` | compact k=20 target-calibration tables for four-dataset cross-checking |
+| `3_analysis/lodo_source_expert_transfer.py` | leave-one-dataset-out pooled/source-expert adaptation with k-shot source selection, convex weighting, source+model selection, and residual/linear target adapters |
 | `3_analysis/validate_four_dataset_extension.py` | validates four-dataset feature tables, splits, and within/cross result matrices |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
