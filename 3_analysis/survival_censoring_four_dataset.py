@@ -10,6 +10,8 @@ Outputs:
     data/intermediate/four_dataset_survival_censoring_curves.csv
     data/intermediate/four_dataset_survival_censoring_censored_cells.csv
     data/intermediate/four_dataset_survival_censoring_pairwise_tests.csv
+    data/intermediate/four_dataset_survival_censoring_rmst_bootstrap.csv
+    data/intermediate/four_dataset_survival_censoring_rmst_pairwise.csv
     data/intermediate/four_dataset_survival_censoring.json
     data/intermediate/four_dataset_survival_censoring_report.md
     outputs/results_v2_four_dataset_survival/kaplan_meier_four_dataset.png
@@ -43,6 +45,8 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_four_dataset_survival"
 FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_four_dataset.csv"
 DATASETS = ["matr", "hust", "sandia", "luh"]
 N_CYCLES = 100
+RMST_BOOTSTRAPS = 2000
+RANDOM_SEED = 20260512
 
 CYCLE_SOURCES = {
     "matr": (INTERMEDIATE_DIR / "matr_cycles_tidy.csv", ""),
@@ -176,6 +180,53 @@ def pairwise_tests(event_table: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def rmst_bootstrap(event_table: pd.DataFrame, tau: float, *, n_boot: int, seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    rng = np.random.default_rng(seed)
+    dataset_samples: dict[str, np.ndarray] = {}
+    dataset_rows = []
+    for dataset in DATASETS:
+        sub = event_table[event_table["dataset"] == dataset].reset_index(drop=True)
+        values = []
+        for _ in range(n_boot):
+            idx = rng.choice(np.arange(len(sub)), size=len(sub), replace=True)
+            boot = sub.iloc[idx].copy()
+            curve = kaplan_meier(boot, dataset)
+            values.append(restricted_mean_survival_time(curve, tau))
+        values = np.asarray(values, dtype=float)
+        dataset_samples[dataset] = values
+        dataset_rows.append(
+            {
+                "dataset": dataset,
+                "rmst_tau_cycles": float(tau),
+                "rmst_boot_mean": float(np.mean(values)),
+                "rmst_boot_ci95_low": float(np.percentile(values, 2.5)),
+                "rmst_boot_ci95_high": float(np.percentile(values, 97.5)),
+                "rmst_boot_std": float(np.std(values, ddof=1)),
+                "n_bootstrap": int(n_boot),
+            }
+        )
+
+    pair_rows = []
+    for a, b in combinations(DATASETS, 2):
+        diff = dataset_samples[b] - dataset_samples[a]
+        p = 2.0 * min(float(np.mean(diff <= 0.0)), float(np.mean(diff >= 0.0)))
+        pair_rows.append(
+            {
+                "group_a": a,
+                "group_b": b,
+                "rmst_tau_cycles": float(tau),
+                "rmst_a_mean": float(np.mean(dataset_samples[a])),
+                "rmst_b_mean": float(np.mean(dataset_samples[b])),
+                "rmst_diff_b_minus_a": float(np.mean(diff)),
+                "rmst_diff_ci95_low": float(np.percentile(diff, 2.5)),
+                "rmst_diff_ci95_high": float(np.percentile(diff, 97.5)),
+                "rmst_diff_boot_p_value": float(min(1.0, max(p, 1.0 / (n_boot + 1)))),
+                "n_bootstrap": int(n_boot),
+            }
+        )
+    return pd.DataFrame(dataset_rows), pd.DataFrame(pair_rows)
+
+
 def make_plot(curves: pd.DataFrame, event_table: pd.DataFrame) -> None:
     try:
         import matplotlib.pyplot as plt
@@ -221,7 +272,14 @@ def markdown_table(df: pd.DataFrame, float_digits: int | None = None) -> str:
     return "\n".join([header, separator, *body])
 
 
-def write_report(summary: pd.DataFrame, censored: pd.DataFrame, pairwise: pd.DataFrame, out_path: Path) -> None:
+def write_report(
+    summary: pd.DataFrame,
+    censored: pd.DataFrame,
+    pairwise: pd.DataFrame,
+    rmst_bootstrap_df: pd.DataFrame,
+    rmst_pairwise: pd.DataFrame,
+    out_path: Path,
+) -> None:
     lines = [
         "# Four-Dataset Survival/Censoring Audit",
         "",
@@ -233,6 +291,16 @@ def write_report(summary: pd.DataFrame, censored: pd.DataFrame, pairwise: pd.Dat
         "## Pairwise Tests",
         markdown_table(pairwise, float_digits=3),
         "",
+        "## RMST Bootstrap Robustness",
+        "RMST is restricted to the common follow-up horizon across all four datasets.",
+        "",
+        markdown_table(rmst_bootstrap_df.sort_values("dataset"), float_digits=3),
+        "",
+        "## Pairwise RMST Differences",
+        "Positive `rmst_diff_b_minus_a` means group B has larger restricted mean survival than group A.",
+        "",
+        markdown_table(rmst_pairwise, float_digits=3),
+        "",
         "## Censored Cells",
     ]
     if censored.empty:
@@ -242,7 +310,7 @@ def write_report(summary: pd.DataFrame, censored: pd.DataFrame, pairwise: pd.Dat
     lines.extend(
         [
             "",
-            "Interpretation: Sandia and Luh introduce additional censoring checks, but the main four-dataset modeling rule remains unchanged: censored cells are excluded from MAE/sMAPE/R2 regression metrics and retained here as right-censored observations.",
+            "Interpretation: Sandia and Luh introduce additional censoring checks, but the main four-dataset modeling rule remains unchanged: censored cells are excluded from MAE/sMAPE/R2 regression metrics and retained here as right-censored observations. RMST at the common follow-up horizon is the paper-facing robustness statistic because it remains interpretable when median survival and event-only means are distorted by right censoring.",
         ]
     )
     out_path.write_text("\n".join(lines) + "\n")
@@ -259,11 +327,14 @@ def main() -> int:
     summary = pd.DataFrame([summarize_dataset(event_table, curves, ds, tau) for ds in DATASETS])
     censored = censored_cell_details(event_table)
     pairwise = pairwise_tests(event_table)
+    rmst_bootstrap_df, rmst_pairwise = rmst_bootstrap(event_table, tau, n_boot=RMST_BOOTSTRAPS, seed=RANDOM_SEED)
 
     out_summary = INTERMEDIATE_DIR / "four_dataset_survival_censoring_summary.csv"
     out_curves = INTERMEDIATE_DIR / "four_dataset_survival_censoring_curves.csv"
     out_censored = INTERMEDIATE_DIR / "four_dataset_survival_censoring_censored_cells.csv"
     out_pairwise = INTERMEDIATE_DIR / "four_dataset_survival_censoring_pairwise_tests.csv"
+    out_rmst_bootstrap = INTERMEDIATE_DIR / "four_dataset_survival_censoring_rmst_bootstrap.csv"
+    out_rmst_pairwise = INTERMEDIATE_DIR / "four_dataset_survival_censoring_rmst_pairwise.csv"
     out_json = INTERMEDIATE_DIR / "four_dataset_survival_censoring.json"
     out_report = INTERMEDIATE_DIR / "four_dataset_survival_censoring_report.md"
 
@@ -271,15 +342,20 @@ def main() -> int:
     curves.to_csv(out_curves, index=False)
     censored.to_csv(out_censored, index=False)
     pairwise.to_csv(out_pairwise, index=False)
+    rmst_bootstrap_df.to_csv(out_rmst_bootstrap, index=False)
+    rmst_pairwise.to_csv(out_rmst_pairwise, index=False)
     make_plot(curves, event_table)
-    write_report(summary, censored, pairwise, out_report)
+    write_report(summary, censored, pairwise, rmst_bootstrap_df, rmst_pairwise, out_report)
 
     payload = {
         "protocol": "four_dataset_survival_censoring_v1",
         "n_cycles": N_CYCLES,
         "rmst_tau": tau,
+        "rmst_bootstraps": RMST_BOOTSTRAPS,
         "summary": summary.replace({np.nan: None}).to_dict(orient="records"),
         "pairwise_tests": pairwise.replace({np.nan: None}).to_dict(orient="records"),
+        "rmst_bootstrap": rmst_bootstrap_df.replace({np.nan: None}).to_dict(orient="records"),
+        "rmst_pairwise": rmst_pairwise.replace({np.nan: None}).to_dict(orient="records"),
         "censored_cells": censored.replace({np.nan: None}).to_dict(orient="records"),
     }
     with out_json.open("w") as f:
@@ -289,6 +365,8 @@ def main() -> int:
     print(f"[save] {out_curves.relative_to(PROJECT_ROOT)}")
     print(f"[save] {out_censored.relative_to(PROJECT_ROOT)}")
     print(f"[save] {out_pairwise.relative_to(PROJECT_ROOT)}")
+    print(f"[save] {out_rmst_bootstrap.relative_to(PROJECT_ROOT)}")
+    print(f"[save] {out_rmst_pairwise.relative_to(PROJECT_ROOT)}")
     print(f"[save] {out_json.relative_to(PROJECT_ROOT)}")
     print(f"[save] {out_report.relative_to(PROJECT_ROOT)}")
     plot = OUTPUT_DIR / "kaplan_meier_four_dataset.png"

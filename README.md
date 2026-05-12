@@ -215,7 +215,7 @@ python 3_analysis/summarize_conformal_results.py
 | **Paper extension** | Four-dataset conditional-shift diagnostics: pairwise feature-slope shifts, naive-best source-prediction rank signal, residual-vs-linear calibration regime labels | `3_analysis/conditional_shift_four_dataset.py` | `data/intermediate/four_dataset_conditional_shift_*`, `outputs/results_v2_four_dataset_conditional_shift/...` |
 | **§6+++** | Hankel-DMD / Koopman-style dynamics pilot on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer | `3_analysis/koopman_dmd_pilot.py` | `data/intermediate/koopman_dmd_*`, `outputs/results_v2_koopman_dmd/...` |
 | **Paper extension** | Four-dataset validation: Sandia 0-100 subset, Luh standard-cycling subset, feature-table counts, split completeness, and full within/cross result matrix checks | `3_analysis/validate_four_dataset_extension.py` | `data/intermediate/four_dataset_validation_*` |
-| **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves and pairwise log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
+| **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
 | **§7−** | Target calibration baseline (k=5/10/15/20 calibration cells; residual-mean and linear adapters; MATR/HUST default or four-dataset extension via CLI) | `3_analysis/target_rescaling.py`, `3_analysis/summarize_target_rescaling.py` | `outputs/results_v2_target_rescale/...`, `outputs/results_v2_four_dataset_target_rescale/...`, `data/intermediate/four_dataset_target_rescale_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional linear sensitivity) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, including `paper_cp_k_sweep.*` |
@@ -597,8 +597,12 @@ only from 778 to 802 cycles; HUST remains 1490 cycles.
 The four-dataset survival audit extends the same rule to Sandia and Luh:
 censored cells are excluded from regression metrics and retained as
 right-censored observations for Kaplan-Meier/log-rank sensitivity checks.
-Key medians are MATR 773, HUST 1513, Sandia 305, and Luh 508 cycles in
-`data/intermediate/four_dataset_survival_censoring_report.md`; the plot is
+Key medians are MATR 773, HUST 1513, Sandia 305, and Luh 508 cycles. RMST at
+the common 1615-cycle horizon gives HUST 1429 [1382, 1473], MATR 795
+[734, 856], Sandia 711 [547, 875], and Luh 572 [495, 655] cycles by bootstrap
+95% CI. HUST is decisively separated from all others, while MATR vs Sandia
+and Sandia vs Luh have RMST-difference CIs crossing zero. Report:
+`data/intermediate/four_dataset_survival_censoring_report.md`; plot:
 `outputs/results_v2_four_dataset_survival/kaplan_meier_four_dataset.png`.
 
 ---
@@ -679,7 +683,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 - [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
 - [x] Paper extension conditional-shift diagnostics (four-dataset feature-slope and rank-signal regimes)
-- [x] Paper extension survival/censoring audit (four-dataset Kaplan-Meier/log-rank/KS checks)
+- [x] Paper extension survival/censoring audit (four-dataset Kaplan-Meier/RMST/log-rank/KS checks)
 
 ---
 

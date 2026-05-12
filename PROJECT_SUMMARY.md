@@ -79,7 +79,7 @@ the SOP12 capacity-only features.
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
 | **Paper extension** | Four-dataset validation | ✅ | MATR/HUST/Sandia/Luh feature counts, split completeness, and 56-row within / 168-row cross result matrices pass |
-| **Paper extension** | Four-dataset survival/censoring audit | ✅ | Sandia 11/61 censored, Luh 2/108 censored; Kaplan-Meier curves and pairwise tests committed |
+| **Paper extension** | Four-dataset survival/censoring audit | ✅ | Sandia 11/61 censored, Luh 2/108 censored; Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and pairwise tests committed |
 
 ---
 
@@ -330,7 +330,11 @@ longer-lived.
 The four-dataset audit applies the same rule to the paper extension. Counts
 are MATR 135/129/6, HUST 77/77/0, Sandia 61/50/11, and Luh 108/106/2
 (cells/events-or-modeled/censored). Kaplan-Meier medians are MATR 773, HUST
-1513, Sandia 305, and Luh 508 cycles. Outputs:
+1513, Sandia 305, and Luh 508 cycles. RMST at the common 1615-cycle horizon
+gives HUST 1429 [1382, 1473], MATR 795 [734, 856], Sandia 711 [547, 875],
+and Luh 572 [495, 655] cycles by bootstrap 95% CI. Pairwise RMST differences
+show HUST is decisively longer-lived than all others; MATR vs Sandia and
+Sandia vs Luh have CIs crossing zero after right-censoring is handled. Outputs:
 `data/intermediate/four_dataset_survival_censoring_report.md` and
 `outputs/results_v2_four_dataset_survival/kaplan_meier_four_dataset.png`.
 
@@ -662,7 +666,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/feature_transfer_stability.py` | feature-level transfer/stability analysis and SHAP bridge |
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability classes |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
-| `3_analysis/survival_censoring_four_dataset.py` | four-dataset Kaplan-Meier/log-rank/KS censoring audit |
+| `3_analysis/survival_censoring_four_dataset.py` | four-dataset Kaplan-Meier/RMST/log-rank/KS censoring audit |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
 | `3_analysis/conditional_shift_decomposition.py` | centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust alpha checks, Pearson r with bootstrap CI, and scatter plot |
 | `3_analysis/conditional_shift_four_dataset.py` | four-dataset feature-slope/rank-signal conditional-shift regimes |

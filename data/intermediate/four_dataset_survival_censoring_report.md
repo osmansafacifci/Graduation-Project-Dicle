@@ -20,6 +20,28 @@ Protocol: N=100 cell table; uncensored cells are EOL events; censored cells are 
 | hust | luh | 124.664 | 0.000 | 0.833 | 0.000 | 0.826 | 0.000 |
 | sandia | luh | 8.150 | 0.004 | 0.391 | 0.000 | 0.335 | 0.000 |
 
+## RMST Bootstrap Robustness
+RMST is restricted to the common follow-up horizon across all four datasets.
+
+| dataset | rmst_tau_cycles | rmst_boot_mean | rmst_boot_ci95_low | rmst_boot_ci95_high | rmst_boot_std | n_bootstrap |
+| --- | --- | --- | --- | --- | --- | --- |
+| hust | 1615.000 | 1428.664 | 1382.425 | 1472.715 | 23.005 | 2000.000 |
+| luh | 1615.000 | 571.904 | 495.139 | 654.845 | 41.236 | 2000.000 |
+| matr | 1615.000 | 794.547 | 733.743 | 855.731 | 30.716 | 2000.000 |
+| sandia | 1615.000 | 711.121 | 546.743 | 874.877 | 84.292 | 2000.000 |
+
+## Pairwise RMST Differences
+Positive `rmst_diff_b_minus_a` means group B has larger restricted mean survival than group A.
+
+| group_a | group_b | rmst_tau_cycles | rmst_a_mean | rmst_b_mean | rmst_diff_b_minus_a | rmst_diff_ci95_low | rmst_diff_ci95_high | rmst_diff_boot_p_value | n_bootstrap |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| matr | hust | 1615.000 | 794.547 | 1428.664 | 634.117 | 559.144 | 709.470 | 0.000 | 2000.000 |
+| matr | sandia | 1615.000 | 794.547 | 711.121 | -83.425 | -255.168 | 89.769 | 0.342 | 2000.000 |
+| matr | luh | 1615.000 | 794.547 | 571.904 | -222.642 | -325.851 | -121.409 | 0.000 | 2000.000 |
+| hust | sandia | 1615.000 | 1428.664 | 711.121 | -717.542 | -891.917 | -549.207 | 0.000 | 2000.000 |
+| hust | luh | 1615.000 | 1428.664 | 571.904 | -856.759 | -944.542 | -761.088 | 0.000 | 2000.000 |
+| sandia | luh | 1615.000 | 711.121 | 571.904 | -139.217 | -318.226 | 47.654 | 0.132 | 2000.000 |
+
 ## Censored Cells
 | dataset | cell_id | censor_time_cycles | q0 | last_positive_cycle | last_positive_qdis | last_positive_retention | min_positive_cycle | min_positive_qdis | min_positive_retention |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -43,4 +65,4 @@ Protocol: N=100 cell table; uncensored cells are EOL events; censored cells are 
 | sandia | sandia_SNL_18650_LFP_25C_0_100_0_5_2C_b | 4050.000 | 1.032 | 4050.000 | 0.940 | 0.911 | 2787.000 | 0.880 | 0.853 |
 | sandia | sandia_SNL_18650_LFP_15C_0_100_0_5_1C_a | 4551.000 | 1.033 | 4551.000 | 0.947 | 0.917 | 4338.000 | 0.924 | 0.894 |
 
-Interpretation: Sandia and Luh introduce additional censoring checks, but the main four-dataset modeling rule remains unchanged: censored cells are excluded from MAE/sMAPE/R2 regression metrics and retained here as right-censored observations.
+Interpretation: Sandia and Luh introduce additional censoring checks, but the main four-dataset modeling rule remains unchanged: censored cells are excluded from MAE/sMAPE/R2 regression metrics and retained here as right-censored observations. RMST at the common follow-up horizon is the paper-facing robustness statistic because it remains interpretable when median survival and event-only means are distorted by right censoring.
