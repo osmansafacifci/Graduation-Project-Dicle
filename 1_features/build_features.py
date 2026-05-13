@@ -107,7 +107,7 @@ ALL_FEATURE_COLS = SOP12_FEATURE_COLS + EXTENDED_FEATURE_COLS + EXTENDED2_FEATUR
 CAPACITY_RAW_FEATURES = [
     # 12 SOP capacity-unit features
     "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
-    "mean_diff", "std_diff", "range_Qdis", "variance_Qdis",  # variance is Ah² but Q0² scaling is fine
+    "mean_diff", "std_diff", "range_Qdis",
     # 12 extended capacity-unit features
     "poly2_a", "poly2_b", "poly2_c",
     "slope_first_quarter", "slope_last_quarter",
@@ -115,6 +115,7 @@ CAPACITY_RAW_FEATURES = [
     "accel_mean", "accel_std", "accel_max_abs",
     "mad_Qdis",
 ]
+CAPACITY_VARIANCE_FEATURES = ["variance_Qdis"]
 
 # Same merge metadata as build_matr_audit.py (kept in sync intentionally)
 BATCH1_CONTINUATION_FROM_BATCH2 = {
@@ -528,6 +529,10 @@ def build_feature_rows(
                 # different-nominal-capacity dataset on the same scale.
                 for col in CAPACITY_RAW_FEATURES:
                     feats[col] = feats[col] / q0
+                # Variance has capacity² units, so use Q0² for dimensional
+                # consistency with the Q/Q0 scale.
+                for col in CAPACITY_VARIANCE_FEATURES:
+                    feats[col] = feats[col] / (q0 ** 2)
             row = {
                 "dataset": dataset,
                 "cell_id": cell_id,
@@ -549,8 +554,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-windows", type=int, nargs="+", default=list(DEFAULT_N_WINDOWS),
                         help="Prediction windows N. Default: 50 100. Add 25 for ablation.")
     parser.add_argument("--capacity-normalize", action="store_true",
-                        help="Divide raw-capacity features (Qdis_N, delta_Qdis, Qdis_cycle10, "
-                             "max_drop, mean_diff) by Q0. Use when adding a third dataset with "
+                        help="Divide raw-capacity features by Q0 and variance features by Q0^2. "
+                             "Use when adding a third dataset with "
                              "different nominal capacity. Off by default (MATR + HUST share 1.1Ah).")
     parser.add_argument("--matr-only", action="store_true")
     parser.add_argument("--hust-only", action="store_true")

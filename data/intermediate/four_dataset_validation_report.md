@@ -19,6 +19,8 @@
 | capnorm_shape_matches_raw | PASS | raw=(762, 41), capnorm=(762, 41) |
 | capacity_normalized_flags | PASS | raw=[np.int64(0)], capnorm=[np.int64(1)] |
 | capnorm_keeps_ids_and_labels | PASS | dataset/cell/window/q0/label/censor columns unchanged |
+| capnorm_capacity_features_divide_by_q0 | PASS | max_abs_error=2.220446049250313e-16 |
+| capnorm_variance_qdis_divides_by_q0_squared | PASS | max_abs_error=9.93129189996722e-17 |
 | split_completeness | PASS | missing=[], bad=[] |
 | within_result_matrix_complete | PASS | rows=56, expected=56 |
 | cross_result_matrix_complete | PASS | rows=168, expected=168 |
@@ -44,17 +46,17 @@
 ## Best Naive Cross-Dataset Results at N=100
 | experiment | model | MAE_mean | SMAPE_mean | R2_mean |
 | --- | --- | --- | --- | --- |
-| hust_to_luh | pls | 352.754 | 104.975 | -0.373 |
-| hust_to_matr | gaussian_process | 720.379 | 69.406 | -3.600 |
-| hust_to_sandia | xgboost | 1193.096 | 124.730 | -0.296 |
-| luh_to_hust | random_forest | 300.655 | 21.018 | -0.766 |
-| luh_to_matr | stacking | 343.007 | 42.028 | -0.313 |
-| luh_to_sandia | xgboost | 415.345 | 46.643 | 0.492 |
-| matr_to_hust | gaussian_process | 763.008 | 67.094 | -7.937 |
-| matr_to_luh | stacking | 332.796 | 64.884 | 0.012 |
-| matr_to_sandia | catboost | 714.950 | 93.371 | 0.041 |
-| sandia_to_hust | catboost | 342.133 | 25.006 | -1.431 |
-| sandia_to_luh | pls | 185.042 | 35.347 | 0.477 |
-| sandia_to_matr | gaussian_process | 361.407 | 50.155 | -0.799 |
+| hust_to_luh | pls | 405.327 | 108.769 | -0.562 |
+| hust_to_matr | gaussian_process | 720.361 | 69.405 | -3.600 |
+| hust_to_sandia | xgboost | 1163.071 | 123.747 | -0.231 |
+| luh_to_hust | random_forest | 300.383 | 20.997 | -0.763 |
+| luh_to_matr | stacking | 334.381 | 41.151 | -0.275 |
+| luh_to_sandia | xgboost | 414.473 | 46.946 | 0.499 |
+| matr_to_hust | gaussian_process | 763.007 | 67.094 | -7.937 |
+| matr_to_luh | stacking | 334.060 | 65.096 | 0.004 |
+| matr_to_sandia | xgboost | 730.672 | 92.498 | 0.046 |
+| sandia_to_hust | catboost | 384.653 | 28.695 | -2.027 |
+| sandia_to_luh | pls | 181.764 | 34.209 | 0.494 |
+| sandia_to_matr | gaussian_process | 361.478 | 50.186 | -0.802 |
 
 Notes: Sandia primary is restricted to 0-100 SOC-window cells. Luh uses the 108 standard-cycling cells; all parsed through `log_age_capacity` alignment.

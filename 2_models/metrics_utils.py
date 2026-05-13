@@ -8,6 +8,43 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
+def to_cycles(
+    pred: np.ndarray,
+    *,
+    log_target: bool,
+    min_cycle: float = 1.0,
+    max_cycle: float = 1e9,
+) -> np.ndarray:
+    """Convert model predictions to bounded cycle-life values.
+
+    Most experiments fit models in log(cycle_life) space and score in cycle
+    space. Linear and GP-style models can produce extreme log predictions under
+    cross-dataset shift; clipping before exponentiation keeps metrics finite
+    without hiding that the prediction is catastrophically wrong.
+    """
+    arr = np.asarray(pred, dtype=float)
+    if log_target:
+        log_min = float(np.log(min_cycle))
+        log_max = float(np.log(max_cycle))
+        arr = np.nan_to_num(arr, nan=log_min, posinf=log_max, neginf=log_min)
+        out = np.exp(np.clip(arr, log_min, log_max))
+    else:
+        out = arr
+    out = np.nan_to_num(out, nan=min_cycle, posinf=max_cycle, neginf=min_cycle)
+    return np.clip(out, min_cycle, max_cycle)
+
+
+def fit_with_threaded_joblib(fitter, X_train: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """Fit a project model while avoiding loky process spawning in analysis scripts."""
+    try:
+        from joblib import parallel_backend
+    except Exception:
+        return fitter(X_train, y_train, seed=seed)
+
+    with parallel_backend("threading"):
+        return fitter(X_train, y_train, seed=seed)
+
+
 def symmetric_mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     denom = (np.abs(y_true) + np.abs(y_pred)) / 2.0
     diff = np.abs(y_pred - y_true)

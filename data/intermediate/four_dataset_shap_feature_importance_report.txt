@@ -3,29 +3,29 @@ SHAP feature attribution summary
 Protocol: 34 features, N=100 default, log-target models, SHAP in log-cycle space.
 
 Model check across explained splits:
-  N=100 LUH catboost: MAE=105.7, sMAPE=17.0, R2=+0.773 (5 seeds)
-  N=100 SANDIA xgboost: MAE=133.7, sMAPE=25.2, R2=+0.927 (5 seeds)
+  N=100 LUH catboost: MAE=104.2, sMAPE=16.7, R2=+0.770 (5 seeds)
+  N=100 SANDIA xgboost: MAE=135.7, sMAPE=25.4, R2=+0.926 (5 seeds)
 
 N=100 LUH catboost top SHAP features:
-  slope_last_quarter       rank=2.8 rel=6.9% sandia_vs_luh=slope_stable
-  slope_linear             rank=6.2 rel=6.4% sandia_vs_luh=slope_stable
-  mad_Qdis                 rank=4.6 rel=5.8% sandia_vs_luh=slope_stable
-  cycle_to_95pct           rank=6.4 rel=6.0% sandia_vs_luh=slope_stable
-  poly2_b                  rank=8.8 rel=5.0% sandia_vs_luh=slope_stable
-  Qdis_N                   rank=7.2 rel=4.9% sandia_vs_luh=slope_stable
-  retention_ratio          rank=8.6 rel=4.8% sandia_vs_luh=slope_stable
-  range_Qdis               rank=8.2 rel=4.7% sandia_vs_luh=slope_stable
-  max_drop                 rank=12.4 rel=4.0% sandia_vs_luh=slope_stable
-  exp_decay_k              rank=11.4 rel=3.9% sandia_vs_luh=slope_stable
+  slope_last_quarter       rank=3.4 rel=7.6% sandia_vs_luh=slope_stable
+  slope_linear             rank=5.0 rel=6.3% sandia_vs_luh=slope_stable
+  poly2_b                  rank=5.2 rel=5.8% sandia_vs_luh=slope_stable
+  mad_Qdis                 rank=5.0 rel=5.6% sandia_vs_luh=slope_stable
+  cycle_to_95pct           rank=7.8 rel=5.3% sandia_vs_luh=slope_stable
+  retention_ratio          rank=6.2 rel=5.2% sandia_vs_luh=slope_stable
+  exp_decay_k              rank=9.8 rel=4.6% sandia_vs_luh=slope_stable
+  Qdis_N                   rank=9.6 rel=4.3% sandia_vs_luh=slope_stable
+  range_Qdis               rank=11.0 rel=4.2% sandia_vs_luh=slope_stable
+  poly2_a                  rank=10.6 rel=4.0% sandia_vs_luh=slope_stable
 
 N=100 SANDIA xgboost top SHAP features:
-  Qdis_N                   rank=1.0 rel=55.0% sandia_vs_luh=slope_stable
-  mad_Qdis                 rank=7.2 rel=8.6% sandia_vs_luh=slope_stable
-  slope_linear             rank=4.4 rel=5.8% sandia_vs_luh=slope_stable
-  variance_Qdis            rank=4.0 rel=5.8% sandia_vs_luh=slope_stable
-  spectral_entropy         rank=12.0 rel=3.1% sandia_vs_luh=slope_stable
-  slope_ratio              rank=7.4 rel=2.7% sandia_vs_luh=slope_stable
-  autocorr_lag1            rank=15.6 rel=2.1% sandia_vs_luh=slope_stable
-  accel_mean               rank=10.8 rel=1.5% sandia_vs_luh=slope_stable
-  slope_first_quarter      rank=14.0 rel=1.5% sandia_vs_luh=slope_stable
-  cycle_to_98pct           rank=16.2 rel=1.4% sandia_vs_luh=slope_shifted
+  Qdis_N                   rank=1.0 rel=54.8% sandia_vs_luh=slope_stable
+  mad_Qdis                 rank=11.0 rel=8.8% sandia_vs_luh=slope_stable
+  slope_linear             rank=3.6 rel=7.3% sandia_vs_luh=slope_stable
+  range_Qdis               rank=11.0 rel=3.1% sandia_vs_luh=slope_stable
+  spectral_entropy         rank=12.0 rel=3.0% sandia_vs_luh=slope_stable
+  slope_ratio              rank=7.0 rel=3.0% sandia_vs_luh=slope_stable
+  variance_Qdis            rank=8.6 rel=2.8% sandia_vs_luh=slope_stable
+  autocorr_lag1            rank=15.2 rel=2.1% sandia_vs_luh=slope_stable
+  slope_first_quarter      rank=12.8 rel=1.5% sandia_vs_luh=slope_stable
+  skewness_Qdis            rank=14.2 rel=1.4% sandia_vs_luh=slope_stable

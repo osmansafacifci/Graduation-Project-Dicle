@@ -56,7 +56,7 @@ SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_shap"
 
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
-from metrics_utils import compute_metrics  # noqa: E402
+from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
     META_COLS,
     SEEDS,
@@ -97,11 +97,6 @@ def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
 
 def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
     return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
-
-
-def safe_cycles_from_log(pred_log: np.ndarray) -> np.ndarray:
-    pred_log = np.clip(pred_log, np.log(1.0), np.log(1e9))
-    return np.clip(np.nan_to_num(np.exp(pred_log), nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
 
 
 def model_list_for_dataset(requested: list[str], dataset: str) -> list[str]:
@@ -169,14 +164,14 @@ def evaluate_and_explain(
     y_train_fit = np.log(y_train)
 
     fitter = MODEL_FITTERS[model_name]
-    fitted = fitter(X_train_s, y_train_fit, seed=seed)
+    fitted = fit_with_threaded_joblib(fitter, X_train_s, y_train_fit, seed=seed)
     if isinstance(fitted, tuple):
         model, tuning = fitted
     else:
         model, tuning = fitted, {}
 
     pred_log = np.asarray(model.predict(X_test_s), dtype=float).ravel()
-    pred = safe_cycles_from_log(pred_log)
+    pred = to_cycles(pred_log, log_target=True)
     metrics = compute_metrics(y_test, pred)
 
     shap_values = compute_tree_shap_values(model, X_test_s)

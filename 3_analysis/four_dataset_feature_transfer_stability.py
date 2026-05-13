@@ -45,7 +45,7 @@ PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2_four_dataset"
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
-from metrics_utils import compute_metrics  # noqa: E402
+from metrics_utils import compute_metrics, to_cycles  # noqa: E402
 from run_experiments import META_COLS, SEEDS  # noqa: E402
 
 DEFAULT_FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_four_dataset_capnorm.csv"
@@ -55,11 +55,6 @@ ALL_DATASETS = ["matr", "hust", "sandia", "luh"]
 
 def resolve_path(path: Path) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
-
-
-def safe_cycles_from_log(pred_log: np.ndarray) -> np.ndarray:
-    pred_log = np.clip(pred_log, np.log(1.0), np.log(1e9))
-    return np.clip(np.nan_to_num(np.exp(pred_log), nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
 
 
 def stable_seed(*parts: object) -> int:
@@ -114,7 +109,7 @@ def fit_univariate_log_ridge(train_df: pd.DataFrame, feature: str) -> tuple[Ridg
 
 def predict_univariate(model: RidgeCV, scaler: StandardScaler, df: pd.DataFrame, feature: str) -> np.ndarray:
     X = df[[feature]].to_numpy(dtype=float)
-    return safe_cycles_from_log(model.predict(scaler.transform(X)))
+    return to_cycles(model.predict(scaler.transform(X)), log_target=True)
 
 
 def residual_mean_adapted_metrics(

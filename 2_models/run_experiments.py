@@ -50,7 +50,7 @@ from sklearn.preprocessing import StandardScaler
 # scoped to this directory so we can `from metrics_utils import ...`
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from metrics_utils import bootstrap_metric_ci, compute_metrics  # noqa: E402
+from metrics_utils import bootstrap_metric_ci, compute_metrics, to_cycles  # noqa: E402
 
 # Quiet ElasticNetCV's convergence warnings on small folds (~6-8 cells).
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -491,9 +491,6 @@ def evaluate_split(
         y_train_fit = y_train
         y_cal_fit = y_cal
 
-    def _to_cycles(pred):
-        return np.exp(pred) if log_target else pred
-
     # Z-score: fit on TRAIN, transform cal/test
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
@@ -529,79 +526,79 @@ def evaluate_split(
 
     if "elastic_net" in models:
         enet = fit_elastic_net(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(enet.predict(X_test_s))
+        pred = to_cycles(enet.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["best_alpha"] = float(enet.alpha_)
         m["best_l1_ratio"] = float(enet.l1_ratio_)
         if len(X_cal_s):
-            cal_pred = _to_cycles(enet.predict(X_cal_s))
+            cal_pred = to_cycles(enet.predict(X_cal_s), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["elastic_net"] = m
 
     if "pls" in models:
         pls_model, pls_info = fit_pls(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(pls_model.predict(X_test_s).ravel())
+        pred = to_cycles(pls_model.predict(X_test_s).ravel(), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = pls_info
         if len(X_cal_s):
-            cal_pred = _to_cycles(pls_model.predict(X_cal_s).ravel())
+            cal_pred = to_cycles(pls_model.predict(X_cal_s).ravel(), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["pls"] = m
 
     if "random_forest" in models:
         rf_model, rf_info = fit_random_forest(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(rf_model.predict(X_test_s))
+        pred = to_cycles(rf_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = rf_info
         if len(X_cal_s):
-            cal_pred = _to_cycles(rf_model.predict(X_cal_s))
+            cal_pred = to_cycles(rf_model.predict(X_cal_s), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["random_forest"] = m
 
     if "gaussian_process" in models:
         gp_model, gp_info = fit_gaussian_process(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(gp_model.predict(X_test_s))
+        pred = to_cycles(gp_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = gp_info
         if len(X_cal_s):
-            cal_pred = _to_cycles(gp_model.predict(X_cal_s))
+            cal_pred = to_cycles(gp_model.predict(X_cal_s), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["gaussian_process"] = m
 
     if "xgboost" in models:
         xgb_model, xgb_info = fit_xgboost(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(xgb_model.predict(X_test_s))
+        pred = to_cycles(xgb_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = xgb_info  # max_depth, learning_rate, n_estimators, CV stats
         if len(X_cal_s):
-            cal_pred = _to_cycles(xgb_model.predict(X_cal_s))
+            cal_pred = to_cycles(xgb_model.predict(X_cal_s), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["xgboost"] = m
 
     if "catboost" in models:
         cb_model, cb_info = fit_catboost(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(cb_model.predict(X_test_s))
+        pred = to_cycles(cb_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = cb_info  # depth, learning_rate, iterations, CV stats
         if len(X_cal_s):
-            cal_pred = _to_cycles(cb_model.predict(X_cal_s))
+            cal_pred = to_cycles(cb_model.predict(X_cal_s), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["catboost"] = m
 
     if "stacking" in models:
         st_model, st_info = fit_stacking(X_train_s, y_train_fit, seed=seed)
-        pred = _to_cycles(st_model.predict(X_test_s))
+        pred = to_cycles(st_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         m["tuning"] = st_info
         if len(X_cal_s):
-            cal_pred = _to_cycles(st_model.predict(X_cal_s))
+            cal_pred = to_cycles(st_model.predict(X_cal_s), log_target=log_target)
             m["calibration_MAE"] = float(np.mean(np.abs(y_cal - cal_pred)))
         out["stacking"] = m
 
@@ -646,15 +643,6 @@ def evaluate_cross_dataset(
         y_train_fit = np.log(y_train)
     else:
         y_train_fit = y_train
-
-    def _to_cycles(pred):
-        out = np.exp(pred) if log_target else pred
-        # Cross-dataset guard: linear models (ElasticNet, PLS) can produce wild
-        # log-space predictions when target features are far outside training
-        # distribution; exp() then overflows to inf. Clip to a finite band that
-        # spans every plausible cycle_life value (still records "very bad" so
-        # MAE stays interpretable, just doesn't crash sklearn metrics).
-        return np.clip(np.nan_to_num(out, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
 
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
@@ -709,7 +697,7 @@ def evaluate_cross_dataset(
         raw_pred = model.predict(X_test_s)
         if hasattr(raw_pred, "ravel"):
             raw_pred = raw_pred.ravel()
-        pred = _to_cycles(raw_pred)
+        pred = to_cycles(raw_pred, log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
         if name == "elastic_net":

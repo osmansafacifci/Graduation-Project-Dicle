@@ -13,7 +13,7 @@ Outputs:
 
 The cap-normalized table follows the same `capacity_normalize` behavior as
 `1_features/build_features.py`: raw-capacity columns are divided by each row's
-Q0, and `capacity_normalized` is set to 1.
+Q0, capacity-variance columns by Q0², and `capacity_normalized` is set to 1.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_features import CAPACITY_RAW_FEATURES  # noqa: E402
+from build_features import CAPACITY_RAW_FEATURES, CAPACITY_VARIANCE_FEATURES  # noqa: E402
 
 BASE_COMBINED = INTERMEDIATE_DIR / "features_sop12_combined.csv"
 SANDIA_FEATURES = INTERMEDIATE_DIR / "features_sop12_sandia.csv"
@@ -62,11 +62,13 @@ def load_primary_sandia() -> pd.DataFrame:
 
 def capacity_normalize(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-    missing = [col for col in CAPACITY_RAW_FEATURES if col not in out.columns]
+    missing = [col for col in [*CAPACITY_RAW_FEATURES, *CAPACITY_VARIANCE_FEATURES] if col not in out.columns]
     if missing:
         raise SystemExit(f"[error] missing expected capacity feature columns: {missing}")
     for col in CAPACITY_RAW_FEATURES:
         out[col] = out[col] / out["q0"]
+    for col in CAPACITY_VARIANCE_FEATURES:
+        out[col] = out[col] / (out["q0"] ** 2)
     out["capacity_normalized"] = 1
     return out
 

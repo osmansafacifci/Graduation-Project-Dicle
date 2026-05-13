@@ -54,24 +54,20 @@ PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
-from metrics_utils import compute_metrics  # noqa: E402
+from metrics_utils import compute_metrics, to_cycles  # noqa: E402
 from run_experiments import META_COLS, SEEDS  # noqa: E402
 
 FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_combined.csv"
 
 CAPACITY_RAW_FEATURES = {
     "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
-    "mean_diff", "std_diff", "range_Qdis", "variance_Qdis",
+    "mean_diff", "std_diff", "range_Qdis",
     "poly2_a", "poly2_b", "poly2_c",
     "slope_first_quarter", "slope_last_quarter",
     "accel_mean", "accel_std", "accel_max_abs",
     "mad_Qdis",
 }
-
-
-def safe_cycles_from_log(pred_log: np.ndarray) -> np.ndarray:
-    pred_log = np.clip(pred_log, np.log(1.0), np.log(1e9))
-    return np.clip(np.nan_to_num(np.exp(pred_log), nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
+CAPACITY_VARIANCE_FEATURES = {"variance_Qdis"}
 
 
 def load_split(dataset: str, seed: int) -> dict:
@@ -127,7 +123,7 @@ def fit_univariate_log_ridge(train_df: pd.DataFrame, feature: str) -> tuple[Ridg
 def predict_univariate(model: RidgeCV, scaler: StandardScaler, df: pd.DataFrame, feature: str) -> np.ndarray:
     X = df[[feature]].to_numpy(dtype=float)
     X_s = scaler.transform(X)
-    return safe_cycles_from_log(model.predict(X_s))
+    return to_cycles(model.predict(X_s), log_target=True)
 
 
 def residual_mean_adapted_metrics(
@@ -229,6 +225,9 @@ def main() -> int:
         for col in CAPACITY_RAW_FEATURES:
             if col in capnorm.columns:
                 capnorm[col] = capnorm[col] / capnorm["q0"]
+        for col in CAPACITY_VARIANCE_FEATURES:
+            if col in capnorm.columns:
+                capnorm[col] = capnorm[col] / (capnorm["q0"] ** 2)
         matr_cap = dataset_window(capnorm, "matr", n_cycles)
         hust_cap = dataset_window(capnorm, "hust", n_cycles)
 

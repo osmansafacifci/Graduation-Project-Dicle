@@ -58,7 +58,7 @@ from sklearn.linear_model import HuberRegressor, TheilSenRegressor
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
-from metrics_utils import compute_metrics  # noqa: E402
+from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
     META_COLS,
     SEEDS,
@@ -232,13 +232,6 @@ def safe_pred(model: object, x: np.ndarray) -> np.ndarray:
     return np.clip(raw, -1e9, 1e9)
 
 
-def to_cycles(pred: np.ndarray, *, log_target: bool) -> np.ndarray:
-    if log_target:
-        pred = np.clip(pred, np.log(1.0), np.log(1e9))
-        pred = np.exp(pred)
-    return np.clip(np.nan_to_num(pred, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
-
-
 def load_split(dataset: str, seed: int) -> dict:
     with (SPLITS_DIR / f"{dataset}_{seed}.json").open() as f:
         return json.load(f)
@@ -275,7 +268,7 @@ def fit_source_predict_target(
     x_train_s = np.clip(np.nan_to_num(x_train_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
     x_target_s = np.clip(np.nan_to_num(x_target_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
 
-    result = FITTERS[model_name](x_train_s, y_train_fit, seed=seed)
+    result = fit_with_threaded_joblib(FITTERS[model_name], x_train_s, y_train_fit, seed=seed)
     model = result[0] if isinstance(result, tuple) else result
     y_pred = to_cycles(safe_pred(model, x_target_s), log_target=log_target)
     return target_cell_ids, y_target, y_pred

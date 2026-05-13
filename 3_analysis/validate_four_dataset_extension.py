@@ -42,6 +42,26 @@ DATASETS = ["matr", "hust", "sandia", "luh"]
 SEEDS = [42, 123, 456, 789, 1011]
 MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
 WINDOWS = [50, 100]
+CAPACITY_RAW_FEATURES = [
+    "Qdis_N",
+    "delta_Qdis",
+    "slope_linear",
+    "Qdis_cycle10",
+    "max_drop",
+    "mean_diff",
+    "std_diff",
+    "range_Qdis",
+    "poly2_a",
+    "poly2_b",
+    "poly2_c",
+    "slope_first_quarter",
+    "slope_last_quarter",
+    "accel_mean",
+    "accel_std",
+    "accel_max_abs",
+    "mad_Qdis",
+]
+CAPACITY_VARIANCE_FEATURES = ["variance_Qdis"]
 
 
 def check(condition: bool, name: str, details: str) -> dict:
@@ -123,6 +143,26 @@ def main() -> int:
     id_cols = ["dataset", "cell_id", "n_cycles", "q0", "cycle_life", "is_censored"]
     ids_match = raw[id_cols].fillna(-1).equals(capnorm[id_cols].fillna(-1))
     rows.append(check(ids_match, "capnorm_keeps_ids_and_labels", "dataset/cell/window/q0/label/censor columns unchanged"))
+    raw_capacity_errors = []
+    for col in CAPACITY_RAW_FEATURES:
+        if col in raw.columns and col in capnorm.columns:
+            err = float(np.nanmax(np.abs(capnorm[col] - raw[col] / raw["q0"])))
+            raw_capacity_errors.append(err)
+    variance_errors = []
+    for col in CAPACITY_VARIANCE_FEATURES:
+        if col in raw.columns and col in capnorm.columns:
+            err = float(np.nanmax(np.abs(capnorm[col] - raw[col] / (raw["q0"] ** 2))))
+            variance_errors.append(err)
+    rows.append(check(
+        raw_capacity_errors and max(raw_capacity_errors) < 1e-9,
+        "capnorm_capacity_features_divide_by_q0",
+        f"max_abs_error={max(raw_capacity_errors) if raw_capacity_errors else 'missing'}",
+    ))
+    rows.append(check(
+        variance_errors and max(variance_errors) < 1e-9,
+        "capnorm_variance_qdis_divides_by_q0_squared",
+        f"max_abs_error={max(variance_errors) if variance_errors else 'missing'}",
+    ))
 
     # Splits.
     missing_splits = []

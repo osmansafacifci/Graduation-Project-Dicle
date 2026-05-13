@@ -2,7 +2,7 @@
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
 > **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, geometric-shift diagnostics, all-pairs feature-transfer stability, raw-vs-capnorm ablation, conditional-shift/rank-signal diagnostics, k-shot target calibration, leave-one-dataset-out source-expert adaptation, conformal prediction, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
-> **Last updated**: 2026-05-12
+> **Last updated**: 2026-05-13
 
 ---
 
@@ -60,7 +60,7 @@ the SOP12 capacity-only features.
 | §2 (extended²) | +10 entropy / FFT / 2nd-derivative features | ✅ | We added these |
 | §2.1 | N=100 primary, N=50 secondary | ✅ | Both reported |
 | §2.2 | Z-score: fit on train only | ✅ | StandardScaler |
-| §2.3 | Capacity normalization (Q0-divide raw-capacity features) | ✅ | Tested both raw and capnorm |
+| §2.3 | Capacity normalization (raw-capacity features ÷ Q0; `variance_Qdis` ÷ Q0²) | ✅ | Tested both raw and capnorm; validation now checks both transforms |
 | §2.4 | VIF screening on MATR train slice | ✅ | Report-only by default; `--drop` for ablation |
 | §3 | 70/15/15 cell-level split, 5 seeds, lifetime-quartile stratified | ✅ | Seeds {42, 123, 456, 789, 1011} |
 | §4.1 | ElasticNet with internal CV over l1_ratio | ✅ |
@@ -120,18 +120,21 @@ Reference points:
 
 | Direction | Feature set | Best model | MAE | R² |
 |---|---|---|---|---|
-| MATR → HUST | 12 / 24 / 34 | GP | 781 | **−8.13** |
-| HUST → MATR | 12 | RF | **518** | **−1.53** |
+| MATR → HUST | 12 | GP | 813 | −8.83 |
+| MATR → HUST | 34 | GP | 781 | **−8.12** |
+| HUST → MATR | 12 | RF | **543** | **−1.72** |
 | HUST → MATR | 24 | RF | 552 | −1.80 |
 | HUST → MATR | 34 | GP | 569 | −2.05 |
 
 All transfers fail catastrophically. R² < 0 means worse than predicting the
-target's mean cycle life. **More features hurt transfer** (34-feat is the
-within-dataset champion but transfers worse than 12-feat) — the entropy / FFT
-features capture MATR-specific signal that does not generalize.
+target's mean cycle life. The 12/24/34 result is directional rather than a
+simple monotone rule: MATR → HUST improves slightly from 12 to 34 features but
+remains unusable, while HUST → MATR worsens as feature count increases. The
+within-dataset 34-feature champion is therefore not automatically the most
+transferable representation.
 
 Four-dataset naive cross transfer is mixed rather than uniformly catastrophic:
-Luh → Sandia reaches R² = 0.492 and Sandia → Luh reaches R² = 0.477, while
+Luh → Sandia reaches R² = 0.499 and Sandia → Luh reaches R² = 0.494, while
 MATR/HUST directions remain poor and some Sandia/HUST/MATR directions still
 need target calibration. The full matrix is
 `outputs/results_v2_four_dataset_cross_34feat_capnorm_log/results_summary.csv`.
@@ -146,9 +149,10 @@ worsen. The merged comparison is
 
 At k=20, target calibration was run for all 12 directions, all 7 models, and
 both residual-mean and linear adapters. The conservative table fixes the
-naive-best model first; examples: Luh → Sandia improves from R² = 0.492 to
-0.784 with the linear adapter, Sandia → Luh from 0.477 to 0.716, MATR → HUST
-from −7.937 to −0.108, and Sandia → HUST from −1.431 to −0.078. Cross-check
+naive-best model first; examples: Luh → Sandia improves from R² = 0.499 to
+0.786 with the linear adapter, Sandia → Luh from 0.494 to 0.723, HUST → Luh
+from −0.562 to 0.555, MATR → HUST from −7.937 to −0.108, and Sandia → HUST
+from −2.027 to −0.094. Cross-check
 files: `data/intermediate/four_dataset_target_rescale_naive_best_k20.csv` and
 `data/intermediate/four_dataset_target_rescale_report_k20.md`.
 
@@ -170,7 +174,7 @@ dataset gap. Capacity normalization (SOP §2.3) attacks this directly.
 
 The four-dataset geometric-shift extension adds cross-fitted dataset
 discriminator AUC, MMD, and Mahalanobis for every unordered pair. At N=100,
-capnorm cuts MATR/Luh Mahalanobis from 231.4 to 22.6 and HUST/Luh from 188.4
+capnorm cuts MATR/Luh Mahalanobis from 231.4 to 19.7 and HUST/Luh from 188.4
 to 38.0, but every pair remains highly separable (capnorm AUC = 0.975-1.000).
 This is the right nuance for the paper: Q0 normalization removes a major scale
 artifact, but geometric support mismatch remains. Files:
@@ -259,12 +263,12 @@ linear target calibration becomes genuinely predictive.
 
 | Direction | Naive R² | Pearson r | Linear-calibrated R² | Regime |
 |---|---:|---:|---:|---|
-| Luh → Sandia | 0.492 | 0.912 | 0.840 | transferable rank signal |
-| Sandia → Luh | 0.477 | 0.859 | 0.744 | transferable rank signal |
-| HUST → Luh | -0.373 | 0.766 | 0.600 | rank signal survives large offset |
-| MATR → Sandia | 0.041 | 0.522 | 0.343 | calibratable transfer |
+| Luh → Sandia | 0.499 | 0.913 | 0.842 | transferable rank signal |
+| Sandia → Luh | 0.494 | 0.862 | 0.750 | transferable rank signal |
+| HUST → Luh | -0.562 | 0.772 | 0.610 | rank signal survives large offset |
+| MATR → Sandia | 0.046 | 0.427 | 0.261 | calibratable transfer |
 | MATR → HUST | -7.937 | -0.120 | 0.025 | center repair; rank signal lost |
-| HUST → MATR | -3.600 | -0.130 | 0.015 | center repair; rank signal lost |
+| HUST → MATR | -3.600 | -0.114 | 0.008 | center repair; rank signal lost |
 
 This supports the broader paper claim: **cross-dataset battery RUL transfer is
 not a binary success/failure problem; it separates into rank-preserving
@@ -351,16 +355,15 @@ many of their most important features are not semantically stable across MATR
 and HUST.
 
 The four-dataset SHAP extension adds Sandia and Luh/KIT on the
-capacity-normalized four-dataset table. Sandia XGBoost reaches R²=0.927 across
-the five official splits and is dominated by `Qdis_N` (55.0% relative SHAP
-importance), followed by `mad_Qdis`, `slope_linear`, and `variance_Qdis`.
-Luh/KIT CatBoost reaches R²=0.773 and is more distributed, led by
-`slope_last_quarter`, `slope_linear`, `mad_Qdis`, `cycle_to_95pct`, and
-`poly2_b`. Joined to the Sandia-vs-Luh centered-log slope test, almost all
-top-10 SHAP features are slope-stable; the notable top-10 exception is Sandia
-`cycle_to_98pct`. This gives a cleaner feature-importance companion for the
-new two datasets without reusing the MATR/HUST fragility labels as if they
-were Sandia/Luh-specific.
+capacity-normalized four-dataset table. Sandia XGBoost reaches R²=0.926 across
+the five official splits and is dominated by `Qdis_N` (54.8% relative SHAP
+importance), followed by `mad_Qdis`, `slope_linear`, and `range_Qdis`.
+Luh/KIT CatBoost reaches R²=0.770 and is more distributed, led by
+`slope_last_quarter`, `slope_linear`, `poly2_b`, `mad_Qdis`, and
+`cycle_to_95pct`. Joined to the Sandia-vs-Luh centered-log slope test, the
+top-10 SHAP features for both datasets are slope-stable. This gives a cleaner
+feature-importance companion for the new two datasets without reusing the
+MATR/HUST fragility labels as if they were Sandia/Luh-specific.
 
 ### Survival/censoring sensitivity
 
@@ -400,14 +403,14 @@ Re-running cross-dataset with capacity normalization:
 
 | Direction | Feature set | Raw R² | Capnorm R² |
 |---|---|---|---|
-| MATR → HUST | 12 | −8.13 | −8.11 |
+| MATR → HUST | 12 | −8.83 | −8.11 |
 | MATR → HUST | 34 | −8.13 | −7.94 |
-| HUST → MATR | 12 | **−1.53** | **−3.82** |
+| HUST → MATR | 12 | **−1.72** | −3.61 |
 | HUST → MATR | 34 | −2.05 | −3.60 |
 
 **Geometric alignment without prediction alignment.** Mahalanobis dropped 71%,
-MMD dropped 28% — but transfer accuracy did not improve, and even degraded
-on HUST → MATR. The absolute-capacity gap was carrying dataset-identity
+MMD dropped 28% — but transfer accuracy did not reliably improve, and even
+degraded on HUST → MATR. The absolute-capacity gap was carrying dataset-identity
 information that the regressor leaned on; removing it geometrically aligns
 the covariates but breaks the implicit predictor without fixing the underlying
 cycle-life distribution mismatch.
@@ -475,10 +478,10 @@ Best k=20 results at N=100:
 
 | Target | Best protocol | Model / expert | Adapter | MAE | sMAPE | R² |
 |---|---|---|---|---:|---:|---:|
-| HUST | Pooled ERM + k-shot | Elastic Net | Linear | 237.1 | 16.16 | -0.115 |
-| Luh/KIT | Pooled ERM + k-shot | CatBoost | Linear | 177.6 | 49.98 | 0.667 |
-| MATR | Convex source experts | Primary-source experts | Residual mean | 278.0 | 35.92 | -0.018 |
-| Sandia | Pooled ERM + k-shot | Stacking | Linear | 272.5 | 69.10 | 0.862 |
+| HUST | Source+model selection | Source-model experts | Linear | 236.0 | 16.05 | -0.110 |
+| Luh/KIT | Source+model selection | Source-model experts | Linear | 178.2 | 45.02 | 0.660 |
+| MATR | Pooled ERM + k-shot | XGBoost | Linear | 274.7 | 35.62 | -0.003 |
+| Sandia | Pooled ERM + k-shot | Stacking | Linear | 277.5 | 68.99 | 0.855 |
 
 This is a strong but not over-claimed AI contribution. It improves over naive
 single-source transfer for every held-out target and shows clear gains as k
@@ -520,16 +523,16 @@ CP repairs uncertainty. The remaining SOP-letter k-grid loose end is closed.
 
 Four-dataset CP repeats the same standard MAPIE protocol on MATR, HUST,
 Sandia, and Luh/KIT using the capacity-normalized feature table and all 12
-cross directions. At 90%, within-dataset coverage is 0.89–0.97. Naive
-source-calibrated cross CP under-covers everywhere (coverage range 0.00–0.73),
-including the easier Sandia↔Luh pair (0.71–0.73). Target-domain CP with
-`k_target=20` restores nominal coverage across directions (0.89–0.92) but
+cross directions. At 90%, within-dataset coverage is 0.875–0.967. Naive
+source-calibrated cross CP under-covers everywhere (coverage range 0.00–0.732),
+including the easier Sandia↔Luh pair (0.630–0.732). Target-domain CP with
+`k_target=20` restores nominal coverage across directions (0.902–0.914) but
 often with wide intervals. Residual-mean adapted CP with `k_adapter=20` and
-`k_target=20` keeps coverage near nominal (0.89–0.93), all intervals finite,
+`k_target=20` keeps coverage near nominal (0.892–0.928), all intervals finite,
 and reduces median width in most directions. Key examples at 90%: MATR→HUST
-improves from source-CP coverage 0.164 to adapted-CP coverage 0.910 with
-median width 1015; HUST→MATR from 0.202 to 0.914 with width 1303;
-Sandia→Luh from 0.713 to 0.906 with width 1316 and R²=0.158. Outputs are in
+improves from source-CP coverage 0.177 to adapted-CP coverage 0.906 with
+median width 1007; HUST→MATR from 0.203 to 0.915 with width 1303;
+Sandia→Luh from 0.630 to 0.905 with width 1314 and R²=0.154. Outputs are in
 `outputs/results_v2_four_dataset_conformal/`.
 
 ---

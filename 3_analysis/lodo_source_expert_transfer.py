@@ -64,7 +64,7 @@ from sklearn.preprocessing import StandardScaler
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
-from metrics_utils import compute_metrics  # noqa: E402
+from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
     ALL_MODELS,
     META_COLS,
@@ -115,13 +115,6 @@ def display_path(path: Path) -> str:
         return str(path)
 
 
-def safe_cycle_predictions(pred: np.ndarray, *, log_target: bool) -> np.ndarray:
-    raw = np.asarray(pred).ravel()
-    raw = np.nan_to_num(raw, nan=0.0, posinf=1e9, neginf=-1e9)
-    out = np.exp(raw) if log_target else raw
-    return np.clip(np.nan_to_num(out, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
-
-
 def stable_seed(*parts: object) -> int:
     text = "|".join(str(part) for part in parts)
     return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
@@ -169,9 +162,9 @@ def fit_model_predict(
     X_train_s = np.clip(np.nan_to_num(X_train_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
     X_target_s = np.clip(np.nan_to_num(X_target_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
 
-    result = fitter(X_train_s, y_fit, seed=seed)
+    result = fit_with_threaded_joblib(fitter, X_train_s, y_fit, seed=seed)
     model = result[0] if isinstance(result, tuple) else result
-    return safe_cycle_predictions(model.predict(X_target_s), log_target=log_target)
+    return to_cycles(model.predict(X_target_s), log_target=log_target).ravel()
 
 
 def fit_point_adapter(y_pred_cal: np.ndarray, y_true_cal: np.ndarray, adapter_type: str) -> tuple[float, float]:

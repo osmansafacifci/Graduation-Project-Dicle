@@ -61,7 +61,7 @@ from run_experiments import (  # noqa: E402
     fit_catboost, fit_elastic_net, fit_gaussian_process,
     fit_pls, fit_random_forest, fit_stacking, fit_xgboost,
 )
-from metrics_utils import compute_metrics  # noqa: E402
+from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
@@ -112,7 +112,10 @@ def fit_point_adapter(y_pred: np.ndarray, y_true: np.ndarray, adapter_type: str)
         raise ValueError(f"unknown adapter_type={adapter_type}")
     if np.std(y_pred) < 1e-12:
         return 1.0, float(np.mean(y_true) - np.mean(y_pred))
-    a, b = np.polyfit(y_pred, y_true, 1)
+    rank_warning = getattr(getattr(np, "exceptions", np), "RankWarning", Warning)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=rank_warning)
+        a, b = np.polyfit(y_pred, y_true, 1)
     return float(a), float(b)
 
 
@@ -199,10 +202,6 @@ def evaluate_direction(
 
     y_train_fit = np.log(y_train) if log_target else y_train
 
-    def _to_cycles(p):
-        out = np.exp(p) if log_target else p
-        return np.clip(np.nan_to_num(out, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
-
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
     X_tgt_s = scaler.transform(X_tgt)
@@ -219,9 +218,9 @@ def evaluate_direction(
         fitter = FITTERS.get(name)
         if fitter is None:
             continue
-        result = fitter(X_train_s, y_train_fit, seed=seed)
+        result = fit_with_threaded_joblib(fitter, X_train_s, y_train_fit, seed=seed)
         model = result[0] if isinstance(result, tuple) else result
-        y_pred_target = _to_cycles(safe_pred(model, X_tgt_s))
+        y_pred_target = to_cycles(safe_pred(model, X_tgt_s), log_target=log_target)
 
         baseline = compute_metrics(y_tgt, y_pred_target)
         rescaled = rescale_block(y_pred_target, y_tgt, k_values, adapter_types, n_repeats, seed=seed)

@@ -16,8 +16,8 @@
   - `delta_Qdis`: score=+0.579, shift_z=1.93, rho=(+0.08, +0.92), adapted_R2=+0.395, class=weak_or_mixed
   - `retention_ratio`: score=+0.557, shift_z=1.93, rho=(+0.08, +0.92), adapted_R2=+0.385, class=weak_or_mixed
   - `knee_cycle`: score=+0.442, shift_z=0.22, rho=(-0.09, -0.13), adapted_R2=-0.070, class=weak_or_mixed
+  - `variance_Qdis`: score=+0.316, shift_z=0.80, rho=(-0.14, -0.93), adapted_R2=+0.167, class=weak_or_mixed
   - `kurtosis_Qdis`: score=+0.302, shift_z=1.29, rho=(+0.30, +0.29), adapted_R2=-0.055, class=weak_or_mixed
-  - `slope_ratio`: score=+0.258, shift_z=1.14, rho=(-0.36, -0.22), adapted_R2=-0.034, class=weak_or_mixed
 
 ### `hust_to_matr`
 - Class counts: {'relationship_unstable': 21, 'weak_or_mixed': 13}
@@ -68,10 +68,10 @@
   - `max_drop`: score=+0.739, shift_z=0.15, rho=(-0.85, -0.07), adapted_R2=-2.240, class=stable_candidate
   - `std_diff`: score=+0.700, shift_z=0.15, rho=(-0.69, -0.26), adapted_R2=-0.352, class=stable_candidate
   - `accel_std`: score=+0.621, shift_z=0.16, rho=(-0.63, -0.18), adapted_R2=-0.028, class=stable_candidate
+  - `variance_Qdis`: score=+0.603, shift_z=0.25, rho=(-0.93, -0.57), adapted_R2=-0.099, class=stable_candidate
   - `mad_Qdis`: score=+0.598, shift_z=1.81, rho=(-0.92, -0.39), adapted_R2=+0.046, class=weak_or_mixed
   - `cycle_to_95pct`: score=+0.590, shift_z=1.39, rho=(+0.89, +0.15), adapted_R2=-0.025, class=weak_or_mixed
   - `slope_last_quarter`: score=+0.550, shift_z=1.31, rho=(+0.89, +0.47), adapted_R2=+0.046, class=weak_or_mixed
-  - `variance_Qdis`: score=+0.547, shift_z=0.63, rho=(-0.93, -0.57), adapted_R2=-0.081, class=stable_candidate
   - `accel_max_abs`: score=+0.517, shift_z=0.15, rho=(-0.60, -0.11), adapted_R2=-0.281, class=stable_candidate
   - `Qdis_N`: score=+0.439, shift_z=2.18, rho=(+0.93, +0.08), adapted_R2=+0.033, class=weak_or_mixed
 
@@ -125,10 +125,10 @@
   - `knee_cycle`: score=+0.476, shift_z=0.26, rho=(-0.27, -0.20), adapted_R2=-0.011, class=stable_candidate
   - `cycle_to_98pct`: score=+0.470, shift_z=3.48, rho=(+0.21, +0.45), adapted_R2=+0.271, class=scale_shift_fragile
   - `slope_ratio`: score=+0.418, shift_z=0.45, rho=(-0.27, -0.30), adapted_R2=-0.116, class=weak_or_mixed
+  - `variance_Qdis`: score=+0.392, shift_z=0.17, rho=(-0.57, -0.73), adapted_R2=-0.110, class=weak_or_mixed
   - `autocorr_lag1`: score=+0.371, shift_z=0.52, rho=(+0.07, +0.18), adapted_R2=-0.108, class=weak_or_mixed
   - `range_Qdis`: score=+0.345, shift_z=0.52, rho=(-0.54, -0.69), adapted_R2=-0.112, class=weak_or_mixed
   - `std_diff`: score=+0.340, shift_z=0.02, rho=(-0.26, -0.57), adapted_R2=-0.123, class=weak_or_mixed
-  - `variance_Qdis`: score=+0.329, shift_z=0.60, rho=(-0.57, -0.73), adapted_R2=-0.110, class=weak_or_mixed
   - `accel_std`: score=+0.323, shift_z=0.01, rho=(-0.18, -0.53), adapted_R2=-0.096, class=weak_or_mixed
 
 ### `sandia_to_hust`
@@ -165,7 +165,7 @@
   - `range_Qdis`: score=+0.911, shift_z=0.52, rho=(-0.69, -0.54), adapted_R2=-0.113, class=stable_candidate
   - `cycle_to_98pct`: score=+0.774, shift_z=3.48, rho=(+0.45, +0.21), adapted_R2=-0.020, class=scale_shift_fragile
   - `mad_Qdis`: score=+0.654, shift_z=2.79, rho=(-0.76, -0.39), adapted_R2=+0.061, class=weak_or_mixed
-  - `variance_Qdis`: score=+0.512, shift_z=0.60, rho=(-0.73, -0.57), adapted_R2=-0.109, class=stable_candidate
+  - `variance_Qdis`: score=+0.579, shift_z=0.17, rho=(-0.73, -0.57), adapted_R2=-0.127, class=stable_candidate
   - `slope_linear`: score=+0.499, shift_z=3.16, rho=(+0.73, +0.11), adapted_R2=-0.367, class=scale_shift_fragile
   - `exp_decay_k`: score=+0.491, shift_z=3.13, rho=(-0.73, -0.11), adapted_R2=-0.308, class=scale_shift_fragile
   - `Qdis_N`: score=+0.469, shift_z=3.55, rho=(+0.63, +0.08), adapted_R2=-0.231, class=scale_shift_fragile

@@ -15,6 +15,8 @@ luh_audit_definition,PASS,"ok=108, alignment_methods=['log_age_capacity']"
 capnorm_shape_matches_raw,PASS,"raw=(762, 41), capnorm=(762, 41)"
 capacity_normalized_flags,PASS,"raw=[np.int64(0)], capnorm=[np.int64(1)]"
 capnorm_keeps_ids_and_labels,PASS,dataset/cell/window/q0/label/censor columns unchanged
+capnorm_capacity_features_divide_by_q0,PASS,max_abs_error=2.220446049250313e-16
+capnorm_variance_qdis_divides_by_q0_squared,PASS,max_abs_error=9.93129189996722e-17
 split_completeness,PASS,"missing=[], bad=[]"
 within_result_matrix_complete,PASS,"rows=56, expected=56"
 cross_result_matrix_complete,PASS,"rows=168, expected=168"

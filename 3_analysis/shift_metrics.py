@@ -75,12 +75,13 @@ FEATURE_SETS = {
 # Mirrors CAPACITY_RAW_FEATURES in build_features.py; keep in sync.
 CAPACITY_RAW_FEATURES = {
     "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
-    "mean_diff", "std_diff", "range_Qdis", "variance_Qdis",
+    "mean_diff", "std_diff", "range_Qdis",
     "poly2_a", "poly2_b", "poly2_c",
     "slope_first_quarter", "slope_last_quarter",
     "accel_mean", "accel_std", "accel_max_abs",
     "mad_Qdis",
 }
+CAPACITY_VARIANCE_FEATURES = {"variance_Qdis"}
 
 
 # ---------- helpers ----------
@@ -202,10 +203,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=8,
                         help="How many top per-feature shifts to print in the summary.")
     parser.add_argument("--capacity-normalize", action="store_true",
-                        help="Divide capacity-unit features by Q0 (per SOP §2.3) before "
-                             "computing shift. Mirrors --capacity-normalize on the feature "
-                             "builder; lets us measure how much shift the absolute-capacity "
-                             "scale gap between datasets contributes.")
+                        help="Divide raw-capacity features by Q0 and capacity-variance "
+                             "features by Q0^2 before computing shift. Mirrors "
+                             "--capacity-normalize on the feature builder; lets us measure "
+                             "how much shift the absolute-capacity scale gap between "
+                             "datasets contributes.")
     return parser.parse_args()
 
 
@@ -224,15 +226,18 @@ def main() -> int:
         "results": [],
     }
     report_lines: list[str] = []
-    norm_tag = "(capacity-normalized: features in Q0 list divided by q0)" if args.capacity_normalize else "(raw features)"
+    norm_tag = "(capacity-normalized: capacity features divided by q0; variance by q0^2)" if args.capacity_normalize else "(raw features)"
     report_lines.append(f"Distribution shift between MATR and HUST {norm_tag}")
     report_lines.append("=" * 80)
 
     if args.capacity_normalize:
-        # apply the Q0 division on the fly so we don't need to rebuild features
+        # Apply the Q0/Q0^2 normalization on the fly so we don't need to
+        # rebuild the two-dataset feature table.
         for col in df.columns:
             if col in CAPACITY_RAW_FEATURES:
                 df[col] = df[col] / df["q0"]
+            elif col in CAPACITY_VARIANCE_FEATURES:
+                df[col] = df[col] / (df["q0"] ** 2)
 
     for fs_name in args.feature_sets:
         full_list = FEATURE_SETS[fs_name]
