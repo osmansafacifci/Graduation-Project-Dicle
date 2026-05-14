@@ -10,8 +10,8 @@ features.
 > Within-dataset, cross-dataset, distribution-shift quantification,
 > feature-transfer/XAI diagnostics, survival/censoring sensitivity,
 > concept-/conditional-shift diagnostics, importance-weighted CP falsifier,
-> Koopman/DMD dynamics pilot, target-side recalibration baselines, and standard
-> MAPIE split conformal prediction are all in place.
+> supporting Koopman/DMD dynamics pilot, target-side recalibration baselines,
+> and standard MAPIE split conformal prediction are all in place.
 > Four-dataset feature tables, within/cross metrics, k-shot target calibration,
 > leave-one-dataset-out source-expert adaptation, conformal prediction,
 > geometric-shift diagnostics, feature-transfer stability, raw-vs-capnorm
@@ -47,6 +47,9 @@ four-dataset splits):**
 
 The extension validation report is
 `data/intermediate/four_dataset_validation_report.md`.
+
+Manuscript framing, related-work positioning, and main-vs-SI decisions are
+centralized in `docs/MANUSCRIPT_POSITIONING.md`.
 
 **Cross-dataset transfer (best per direction across all feature-set ablations):**
 
@@ -105,6 +108,8 @@ recovers the bulk of the loss.
 │   └── intermediate/        # committed audit + feature CSVs (~MB)
 ├── splits/sop_v2/           # 70/15/15 cell splits, 5 seeds × 2 datasets
 ├── outputs/                 # all experiment results, JSON + summary CSV
+├── docs/
+│   └── MANUSCRIPT_POSITIONING.md
 ├── legacy/                  # archived earlier code — see legacy/README.md
 ├── run_pipeline.py          # orchestrator (--status, --resume, --phase, --stages)
 ├── requirements.txt
@@ -551,52 +556,20 @@ calibration, but if r collapses the recovery is mostly a target-center repair.
 Outputs are in `data/intermediate/four_dataset_conditional_shift_report.md`
 and `outputs/results_v2_four_dataset_conditional_shift/four_dataset_conditional_shift_heatmaps.png`.
 
-### Koopman/DMD Dynamics Pilot
+### Supporting Koopman/DMD dynamics diagnostic
 
 `3_analysis/koopman_dmd_pilot.py` runs a lightweight Hankel-DMD diagnostic on
-early Q/Q0 retention trajectories over cycles 2..100. This is an explanatory
-analysis, not a replacement for the supervised RUL models: it asks whether the
-early capacity traces contain dataset-specific dynamics that line up with the
-conditional-shift story.
-
-| Diagnostic | Result |
-|---|---|
-| Cells analyzed | MATR 135, HUST 77 |
-| Per-cell DMD-summary dataset AUC | 0.795 ± 0.039 |
-| Dominant eigenvalue distribution | KS = 0.826, p = 1.2e-34; mean Δ\|λ\| = −3.2e-5 |
-| Dominant mode vs. log-life | r ≈ 0.37 in MATR, r ≈ 0.32 in HUST |
-| MATR operator on HUST | 1.84× HUST self-operator one-step RMSE |
-| HUST operator on MATR | 1.02× MATR self-operator one-step RMSE |
-
-This supports a cautious dynamics-level version of the shift story: the early
-capacity trajectories are not identical dynamical objects across datasets, and
-DMD summaries carry moderate dataset identity. The eigenvalue shift is small in
-per-cycle magnitude, so the effect is useful for mechanistic framing but should
-be presented as a pilot/diagnostic until third and fourth datasets confirm
-whether the operator asymmetry is stable.
-Figures are in `outputs/results_v2_koopman_dmd/`.
-
-Four-dataset extension reruns the same protocol on MATR, HUST, Sandia, and
-Luh/KIT using the paper-extension feature table for labels and censoring.
-
-| Diagnostic | Four-dataset result |
-|---|---|
-| Cells analyzed | MATR 135, HUST 77, Sandia 61, Luh 108 |
-| DMD-summary dataset separability | four-class weighted OvR AUC = 0.915 ± 0.019 |
-| Pairwise Sandia vs. Luh separability | AUC = 1.000 ± 0.000 |
-| Sandia vs. Luh dominant \|λ\| shift | KS = 0.268, p = 0.0057; mean Δ\|λ\| = −1.05e-4 |
-| Sandia vs. Luh mean eigenvalue magnitude | KS = 1.000, p = 3.15e-47 |
-| Dominant \|λ\| vs. log-life | r = 0.80 in Sandia, r = 0.58 in Luh |
-| Luh operator on Sandia | 1.07× Sandia self-operator one-step RMSE |
-| Sandia operator on Luh | 6.99× Luh self-operator one-step RMSE |
-
-Interpretation: the new datasets strengthen the mechanistic diagnostic rather
-than weakening it. DMD summaries are strongly dataset-specific, and the
-dominant eigenvalue is lifetime-informative in Sandia/Luh. The Sandia/Luh
-operator transfer asymmetry should be read with absolute errors too, because
-Luh has an extremely low self-operator RMSE; ratios against that tiny baseline
-inflate quickly. Outputs are in `data/intermediate/four_dataset_koopman_dmd_*`
-and `outputs/results_v2_four_dataset_koopman_dmd/`.
+early Q/Q0 retention trajectories over cycles 2..100. It is not a headline RUL
+model and should live mostly in SI. The main-text use is one cautious sentence:
+early capacity trajectories carry dataset-specific dynamical signatures, which
+supports the conditional-shift interpretation. The four-dataset extension
+analyzes MATR 135, HUST 77, Sandia 61, and Luh 108 cells; DMD-summary
+dataset separability reaches weighted OvR AUC=0.915 ± 0.019, and the
+Sandia/Luh operator-transfer asymmetry is retained as a supporting diagnostic.
+Full tables and figures are in `data/intermediate/koopman_dmd_*`,
+`data/intermediate/four_dataset_koopman_dmd_*`,
+`outputs/results_v2_koopman_dmd/`, and
+`outputs/results_v2_four_dataset_koopman_dmd/`.
 
 ### Importance-Weighted CP Falsifier
 
@@ -913,6 +886,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] LODO one-panel main figure + SI details
 - [x] Paper-facing k-shot scaling figure
 - [x] Paper-facing regime-stratified CP figure
+- [x] Manuscript-positioning cleanup (related work, Pareto table, main-vs-SI split)
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 - [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
 - [x] Paper extension conditional-shift diagnostics (four-dataset feature-slope and rank-signal regimes)

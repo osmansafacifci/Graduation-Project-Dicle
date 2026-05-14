@@ -1,8 +1,8 @@
 # Project Summary — Battery Lifetime Prediction (Dicle Çoban Thesis)
 
 > **Repo**: <https://github.com/osmansafacifci/Graduation-Project-Dicle>
-> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, Koopman/DMD dynamics pilot, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, geometric-shift diagnostics, all-pairs feature-transfer stability, raw-vs-capnorm ablation, conditional-shift/rank-signal diagnostics, k-shot target calibration, leave-one-dataset-out source-expert adaptation, conformal prediction, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT.
-> **Last updated**: 2026-05-13
+> **Status**: All §1–§7 result tables are reproducible, including feature-transfer stability, conditional-shift decomposition, SHAP/XAI attribution, survival/censoring sensitivity, supporting Koopman/DMD dynamics diagnostics, importance-weighted CP diagnostics, and standard MAPIE split conformal prediction. The paper extension now has committed four-dataset feature tables, validation checks, within/cross metrics, geometric-shift diagnostics, all-pairs feature-transfer stability, raw-vs-capnorm ablation, conditional-shift/rank-signal diagnostics, k-shot target calibration, leave-one-dataset-out source-expert adaptation, conformal prediction, and survival/censoring audit for MATR, HUST, Sandia, and Luh/KIT. Manuscript positioning is centralized in `docs/MANUSCRIPT_POSITIONING.md`.
+> **Last updated**: 2026-05-14
 
 ---
 
@@ -73,7 +73,7 @@ the SOP12 capacity-only features.
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
 | **+** | Conditional-shift decomposition (centered-log slopes + alpha/beta) | ✅ | Universal log-life offset plus 16/34 feature-level slope changes; robust alpha checks, Pearson-r transfer signal, and scatter plot added |
 | **Paper extension** | Four-dataset conditional-shift diagnostics | ✅ | Pairwise feature-slope shift shares plus source-prediction rank-signal/calibration regimes for all 12 directions |
-| **+** | Koopman/DMD dynamics pilot | ✅ | Hankel-DMD on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer |
+| **+** | Koopman/DMD dynamics pilot | ✅ | Supporting SI-style diagnostic on early Q/Q0 trajectories; not a headline predictor |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
 | **Paper extension** | LODO pooled/source-expert k-shot adaptation | ✅ | Holds out each target dataset, trains on the other three, and compares pooled ERM, source-expert selection/weighting, and source+model selection with k={5,10,15,20} target labels; main-panel and SI packaging added |
@@ -283,43 +283,19 @@ The cross-check report is
 `data/intermediate/four_dataset_conditional_shift_report.md`; the heatmap is
 `outputs/results_v2_four_dataset_conditional_shift/four_dataset_conditional_shift_heatmaps.png`.
 
-### Koopman/DMD dynamics pilot (§6+++)
+### Supporting Koopman/DMD dynamics diagnostic (§6+++, SI-facing)
 
 `3_analysis/koopman_dmd_pilot.py` adds a lightweight Hankel-DMD diagnostic on
-early Q/Q0 retention trajectories over cycles 2..100. This is explanatory
-evidence for the transfer story, not a new RUL predictor: it asks whether the
-early capacity curves carry dataset-specific dynamics in a low-dimensional
-Koopman/DMD representation.
-
-| Diagnostic | Result |
-|---|---|
-| Cells analyzed | MATR 135, HUST 77 |
-| Per-cell DMD-summary dataset AUC | 0.795 ± 0.039 |
-| Dominant eigenvalue distribution | KS = 0.826, p = 1.2e-34; mean Δ\|λ\| = −3.2e-5 |
-| Dominant mode vs. log-life | r ≈ 0.37 in MATR, r ≈ 0.32 in HUST |
-| MATR operator on HUST | 1.84× HUST self-operator one-step RMSE |
-| HUST operator on MATR | 1.02× MATR self-operator one-step RMSE |
-
-Interpretation: the spectra are not identical and DMD summaries carry moderate
-dataset identity, which supports a dynamics-level version of conditional
-shift. The eigenvalue shift is small in per-cycle magnitude, so the result
-should be framed cautiously as a pilot/diagnostic until D3/D4 show whether the
-operator asymmetry generalizes. Outputs are in
-`data/intermediate/koopman_dmd_*` and `outputs/results_v2_koopman_dmd/`.
-
-The four-dataset extension now runs the same Hankel-DMD protocol on MATR,
-HUST, Sandia, and Luh/KIT using `features_sop12_four_dataset.csv` for labels
-and censoring. It analyzes MATR 135, HUST 77, Sandia 61, and Luh 108 cells.
-The four-class DMD-summary discriminator reaches weighted OvR AUC=0.915 ±
-0.019, and pairwise Sandia-vs-Luh separability is AUC=1.000 ± 0.000. For the
-recent two datasets, the dominant eigenvalue magnitude differs modestly
-(KS=0.268, p=0.0057; mean Δ|λ|=-1.05e-4), but mean eigenvalue magnitude is
-fully separated (KS=1.000, p=3.15e-47). Dominant |λ| is also strongly
-lifetime-informative: r=0.80 in Sandia and r=0.58 in Luh. Operator transfer is
-asymmetric: Luh->Sandia is close to Sandia self-dynamics (1.07x RMSE), while
-Sandia->Luh is 6.99x Luh self-RMSE. Because Luh's self-RMSE is extremely
-small, this ratio should be interpreted alongside the absolute RMSE
-(0.00037). Outputs are in `data/intermediate/four_dataset_koopman_dmd_*` and
+early Q/Q0 retention trajectories over cycles 2..100. This should not be sold
+as a new RUL predictor. Its manuscript role is a supporting dynamics paragraph:
+early capacity trajectories carry dataset-specific operator signatures, which
+is consistent with the conditional-shift story. The four-dataset extension
+analyzes MATR 135, HUST 77, Sandia 61, and Luh 108 cells; DMD-summary
+separability reaches weighted OvR AUC=0.915 ± 0.019, and the Sandia/Luh
+operator-transfer asymmetry is retained as SI evidence rather than a main
+claim. Full outputs are in `data/intermediate/koopman_dmd_*`,
+`data/intermediate/four_dataset_koopman_dmd_*`,
+`outputs/results_v2_koopman_dmd/`, and
 `outputs/results_v2_four_dataset_koopman_dmd/`.
 
 ### Importance-weighted CP falsifier (§7 diagnostic)
@@ -601,12 +577,13 @@ finite-interval fraction.
 >    capacity-only literature ceiling (~0.6–0.7) without ever reading
 >    discharge voltage curves.
 >
-> 2. **Cross-dataset transfer fails catastrophically**: every (source,
->    target, model, feature set) combination gives R² ≪ 0. More features
->    hurt transfer — the 34-feature primary set is the worst transferer
->    of the three; the 12-feature SOP set transfers slightly better.
->    *Within-dataset accuracy and transferability trade off in opposite
->    directions.*
+> 2. **Cross-dataset transfer fails catastrophically in the original
+>    MATR/HUST setting**: every (source, target, model, feature set)
+>    combination gives R² ≪ 0. The 34-feature primary set is best
+>    within-dataset, but transfer is directional: it helps MATR → HUST
+>    slightly and hurts HUST → MATR. The four-dataset extension makes the
+>    stronger claim: transferability depends on retained target rank signal,
+>    not simply on feature count.
 >
 > 3. **The shift in feature space is huge** (MMD = 0.71, Mahalanobis = 13)
 >    and dominated by the absolute capacity gap (`Qdis_cycle10` alone has
@@ -660,14 +637,15 @@ finite-interval fraction.
 > **Title**: *Covariate alignment is not concept alignment: a controlled
 > study of cross-dataset transfer for early-cycle battery lifetime prediction*
 
-> **Target venues** (Q2, computer-engineering / applied-ML):
-> - *Engineering Applications of Artificial Intelligence* (Q1/Q2, IF≈7.8)
-> - *Expert Systems with Applications* (Q1, IF≈7.5)
-> - *Applied Soft Computing* (Q2, IF≈7)
-> - *Knowledge-Based Systems* (Q1)
+> **Target venue posture**: CS/EE-flavored applied-ML or engineering
+> journals. Re-check current JCR/SJR quartiles at submission rather than
+> hard-coding impact factors in the manuscript notes.
 
 The core contribution is a **methodological one** wrapped around a battery
 domain study — it suits applied-ML venues better than pure mech-eng venues.
+The current paper-facing positioning, related-work comparison, Pareto table,
+stacking decision, and main-text-vs-SI split are maintained in
+`docs/MANUSCRIPT_POSITIONING.md`.
 
 ### Sections
 
@@ -890,6 +868,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
 | `notebooks/run_pipeline_colab.ipynb` | Phase A Colab runner |
+| `docs/MANUSCRIPT_POSITIONING.md` | manuscript claim, related-work positioning, Pareto table, and main-text-vs-SI decisions |
 | `data/intermediate/*.csv` / `*.json` / `*.txt` | All audit, feature, VIF, shift outputs |
 | `outputs/results_v2*` | All experiment results, JSON + summary CSV per ablation |
 | `splits/sop_v2/{matr,hust}_{seed}.json` | Reproducible split files |
