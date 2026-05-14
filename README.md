@@ -249,7 +249,7 @@ python 3_analysis/summarize_conformal_results.py \
 | **Paper extension** | Leave-one-dataset-out pooled/source-expert adaptation: hold out each target, train on the other three datasets, and use k-shot target labels for pooled ERM, source-expert selection, convex source-expert weighting, or source+model selection; includes main-panel and SI packaging | `3_analysis/lodo_source_expert_transfer.py`, `3_analysis/plot_lodo_main_si.py` | `outputs/results_v2_four_dataset_lodo_source_expert/...`, `data/intermediate/four_dataset_lodo_source_expert_*`, `data/intermediate/paper_lodo_*` |
 | **Paper extension** | Paper-facing k-shot scaling figure combining CP reliability and LODO point-accuracy scaling | `3_analysis/plot_kshot_scaling.py` | `outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.*`, `data/intermediate/paper_kshot_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
-| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional four-dataset primary-model extension) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` |
+| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional four-dataset primary-model extension and regime-stratified paper figure) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py`, `3_analysis/plot_cp_regime_stratified.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` and `paper_cp_regime_stratified_*` |
 
 ---
 
@@ -756,7 +756,11 @@ useful point/interval trade-off for Sandia→Luh (coverage 0.905, median width
 1314, R²=0.154), while Luh→Sandia needs the linear point adapter rather than a
 residual-mean-only adapter for good point accuracy. Outputs are in
 `outputs/results_v2_four_dataset_conformal/paper_cp_summary.*`,
-`paper_cp_k_sweep.*`, and `paper_cp_stratified_coverage.csv`.
+`paper_cp_k_sweep.*`, `paper_cp_stratified_coverage.csv`, and
+`paper_cp_regime_stratified_{90,95}.png`. The regime-stratified figure orders
+all 12 cross-dataset directions by rank-signal class and naive CP MAE, then
+compares coverage, median width, and finite-interval fraction for
+source-calibrated, target-domain, and residual-adapted CP.
 
 ---
 
@@ -877,7 +881,8 @@ python 3_analysis/lodo_source_expert_transfer.py \
     --k-report 20
 python 3_analysis/plot_lodo_main_si.py
 
-# Paper-facing k-shot scaling figure from existing CP + LODO k-sweep outputs
+# Paper-facing CP regime and k-shot scaling figures from existing outputs
+python 3_analysis/plot_cp_regime_stratified.py
 python 3_analysis/plot_kshot_scaling.py
 ```
 
@@ -907,6 +912,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] Paper extension LODO pooled/source-expert k-shot adaptation
 - [x] LODO one-panel main figure + SI details
 - [x] Paper-facing k-shot scaling figure
+- [x] Paper-facing regime-stratified CP figure
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 - [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
 - [x] Paper extension conditional-shift diagnostics (four-dataset feature-slope and rank-signal regimes)

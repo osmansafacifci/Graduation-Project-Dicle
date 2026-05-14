@@ -186,9 +186,15 @@ def apply_point_adapter(y_pred: np.ndarray, slope: float, intercept: float) -> n
 
 
 def convex_weight_grid(n_experts: int, step: float) -> np.ndarray:
-    if n_experts != 3:
-        raise ValueError("convex_weight_grid currently expects exactly 3 experts")
+    if n_experts < 1:
+        raise ValueError("convex_weight_grid expects at least one expert")
+    if n_experts == 1:
+        return np.asarray([[1.0]], dtype=float)
     ticks = np.arange(0.0, 1.0 + step / 2.0, step)
+    if n_experts == 2:
+        return np.asarray([[w0, max(0.0, 1.0 - w0)] for w0 in ticks], dtype=float)
+    if n_experts != 3:
+        raise ValueError("convex_weight_grid currently supports 1, 2, or 3 experts")
     weights = []
     for w0 in ticks:
         for w1 in ticks:
@@ -378,10 +384,13 @@ def main() -> int:
     if not features_path.exists():
         print(f"[error] missing feature table: {features_path}")
         return 1
+    if len(args.datasets) < 2:
+        print("[error] LODO needs at least 2 datasets.")
+        return 1
 
     df = pd.read_csv(features_path)
     feature_cols = [col for col in df.columns if col not in META_COLS]
-    grid_weights = convex_weight_grid(3, args.convex_step)
+    grid_weights = convex_weight_grid(len(args.datasets) - 1, args.convex_step)
     detailed_rows: list[dict] = []
 
     print(f"[setup] features_path: {display_path(features_path)}")
@@ -632,9 +641,10 @@ def main() -> int:
     detail_path = out_dir / "results_detailed.csv"
     summary_path = out_dir / "results_summary.csv"
     config_path = out_dir / "results_config.json"
-    best_path = INTERMEDIATE_DIR / f"four_dataset_lodo_source_expert_k{args.k_report}.csv"
-    k_sweep_path = INTERMEDIATE_DIR / "four_dataset_lodo_source_expert_k_sweep.csv"
-    report_path = INTERMEDIATE_DIR / "four_dataset_lodo_source_expert_report.md"
+    paper_dir = INTERMEDIATE_DIR if out_dir == resolve_path(DEFAULT_OUTPUT_DIR) else out_dir
+    best_path = paper_dir / f"four_dataset_lodo_source_expert_k{args.k_report}.csv"
+    k_sweep_path = paper_dir / "four_dataset_lodo_source_expert_k_sweep.csv"
+    report_path = paper_dir / "four_dataset_lodo_source_expert_report.md"
 
     detailed.to_csv(detail_path, index=False)
     summary.to_csv(summary_path, index=False)

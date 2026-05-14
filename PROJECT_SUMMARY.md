@@ -78,6 +78,7 @@ the SOP12 capacity-only features.
 | **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
 | **Paper extension** | LODO pooled/source-expert k-shot adaptation | ✅ | Holds out each target dataset, trains on the other three, and compares pooled ERM, source-expert selection/weighting, and source+model selection with k={5,10,15,20} target labels; main-panel and SI packaging added |
 | **Paper extension** | Paper-facing k-shot scaling figure | ✅ | Combines CP reliability scaling and LODO point-accuracy scaling from existing k-sweep outputs |
+| **Paper extension** | Paper-facing regime-stratified CP figure | ✅ | Sorts all 12 cross-dataset directions by rank-signal regime and naive CP MAE, then compares coverage, width, and finite-interval fraction |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR/HUST champions and Sandia/Luh TreeSHAP-compatible primary models, joined to transfer-stability or conditional-slope classes; all-pairs SHAP × regime table added |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
@@ -568,7 +569,12 @@ and reduces median width in most directions. Key examples at 90%: MATR→HUST
 improves from source-CP coverage 0.177 to adapted-CP coverage 0.906 with
 median width 1007; HUST→MATR from 0.203 to 0.915 with width 1303;
 Sandia→Luh from 0.630 to 0.905 with width 1314 and R²=0.154. Outputs are in
-`outputs/results_v2_four_dataset_conformal/`.
+`outputs/results_v2_four_dataset_conformal/`. Paper-facing regime-stratified
+outputs are `paper_cp_regime_stratified_{90,95}.png/.md` and
+`paper_cp_regime_stratified.csv`; they order all 12 cross-dataset directions
+by rank-signal class and naive CP MAE, then compare source-calibrated,
+target-domain, and residual-adapted CP on coverage, median width, and
+finite-interval fraction.
 
 ---
 
@@ -839,7 +845,8 @@ python 3_analysis/summarize_conformal_results.py \
     --k-target 20 \
     --k-adapter 20
 
-# Paper-facing k-shot scaling figure from existing CP + LODO k-sweep outputs
+# Paper-facing CP regime and k-shot scaling figures from existing outputs
+python 3_analysis/plot_cp_regime_stratified.py
 python 3_analysis/plot_kshot_scaling.py
 ```
 
@@ -877,6 +884,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/summarize_target_rescaling.py` | compact k=20 target-calibration tables for four-dataset cross-checking |
 | `3_analysis/lodo_source_expert_transfer.py` | leave-one-dataset-out pooled/source-expert adaptation with k-shot source selection, convex weighting, source+model selection, and residual/linear target adapters |
 | `3_analysis/plot_lodo_main_si.py` | LODO one-panel main figure plus SI best-by-k, k20 ranking, and protocol-family tables |
+| `3_analysis/plot_cp_regime_stratified.py` | paper-facing CP coverage, width, and finite-interval figure organized by conditional-shift rank-signal regime |
 | `3_analysis/plot_kshot_scaling.py` | paper-facing k-shot scaling figure joining CP reliability and LODO point-accuracy curves |
 | `3_analysis/validate_four_dataset_extension.py` | validates four-dataset feature tables, splits, and within/cross result matrices |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
