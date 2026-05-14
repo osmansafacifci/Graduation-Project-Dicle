@@ -21,7 +21,7 @@ Outputs:
     data/intermediate/shap_feature_importance_detailed.csv
     data/intermediate/shap_feature_importance.json
     data/intermediate/shap_feature_importance_report.txt
-    outputs/results_v2_shap/shap_importance_top_features.png
+    outputs/results_v2_shap/shap_feature_importance_top_features.png
 
 Usage:
     python 3_analysis/shap_feature_importance.py
@@ -57,6 +57,7 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_shap"
 
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
+import run_experiments as experiments  # noqa: E402
 from run_experiments import (  # noqa: E402
     META_COLS,
     SEEDS,
@@ -126,6 +127,52 @@ def compute_tree_shap_values(model, X_test: np.ndarray) -> np.ndarray:
     return values
 
 
+def benchmark_model_metrics(
+    sub: pd.DataFrame,
+    feature_cols: list[str],
+    split: dict,
+    *,
+    n_cycles: int,
+    seed: int,
+    model_name: str,
+) -> dict:
+    """Return metrics from the canonical within-dataset benchmark helper."""
+    experiments.SOP12_FEATURE_COLS = list(feature_cols)
+    try:
+        from joblib import parallel_backend
+    except Exception:
+        parallel_backend = None
+
+    if parallel_backend is None:
+        result = experiments.evaluate_split(
+            sub,
+            split,
+            n_cycles=n_cycles,
+            models=[model_name],
+            seed=seed,
+            log_target=True,
+            pca_variance=None,
+        )
+    else:
+        with parallel_backend("threading"):
+            result = experiments.evaluate_split(
+                sub,
+                split,
+                n_cycles=n_cycles,
+                models=[model_name],
+                seed=seed,
+                log_target=True,
+                pca_variance=None,
+            )
+    model_metrics = result.get(model_name, {})
+    return {
+        "MAE": model_metrics.get("MAE"),
+        "SMAPE": model_metrics.get("SMAPE"),
+        "R2": model_metrics.get("R2"),
+        "bootstrap_95_ci": model_metrics.get("bootstrap_95_ci"),
+    }
+
+
 def evaluate_and_explain(
     df: pd.DataFrame,
     feature_cols: list[str],
@@ -172,7 +219,25 @@ def evaluate_and_explain(
 
     pred_log = np.asarray(model.predict(X_test_s), dtype=float).ravel()
     pred = to_cycles(pred_log, log_target=True)
-    metrics = compute_metrics(y_test, pred)
+    attribution_metrics = compute_metrics(y_test, pred)
+    metrics = benchmark_model_metrics(
+        sub,
+        feature_cols,
+        split,
+        n_cycles=n_cycles,
+        seed=seed,
+        model_name=model_name,
+    )
+    if metrics["MAE"] is None or metrics["SMAPE"] is None or metrics["R2"] is None:
+        metrics = {
+            "MAE": attribution_metrics["MAE"],
+            "SMAPE": attribution_metrics["SMAPE"],
+            "R2": attribution_metrics["R2"],
+            "bootstrap_95_ci": None,
+        }
+        metric_source = "attribution_model_fallback"
+    else:
+        metric_source = "benchmark_evaluate_split"
 
     shap_values = compute_tree_shap_values(model, X_test_s)
     mean_abs = np.mean(np.abs(shap_values), axis=0)
@@ -201,6 +266,10 @@ def evaluate_and_explain(
                 "MAE": metrics["MAE"],
                 "SMAPE": metrics["SMAPE"],
                 "R2": metrics["R2"],
+                "attribution_MAE": attribution_metrics["MAE"],
+                "attribution_SMAPE": attribution_metrics["SMAPE"],
+                "attribution_R2": attribution_metrics["R2"],
+                "metric_source": metric_source,
             }
         )
 
@@ -215,6 +284,11 @@ def evaluate_and_explain(
         "MAE": metrics["MAE"],
         "SMAPE": metrics["SMAPE"],
         "R2": metrics["R2"],
+        "bootstrap_95_ci": metrics.get("bootstrap_95_ci"),
+        "attribution_MAE": attribution_metrics["MAE"],
+        "attribution_SMAPE": attribution_metrics["SMAPE"],
+        "attribution_R2": attribution_metrics["R2"],
+        "metric_source": metric_source,
         "tuning": tuning,
     }
     return rows, run_row
@@ -234,6 +308,9 @@ def summarize_importance(detailed: pd.DataFrame) -> pd.DataFrame:
         MAE_mean=("MAE", "mean"),
         SMAPE_mean=("SMAPE", "mean"),
         R2_mean=("R2", "mean"),
+        attribution_MAE_mean=("attribution_MAE", "mean"),
+        attribution_SMAPE_mean=("attribution_SMAPE", "mean"),
+        attribution_R2_mean=("attribution_R2", "mean"),
     )
 
     top_rates = detailed.groupby(["n_cycles", "dataset", "model", "feature"])["rank"].agg(
@@ -300,11 +377,20 @@ def join_conditional_shift(summary: pd.DataFrame, path: Path | None, pairs: list
     return out
 
 
-def write_report(summary: pd.DataFrame, run_metrics: list[dict], out_path: Path, *, top_k: int) -> None:
+def write_report(
+    summary: pd.DataFrame,
+    run_metrics: list[dict],
+    out_path: Path,
+    *,
+    top_k: int,
+    features_path: Path,
+) -> None:
     lines: list[str] = []
     lines.append("SHAP feature attribution summary")
     lines.append("=" * 80)
     lines.append("Protocol: 34 features, N=100 default, log-target models, SHAP in log-cycle space.")
+    lines.append(f"Feature table: {display_path(features_path)}")
+    lines.append("Model-check metrics use the canonical benchmark evaluate_split() helper on the same feature table as the SHAP run.")
     lines.append("")
 
     metrics_df = pd.DataFrame([r for r in run_metrics if not r.get("skipped")])
@@ -490,11 +576,11 @@ def main() -> int:
 
     summary_df.to_csv(out_summary, index=False)
     detailed_df.to_csv(out_detailed, index=False)
-    write_report(summary_df, run_metrics, out_report, top_k=args.top_k)
+    write_report(summary_df, run_metrics, out_report, top_k=args.top_k, features_path=features_path)
     make_top_feature_plot(summary_df, args.output_dir, top_k=args.top_k)
 
     payload = {
-        "protocol": "shap_feature_importance_v1",
+        "protocol": "shap_feature_importance_v2_benchmark_model_check",
         "features_path": display_path(features_path),
         "splits_dir": display_path(splits_dir),
         "transfer_path": None if args.skip_transfer_stability else display_path(transfer_path) if transfer_path.exists() else None,

@@ -356,10 +356,12 @@ many of their most important features are not semantically stable across MATR
 and HUST.
 
 The four-dataset SHAP extension adds Sandia and Luh/KIT on the
-capacity-normalized four-dataset table. Sandia XGBoost reaches R²=0.926 across
-the five official splits and is dominated by `Qdis_N` (54.8% relative SHAP
-importance), followed by `mad_Qdis`, `slope_linear`, and `range_Qdis`.
-Luh/KIT CatBoost reaches R²=0.770 and is more distributed, led by
+capacity-normalized four-dataset table. These model-check values therefore
+belong to the capnorm SHAP protocol, not the raw-feature four-dataset headline
+rows. Sandia XGBoost reaches R²=0.926 across the five capnorm splits and is
+dominated by `Qdis_N` (54.8% relative SHAP importance), followed by
+`mad_Qdis`, `slope_linear`, and `range_Qdis`. Luh/KIT CatBoost reaches
+R²=0.770 under the same capnorm protocol and is more distributed, led by
 `slope_last_quarter`, `slope_linear`, `poly2_b`, `mad_Qdis`, and
 `cycle_to_95pct`. Joined to the Sandia-vs-Luh centered-log slope test, the
 top-10 SHAP features for both datasets are slope-stable. This gives a cleaner

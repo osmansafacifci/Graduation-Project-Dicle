@@ -1,6 +1,8 @@
 SHAP feature attribution summary
 ================================================================================
 Protocol: 34 features, N=100 default, log-target models, SHAP in log-cycle space.
+Feature table: data/intermediate/features_sop12_four_dataset_capnorm.csv
+Model-check metrics use the canonical benchmark evaluate_split() helper on the same feature table as the SHAP run.
 
 Model check across explained splits:
   N=100 LUH catboost: MAE=104.2, sMAPE=16.7, R2=+0.770 (5 seeds)

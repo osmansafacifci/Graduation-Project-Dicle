@@ -1,6 +1,8 @@
 SHAP feature attribution summary
 ================================================================================
 Protocol: 34 features, N=100 default, log-target models, SHAP in log-cycle space.
+Feature table: data/intermediate/features_sop12_combined.csv
+Model-check metrics use the canonical benchmark evaluate_split() helper on the same feature table as the SHAP run.
 
 Model check across explained splits:
   N=100 HUST random_forest: MAE=178.0, sMAPE=12.2, R2=+0.340 (5 seeds)

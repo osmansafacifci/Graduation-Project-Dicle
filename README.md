@@ -427,10 +427,12 @@ features that do not carry stable cross-dataset semantics.
 
 Four-dataset SHAP extension explains the newer Sandia/Luh runs with
 TreeSHAP-compatible primary models on the capacity-normalized four-dataset
-table. Sandia uses XGBoost and is highly concentrated on `Qdis_N` (54.8% of
-relative attribution; R²=0.926 across five splits). Luh uses CatBoost and is
-more distributed, led by `slope_last_quarter`, `slope_linear`, `poly2_b`,
-`mad_Qdis`, and `cycle_to_95pct` (R²=0.770). Against the Sandia-vs-Luh
+table, so the model-check R² values below are capnorm-protocol checks rather
+than the raw-feature four-dataset headline rows. Sandia uses XGBoost and is
+highly concentrated on `Qdis_N` (54.8% of relative attribution; R²=0.926
+across five capnorm splits). Luh uses CatBoost and is more distributed, led by
+`slope_last_quarter`, `slope_linear`, `poly2_b`, `mad_Qdis`, and
+`cycle_to_95pct` (R²=0.770 under the same capnorm protocol). Against the Sandia-vs-Luh
 centered-log slope test, the top-10 SHAP features for both datasets are
 slope-stable. This makes the extension a
 useful contrast: the new pair has stronger local feature-slope agreement
