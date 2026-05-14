@@ -91,13 +91,17 @@ the SOP12 capacity-only features.
 ### Within-dataset (primary configuration: 34-feat + log-target)
 
 Fixed protocol: 5 seeds, N=100, best model selected by mean R². Bootstrap
-intervals are averaged across the 5 seed-specific test-cell bootstrap
-intervals.
+intervals are computed from pooled out-of-split predictions across the 5
+official splits; seed-to-seed standard deviations and the earlier seed-mean
+bootstrap intervals are retained in the result CSVs as audit columns.
 
 | Dataset | Best model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] |
 |---|---|---|---|---|
-| MATR | CatBoost | **171.7 [110.4, 243.2]** | 23.7 [15.5, 33.5] | **0.575 [0.256, 0.732]** |
-| HUST | Random Forest | **178.0 [112.1, 253.7]** | 12.2 [7.7, 17.3] | **0.340 [-0.579, 0.690]** |
+| MATR | CatBoost | **171.7 [140.1, 202.1]** | 23.7 [19.8, 28.2] | **0.575 [0.458, 0.646]** |
+| HUST | Random Forest | **178.0 [148.0, 214.1]** | 12.2 [10.0, 14.8] | **0.340 [0.072, 0.512]** |
+
+The pooled-CI test coverage is MATR 100 prediction rows / 75 distinct cells and
+HUST 60 / 43.
 
 Four-dataset paper extension at the same N=100 / 34-feature / log-target
 setting:

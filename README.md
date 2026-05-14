@@ -27,12 +27,13 @@ features.
 
 | Dataset | Best model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] |
 |---|---|---|---|---|
-| MATR | CatBoost | **171.7 [110.4, 243.2]** | 23.7 [15.5, 33.5] | **0.575 [0.256, 0.732]** |
-| HUST | Random Forest | **178.0 [112.1, 253.7]** | 12.2 [7.7, 17.3] | **0.340 [-0.579, 0.690]** |
+| MATR | CatBoost | **171.7 [140.1, 202.1]** | 23.7 [19.8, 28.2] | **0.575 [0.458, 0.646]** |
+| HUST | Random Forest | **178.0 [148.0, 214.1]** | 12.2 [10.0, 14.8] | **0.340 [0.072, 0.512]** |
 
-Bootstrap intervals are averaged across the 5 seed-specific test-cell
-bootstrap intervals; seed-to-seed standard deviations remain in
-`outputs/results_v2_34feat_log/results_summary.csv`.
+Bootstrap intervals now come from pooled out-of-split predictions across the
+five official splits (MATR: 100 prediction rows / 75 distinct test cells; HUST:
+60 / 43). Seed-to-seed standard deviations and the earlier seed-mean bootstrap
+intervals remain in `outputs/results_v2_34feat_log/results_summary.csv`.
 
 **Four-dataset paper extension (34 features + log-target, N=100, fixed
 four-dataset splits):**

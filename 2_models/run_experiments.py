@@ -8,7 +8,9 @@ Setup (per the supervisor's email):
 - Splits:   5 seeds × 70/15/15 (cell-level, lifetime-stratified, censored excluded)
 - Standardization: Z-score; fit StandardScaler on TRAIN ONLY,
                    transform calibration and test sets with the same scaler.
-- Metrics:  MAE, sMAPE, R², bootstrap 95% CI (per-seed and averaged)
+- Metrics:  MAE, sMAPE, R², bootstrap 95% CI from pooled out-of-split
+            predictions across the 5 seeds; seed-mean bootstrap intervals are
+            retained as audit columns when prediction rows are available.
 - Target:   cycle_life (single-cycle EOL @ 0.85 × Q0; computed in the feature builder)
 
 Inputs:
@@ -50,7 +52,7 @@ from sklearn.preprocessing import StandardScaler
 # scoped to this directory so we can `from metrics_utils import ...`
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from metrics_utils import bootstrap_metric_ci, compute_metrics, to_cycles  # noqa: E402
+from metrics_utils import bootstrap_metric_ci, compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 
 # Quiet ElasticNetCV's convergence warnings on small folds (~6-8 cells).
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -453,6 +455,27 @@ def fit_stacking(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
 
 # ---------- per-seed evaluation ----------
 
+def prediction_rows(test_df: pd.DataFrame, y_true: np.ndarray, y_pred: np.ndarray, *, seed: int) -> list[dict]:
+    """Store out-of-split predictions so seed summaries can use pooled CIs."""
+    rows: list[dict] = []
+    for cell_id, dataset, observed, predicted in zip(
+        test_df["cell_id"].to_numpy(),
+        test_df["dataset"].to_numpy(),
+        np.asarray(y_true, dtype=float),
+        np.asarray(y_pred, dtype=float),
+    ):
+        rows.append(
+            {
+                "seed": int(seed),
+                "dataset": str(dataset),
+                "cell_id": str(cell_id),
+                "y_true": float(observed),
+                "y_pred": float(predicted),
+            }
+        )
+    return rows
+
+
 def evaluate_split(
     df: pd.DataFrame,
     split: dict,
@@ -525,10 +548,11 @@ def evaluate_split(
         out["pca"] = pca_info
 
     if "elastic_net" in models:
-        enet = fit_elastic_net(X_train_s, y_train_fit, seed=seed)
+        enet = fit_with_threaded_joblib(fit_elastic_net, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(enet.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["best_alpha"] = float(enet.alpha_)
         m["best_l1_ratio"] = float(enet.l1_ratio_)
         if len(X_cal_s):
@@ -537,10 +561,11 @@ def evaluate_split(
         out["elastic_net"] = m
 
     if "pls" in models:
-        pls_model, pls_info = fit_pls(X_train_s, y_train_fit, seed=seed)
+        pls_model, pls_info = fit_with_threaded_joblib(fit_pls, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(pls_model.predict(X_test_s).ravel(), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["tuning"] = pls_info
         if len(X_cal_s):
             cal_pred = to_cycles(pls_model.predict(X_cal_s).ravel(), log_target=log_target)
@@ -548,10 +573,11 @@ def evaluate_split(
         out["pls"] = m
 
     if "random_forest" in models:
-        rf_model, rf_info = fit_random_forest(X_train_s, y_train_fit, seed=seed)
+        rf_model, rf_info = fit_with_threaded_joblib(fit_random_forest, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(rf_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["tuning"] = rf_info
         if len(X_cal_s):
             cal_pred = to_cycles(rf_model.predict(X_cal_s), log_target=log_target)
@@ -559,10 +585,11 @@ def evaluate_split(
         out["random_forest"] = m
 
     if "gaussian_process" in models:
-        gp_model, gp_info = fit_gaussian_process(X_train_s, y_train_fit, seed=seed)
+        gp_model, gp_info = fit_with_threaded_joblib(fit_gaussian_process, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(gp_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["tuning"] = gp_info
         if len(X_cal_s):
             cal_pred = to_cycles(gp_model.predict(X_cal_s), log_target=log_target)
@@ -570,10 +597,11 @@ def evaluate_split(
         out["gaussian_process"] = m
 
     if "xgboost" in models:
-        xgb_model, xgb_info = fit_xgboost(X_train_s, y_train_fit, seed=seed)
+        xgb_model, xgb_info = fit_with_threaded_joblib(fit_xgboost, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(xgb_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["tuning"] = xgb_info  # max_depth, learning_rate, n_estimators, CV stats
         if len(X_cal_s):
             cal_pred = to_cycles(xgb_model.predict(X_cal_s), log_target=log_target)
@@ -581,10 +609,11 @@ def evaluate_split(
         out["xgboost"] = m
 
     if "catboost" in models:
-        cb_model, cb_info = fit_catboost(X_train_s, y_train_fit, seed=seed)
+        cb_model, cb_info = fit_with_threaded_joblib(fit_catboost, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(cb_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["tuning"] = cb_info  # depth, learning_rate, iterations, CV stats
         if len(X_cal_s):
             cal_pred = to_cycles(cb_model.predict(X_cal_s), log_target=log_target)
@@ -592,10 +621,11 @@ def evaluate_split(
         out["catboost"] = m
 
     if "stacking" in models:
-        st_model, st_info = fit_stacking(X_train_s, y_train_fit, seed=seed)
+        st_model, st_info = fit_with_threaded_joblib(fit_stacking, X_train_s, y_train_fit, seed=seed)
         pred = to_cycles(st_model.predict(X_test_s), log_target=log_target)
         m = compute_metrics(y_test, pred)
         m["bootstrap_95_ci"] = bootstrap_metric_ci(y_test, pred, seed=seed)
+        m["prediction_rows"] = prediction_rows(test_df, y_test, pred, seed=seed)
         m["tuning"] = st_info
         if len(X_cal_s):
             cal_pred = to_cycles(st_model.predict(X_cal_s), log_target=log_target)
@@ -687,7 +717,7 @@ def evaluate_cross_dataset(
         fit_fn = fitters.get(name)
         if fit_fn is None:
             continue
-        result = fit_fn(X_train_s, y_train_fit, seed=seed)
+        result = fit_with_threaded_joblib(fit_fn, X_train_s, y_train_fit, seed=seed)
         if isinstance(result, tuple):
             model, info = result
         else:
@@ -714,6 +744,7 @@ def evaluate_cross_dataset(
 
 def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
     mae, smape, r2 = [], [], []
+    pooled_predictions: list[dict] = []
     ci_bounds = {
         "MAE": {"lower": [], "upper": []},
         "SMAPE": {"lower": [], "upper": []},
@@ -725,6 +756,9 @@ def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
             mae.append(model_block["MAE"])
             smape.append(model_block["SMAPE"])
             r2.append(model_block["R2"])
+            pred_rows = model_block.get("prediction_rows", [])
+            if isinstance(pred_rows, list):
+                pooled_predictions.extend(pred_rows)
             boot = model_block.get("bootstrap_95_ci", {})
             for metric in ci_bounds:
                 metric_ci = boot.get(metric, {})
@@ -733,31 +767,56 @@ def aggregate_seeds(per_seed: dict, model: str, n_cycles: int) -> dict:
                     ci_bounds[metric]["upper"].append(metric_ci["upper"])
     if not mae:
         return {}
-    # Each seed has its own test-cell bootstrap interval. The summary reports
-    # the mean lower/upper bounds across seeds so docs can cite one interval
-    # while keeping seed-to-seed standard deviation as a separate quantity.
-    def add_ci(out: dict, metric: str) -> None:
+
+    def add_seed_mean_ci(out: dict, metric: str) -> None:
         bounds = ci_bounds[metric]
         if bounds["lower"] and bounds["upper"]:
-            out[f"{metric}_ci95_lower"] = float(np.mean(bounds["lower"]))
-            out[f"{metric}_ci95_upper"] = float(np.mean(bounds["upper"]))
+            out[f"{metric}_seed_boot_mean_ci95_lower"] = float(np.mean(bounds["lower"]))
+            out[f"{metric}_seed_boot_mean_ci95_upper"] = float(np.mean(bounds["upper"]))
+
+    def add_pooled_ci(out: dict) -> bool:
+        if not pooled_predictions:
+            return False
+        y_true = np.asarray([row["y_true"] for row in pooled_predictions], dtype=float)
+        y_pred = np.asarray([row["y_pred"] for row in pooled_predictions], dtype=float)
+        if len(y_true) < 2:
+            return False
+        pooled_metrics = compute_metrics(y_true, y_pred)
+        pooled_ci = bootstrap_metric_ci(y_true, y_pred, seed=2026 + int(n_cycles))
+        for metric, value in pooled_metrics.items():
+            out[f"{metric}_pooled"] = float(value)
+            out[f"{metric}_ci95_lower"] = float(pooled_ci[metric]["lower"])
+            out[f"{metric}_ci95_upper"] = float(pooled_ci[metric]["upper"])
+        out["ci95_method"] = "pooled_out_of_split_predictions"
+        out["pooled_test_rows"] = int(len(pooled_predictions))
+        out["pooled_distinct_test_cells"] = int(
+            len({(row.get("dataset"), row.get("cell_id")) for row in pooled_predictions})
+        )
+        return True
 
     out = {
         "MAE_mean": float(np.mean(mae)),
         "MAE_std": float(np.std(mae)),
     }
-    add_ci(out, "MAE")
     out.update({
         "SMAPE_mean": float(np.mean(smape)),
         "SMAPE_std": float(np.std(smape)),
     })
-    add_ci(out, "SMAPE")
     out.update({
         "R2_mean": float(np.mean(r2)),
         "R2_std": float(np.std(r2)),
     })
-    add_ci(out, "R2")
     out["n_seeds"] = len(mae)
+
+    for metric in ci_bounds:
+        add_seed_mean_ci(out, metric)
+    if not add_pooled_ci(out):
+        for metric in ci_bounds:
+            bounds = ci_bounds[metric]
+            if bounds["lower"] and bounds["upper"]:
+                out[f"{metric}_ci95_lower"] = float(np.mean(bounds["lower"]))
+                out[f"{metric}_ci95_upper"] = float(np.mean(bounds["upper"]))
+        out["ci95_method"] = "mean_of_seed_bootstrap_intervals"
     return out
 
 
