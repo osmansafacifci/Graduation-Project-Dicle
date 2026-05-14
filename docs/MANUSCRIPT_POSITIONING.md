@@ -72,7 +72,7 @@ architecture, and the pipeline can wrap any point predictor.
 | LODO source-expert protocol | One main panel | Full protocol-family and k sweep tables |
 | Koopman/DMD | One supporting paragraph | Full spectra/operator-transfer figures and tables |
 | Stacking | SI sensitivity unless it is the best single cell in a required table | Full model lineup |
-| 1D-CNN baseline | Main or SI depending on performance | Training details and seed variability |
+| 1D-CNN baseline | One short robustness sentence or compact SI table | Training details, source-range clipping, and seed variability |
 
 ## Stacking Decision
 
@@ -95,9 +95,23 @@ This avoids overclaiming novelty against recent Koopman-based RUL papers while
 still giving CS/EE reviewers a systems/dynamics explanation for why naive
 transfer breaks.
 
-## Remaining Main-Text Compute
+## 1D-CNN Baseline Decision
 
-The only high-leverage remaining compute item is a small 1D-CNN baseline under
-the same four-dataset protocol. It is not mandatory for a safer engineering
-venue, but it reduces the "why no deep baseline?" reviewer risk for AI/CS
-venues. The CNN should be treated as a baseline, not as a new contribution.
+The 1D-CNN baseline is now complete under the same four-dataset split protocol.
+It uses early `Q_discharge/q0` trajectories and their first differences with a
+small NumPy Conv1D model, so it adds no heavyweight deep-learning dependency.
+
+Outcome:
+
+| Dataset / direction | Result |
+|---|---|
+| MATR within | R² = 0.613, slightly above the CatBoost tabular headline |
+| Luh/KIT within | R² = 0.814, slightly above the Gaussian Process tabular headline |
+| Sandia within | R² = 0.732, far below the XGBoost tabular headline |
+| HUST within | R² = -0.407, fails under the narrow-lifetime HUST setting |
+| Naive cross | Still fails for most directions; only Sandia -> Luh (R² = 0.286) and Luh -> Sandia (R² = 0.352) are positive |
+
+Decision: keep this as reviewer armor, not as a main contribution. It answers
+"why no deep baseline?" and reinforces the central claim: a sequence CNN can
+improve selected within-dataset fits, but architecture alone does not solve
+cross-dataset transfer under conditional shift.

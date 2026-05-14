@@ -236,6 +236,7 @@ python 3_analysis/summarize_conformal_results.py \
 | §2.1–§2.4 | 34 capacity-only features (12 SOP + 12 shape/decay + 10 entropy/FFT/2nd-deriv); z-score; VIF report; `--capacity-normalize` toggle | `1_features/build_features.py`, `2_models/vif_screening.py` | `features_sop12_combined.csv`, `vif_report.txt` |
 | §3 | 70/15/15 cell-level split, 5 seeds, lifetime-quartile-stratified | `2_models/generate_splits.py` | `splits/sop_v2/*.json` |
 | §4 | 7-model within-dataset lineup (Elastic Net, PLS, Random Forest, XGBoost, CatBoost, Gaussian Process, Stacking); `--log-target`, `--pca`, `--features-from` flags | `2_models/run_experiments.py` | `outputs/results_v2*/...` |
+| **Paper extension** | Dependency-light 1D-CNN baseline on early Q/Q0 trajectories using the same four-dataset splits | `2_models/run_cnn_baseline.py` | `outputs/results_v2_four_dataset_cnn_baseline/...`, `data/intermediate/four_dataset_cnn_baseline_report.md` |
 | §5.2 | Cross-dataset transfer (MATR ↔ HUST), three feature-set ablations × two directions | `2_models/run_experiments.py --cross-dataset` | `outputs/results_v2_cross_*/...` |
 | §6.3 | Distribution shift: MMD with RBF + median bandwidth, Mahalanobis with pooled covariance, per-feature attribution | `3_analysis/shift_metrics.py` | `data/intermediate/shift_metrics*.json`, `shift_report*.txt` |
 | **§6.3+** | Feature transfer/stability: per-feature shift, correlation stability, univariate transfer, residual-mean-adapted transfer | `3_analysis/feature_transfer_stability.py` | `data/intermediate/feature_transfer_stability*` |
@@ -871,6 +872,7 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] §2.4 VIF screening (report-only by default; `--drop` for ablation)
 - [x] §3 Splits (70/15/15, 5 seeds, lifetime-quartile-stratified)
 - [x] §4 Within-dataset experiments (7 models, log-target, optional PCA, optional VIF subset)
+- [x] Paper extension 1D-CNN baseline under the same four-dataset split protocol
 - [x] §5.2 Cross-dataset experiments (raw + capacity-normalized, three feature-set ablations)
 - [x] §6.3 Shift metrics (MMD, Mahalanobis, per-feature attribution)
 - [x] §6.3+ Feature transfer/stability analysis

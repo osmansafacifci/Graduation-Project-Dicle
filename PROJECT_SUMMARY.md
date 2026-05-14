@@ -68,6 +68,7 @@ the SOP12 capacity-only features.
 | §4.3 | CatBoost (optional comparison) | ✅ | Same protocol as XGBoost |
 | §4 (extended) | +PLS, +Random Forest, +Gaussian Process, +Stacking | ✅ | We added these for diversity |
 | §4 (extended) | log-target option (`--log-target`) | ✅ | Default for all reported runs; rescues linear models |
+| **Paper extension** | 1D-CNN baseline | ✅ | Dependency-light NumPy CNN on early Q/Q0 trajectories; reviewer-facing baseline, not a new headline architecture |
 | §5.2 | Cross-dataset experiments (MATR ↔ HUST) | ✅ | Three feature-set ablations × two directions |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ✅ | Plus per-feature attribution + capnorm comparison |
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
@@ -116,6 +117,16 @@ setting:
 
 The validation audit is
 `data/intermediate/four_dataset_validation_report.md`.
+
+The 1D-CNN reviewer baseline uses cycles 2..100 as two sequence channels
+(`Q_discharge/q0` and its first difference), trained with the same 5 split
+seeds. Within-dataset R² is MATR 0.613, HUST −0.407, Sandia 0.732, and
+Luh/KIT 0.814. This is useful as a deep-learning sanity check but not a better
+universal model: it improves MATR/Luh within-dataset fits, underperforms badly
+on HUST and Sandia, and does not repair naive transfer except the already
+easiest Sandia↔Luh direction. Outputs are in
+`outputs/results_v2_four_dataset_cnn_baseline/` and
+`data/intermediate/four_dataset_cnn_baseline_report.md`.
 
 Reference points:
 - Severson 2019 (voltage-curve features, MATR): R² ≈ 0.85–0.92
@@ -844,6 +855,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `2_models/generate_splits.py` | 70/15/15 lifetime-stratified splits, 5 seeds |
 | `2_models/vif_screening.py` | §2.4 VIF report + iterative drop |
 | `2_models/run_experiments.py` | Within + cross-dataset experiments, 7 models |
+| `2_models/run_cnn_baseline.py` | dependency-light 1D-CNN baseline on early Q/Q0 trajectories using the four-dataset splits |
 | `3_analysis/shift_metrics.py` | §6.3 MMD + Mahalanobis + per-feature attribution |
 | `3_analysis/feature_transfer_stability.py` | feature-level transfer/stability analysis and SHAP bridge |
 | `3_analysis/four_dataset_geometric_shift.py` | four-dataset discriminator AUC, MMD, Mahalanobis, and per-feature centroid shifts on raw/capnorm tables |
