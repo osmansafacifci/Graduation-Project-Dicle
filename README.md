@@ -185,6 +185,7 @@ python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
 python 3_analysis/shap_feature_importance.py
+python 3_analysis/build_shap_regime_table.py
 python 3_analysis/survival_censoring.py
 
 # Concept-shift and dynamics diagnostics
@@ -235,7 +236,7 @@ python 3_analysis/summarize_conformal_results.py \
 | **Paper extension** | Four-dataset geometric shift: cross-fitted dataset-discriminator AUC, MMD, Mahalanobis, and feature-level centroid shifts on raw and Q0-normalized tables | `3_analysis/four_dataset_geometric_shift.py` | `data/intermediate/four_dataset_geometric_shift_*` |
 | **Paper extension** | Four-dataset feature-transfer/stability: exact direction-aware stability score for all ordered dataset pairs | `3_analysis/four_dataset_feature_transfer_stability.py` | `data/intermediate/four_dataset_feature_transfer_stability*` |
 | **Paper extension** | Four-dataset raw-vs-capnorm 34-feature cross ablation and best-model comparison | `2_models/run_experiments.py`, `3_analysis/summarize_four_dataset_raw_capnorm.py` | `outputs/results_v2_four_dataset_cross_34feat_raw_log/...`, `data/intermediate/four_dataset_raw_vs_capnorm_34feat_cross*` |
-| **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability or conditional-slope classes; includes Sandia/Luh extension | `3_analysis/shap_feature_importance.py` | `data/intermediate/shap_feature_importance*`, `data/intermediate/four_dataset_shap_feature_importance*`, `outputs/results_v2_shap/...`, `outputs/results_v2_four_dataset_shap/...` |
+| **§6.3++** | SHAP/XAI bridge: primary within-dataset model attributions joined to transfer-stability or conditional-slope classes; includes Sandia/Luh extension and all-pairs SHAP × regime table | `3_analysis/shap_feature_importance.py`, `3_analysis/build_shap_regime_table.py` | `data/intermediate/shap_feature_importance*`, `data/intermediate/four_dataset_shap_feature_importance*`, `data/intermediate/paper_shap_regime_*`, `outputs/results_v2_shap/...`, `outputs/results_v2_four_dataset_shap/...` |
 | **§6+** | Survival/censoring sensitivity: Kaplan-Meier curves, log-rank test, lower-bound imputation for censored MATR cells | `3_analysis/survival_censoring.py` | `data/intermediate/survival_censoring*`, `outputs/results_v2_survival/...` |
 | **§6+** | Concept-shift diagnostics: cycle-life KS test + per-cell residual constant-bias decomposition | `3_analysis/concept_shift_diagnostics.py` | `data/intermediate/concept_shift_diagnostics.json` |
 | **§6++** | Conditional-shift decomposition: centered-log per-feature slope tests, source-prediction alpha/beta calibration, robust Theil-Sen/Huber alpha checks, Pearson-r transfer signal | `3_analysis/conditional_shift_decomposition.py` | `data/intermediate/conditional_shift_*`, `outputs/results_v2_conditional_shift/...` |
@@ -244,7 +245,8 @@ python 3_analysis/summarize_conformal_results.py \
 | **Paper extension** | Four-dataset validation: Sandia 0-100 subset, Luh standard-cycling subset, feature-table counts, split completeness, and full within/cross result matrix checks | `3_analysis/validate_four_dataset_extension.py` | `data/intermediate/four_dataset_validation_*` |
 | **Paper extension** | Four-dataset survival/censoring audit with Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and log-rank/KS checks | `3_analysis/survival_censoring_four_dataset.py` | `data/intermediate/four_dataset_survival_censoring_*`, `outputs/results_v2_four_dataset_survival/...` |
 | **§7−** | Target calibration baseline (k=5/10/15/20 calibration cells; residual-mean and linear adapters; MATR/HUST default or four-dataset extension via CLI) | `3_analysis/target_rescaling.py`, `3_analysis/summarize_target_rescaling.py` | `outputs/results_v2_target_rescale/...`, `outputs/results_v2_four_dataset_target_rescale/...`, `data/intermediate/four_dataset_target_rescale_*` |
-| **Paper extension** | Leave-one-dataset-out pooled/source-expert adaptation: hold out each target, train on the other three datasets, and use k-shot target labels for pooled ERM, source-expert selection, convex source-expert weighting, or source+model selection | `3_analysis/lodo_source_expert_transfer.py` | `outputs/results_v2_four_dataset_lodo_source_expert/...`, `data/intermediate/four_dataset_lodo_source_expert_*` |
+| **Paper extension** | Leave-one-dataset-out pooled/source-expert adaptation: hold out each target, train on the other three datasets, and use k-shot target labels for pooled ERM, source-expert selection, convex source-expert weighting, or source+model selection; includes main-panel and SI packaging | `3_analysis/lodo_source_expert_transfer.py`, `3_analysis/plot_lodo_main_si.py` | `outputs/results_v2_four_dataset_lodo_source_expert/...`, `data/intermediate/four_dataset_lodo_source_expert_*`, `data/intermediate/paper_lodo_*` |
+| **Paper extension** | Paper-facing k-shot scaling figure combining CP reliability and LODO point-accuracy scaling | `3_analysis/plot_kshot_scaling.py` | `outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.*`, `data/intermediate/paper_kshot_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
 | §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional four-dataset primary-model extension) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` |
 
@@ -435,6 +437,16 @@ useful contrast: the new pair has stronger local feature-slope agreement
 among important features than MATR/HUST, while still needing the cross-dataset
 and target-calibration checks to decide whether that agreement transfers into
 usable prediction.
+
+The paper-facing SHAP × regime table now extends this join to all 12
+source→target directions:
+`data/intermediate/paper_shap_regime_table.md`. SHAP values are taken from the
+source dataset's within-dataset model, while conditional-slope labels are
+direction-specific. The strongest transfer pair is also the cleanest
+importance/regime pair: Sandia → Luh has only 2.7% of source SHAP mass on
+slope-shifted features and Luh → Sandia has 6.5%. Failed or weak directions
+often load heavily on slope-shifted features, for example Sandia → HUST
+90.3%, Luh → HUST 88.9%, and MATR ↔ HUST about 55%.
 
 ### Geometric alignment is not prediction alignment
 
@@ -674,6 +686,23 @@ that source relevance and conditional shift still constrain transfer. Outputs
 are in `outputs/results_v2_four_dataset_lodo_source_expert/` and
 `data/intermediate/four_dataset_lodo_source_expert_report.md`.
 
+The manuscript packaging script `3_analysis/plot_lodo_main_si.py` writes the
+one-panel main figure and SI tables. At k=20, LODO reduces MAE relative to the
+best no-target baseline for every held-out target: MATR 29.4%, HUST 60.6%,
+Sandia 25.0%, and Luh/KIT 14.1%. The most stable winners are pooled ERM +
+k-shot for MATR/Sandia and source+model selection for HUST/Luh; the SI tables
+retain the full protocol rankings, including cases where source+model
+selection is unstable for Sandia. Main panel:
+`outputs/results_v2_four_dataset_lodo_source_expert/paper_lodo_main_panel.png`.
+SI report: `data/intermediate/paper_lodo_si_report.md`.
+
+The paper-facing k-shot scaling figure combines the CP and LODO sweeps in
+`outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.png`/`.pdf`.
+At `k=20`, 90% residual-adapted CP averages 0.911 coverage with median width
+1466 cycles, versus target-domain CP at 0.909 coverage and median width 2868
+cycles. LODO MAE drops from k=5 to k=20 for every held-out target, with the
+largest reduction on Sandia (470.3 -> 277.5 cycles).
+
 ### Conformal Prediction
 
 Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
@@ -843,6 +872,10 @@ python 3_analysis/lodo_source_expert_transfer.py \
     --n-repeats 20 \
     --output-dir outputs/results_v2_four_dataset_lodo_source_expert \
     --k-report 20
+python 3_analysis/plot_lodo_main_si.py
+
+# Paper-facing k-shot scaling figure from existing CP + LODO k-sweep outputs
+python 3_analysis/plot_kshot_scaling.py
 ```
 
 Each script writes a JSON with the per-seed numbers and a summary CSV.
@@ -863,11 +896,14 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 - [x] Paper extension: four-dataset geometric shift + all-pairs feature-transfer stability
 - [x] Paper extension: four-dataset raw-vs-capnorm 34-feature cross ablation
 - [x] §6.3++ SHAP/XAI attribution joined to transfer-stability classes
+- [x] Paper-facing SHAP × conditional-regime table
 - [x] §6+ Survival/censoring sensitivity analysis
 - [x] §6+ Concept-shift diagnostics (KS test, per-cell residual constant-bias decomposition)
 - [x] §6+++ Koopman/DMD early-capacity dynamics pilot
 - [x] §7− Target calibration baseline (k = 5 / 10 / 15 / 20; residual-mean + linear)
 - [x] Paper extension LODO pooled/source-expert k-shot adaptation
+- [x] LODO one-panel main figure + SI details
+- [x] Paper-facing k-shot scaling figure
 - [x] §7 Conformal prediction (Split CP, target recalibration with valid intervals)
 - [x] Paper extension validation (MATR/HUST/Sandia/Luh feature tables, splits, within/cross metrics)
 - [x] Paper extension conditional-shift diagnostics (four-dataset feature-slope and rank-signal regimes)

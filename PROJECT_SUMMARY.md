@@ -76,8 +76,9 @@ the SOP12 capacity-only features.
 | **+** | Koopman/DMD dynamics pilot | ✅ | Hankel-DMD on early Q/Q0 trajectories; per-cell eigenvalues, dominant mode coefficients, and source/target operator transfer |
 | **+** | Importance-weighted CP falsifier | ✅ | Cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison |
 | **+** | Target calibration baseline (precursor to §7) | ✅ | k={5,10,15,20}, residual-mean + linear adapters; two-dataset and four-dataset outputs committed |
-| **Paper extension** | LODO pooled/source-expert k-shot adaptation | ✅ | Holds out each target dataset, trains on the other three, and compares pooled ERM, source-expert selection/weighting, and source+model selection with k={5,10,15,20} target labels |
-| **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR/HUST champions and Sandia/Luh TreeSHAP-compatible primary models, joined to transfer-stability or conditional-slope classes |
+| **Paper extension** | LODO pooled/source-expert k-shot adaptation | ✅ | Holds out each target dataset, trains on the other three, and compares pooled ERM, source-expert selection/weighting, and source+model selection with k={5,10,15,20} target labels; main-panel and SI packaging added |
+| **Paper extension** | Paper-facing k-shot scaling figure | ✅ | Combines CP reliability scaling and LODO point-accuracy scaling from existing k-sweep outputs |
+| **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR/HUST champions and Sandia/Luh TreeSHAP-compatible primary models, joined to transfer-stability or conditional-slope classes; all-pairs SHAP × regime table added |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
 | §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
 | **Paper extension** | Four-dataset validation | ✅ | MATR/HUST/Sandia/Luh feature counts, split completeness, and 56-row within / 168-row cross result matrices pass |
@@ -365,6 +366,15 @@ top-10 SHAP features for both datasets are slope-stable. This gives a cleaner
 feature-importance companion for the new two datasets without reusing the
 MATR/HUST fragility labels as if they were Sandia/Luh-specific.
 
+`3_analysis/build_shap_regime_table.py` now creates the all-pairs
+paper-facing SHAP × regime table in
+`data/intermediate/paper_shap_regime_table.md`. The table uses source-side
+SHAP attributions but direction-specific conditional-slope labels. The
+cleanest transfer pair is also the cleanest feature-regime pair: Sandia →
+Luh has 2.7% shifted SHAP mass and Luh → Sandia has 6.5%. Weak/failed
+directions often put most source importance on slope-shifted features:
+Sandia → HUST 90.3%, Luh → HUST 88.9%, and MATR ↔ HUST ≈55%.
+
 ### Survival/censoring sensitivity
 
 MATR has 6/135 cells censored at the 0.85 × Q0 EOL threshold; HUST has none.
@@ -490,6 +500,25 @@ to choose the best single source/model/adapter after seeing the target. The
 paper framing should therefore be: feasible source pooling/selection with
 small target calibration, plus evidence that source relevance and conditional
 shift still bound transfer.
+
+`3_analysis/plot_lodo_main_si.py` packages the LODO result for the manuscript:
+`outputs/results_v2_four_dataset_lodo_source_expert/paper_lodo_main_panel.png`
+for the main text and `data/intermediate/paper_lodo_si_report.md` for SI
+details. At k=20, LODO reduces MAE relative to the best no-target baseline
+for every held-out target: MATR 29.4%, HUST 60.6%, Sandia 25.0%, and
+Luh/KIT 14.1%. Pooled ERM + k-shot is the best family for MATR/Sandia,
+while source+model selection wins for HUST/Luh. The SI tables retain the
+full protocol rankings and show that source+model selection can be unstable
+for Sandia, so the paper should frame LODO as a practical protocol with
+source-relevance caveats rather than as a universally dominant method.
+
+`3_analysis/plot_kshot_scaling.py` turns the existing CP and LODO k-sweep
+outputs into a paper-facing four-panel scaling figure at
+`outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.png`/`.pdf`.
+At k=20, 90% residual-adapted CP averages 0.911 coverage with median width
+1466 cycles, versus target-domain CP at 0.909 coverage and median width 2868
+cycles. LODO MAE improves from k=5 to k=20 for every held-out target; Sandia
+has the largest drop (470.3 -> 277.5 cycles).
 
 ### Conformal prediction (§7)
 
@@ -717,6 +746,7 @@ python 3_analysis/shift_metrics.py
 python 3_analysis/shift_metrics.py --capacity-normalize
 python 3_analysis/feature_transfer_stability.py
 python 3_analysis/shap_feature_importance.py
+python 3_analysis/build_shap_regime_table.py
 python 3_analysis/survival_censoring.py
 
 # Concept-shift diagnostics
@@ -779,6 +809,7 @@ python 3_analysis/lodo_source_expert_transfer.py \
     --n-repeats 20 \
     --output-dir outputs/results_v2_four_dataset_lodo_source_expert \
     --k-report 20
+python 3_analysis/plot_lodo_main_si.py
 
 # Covariate-shift CP falsifier
 python 3_analysis/importance_weighted_conformal.py
@@ -801,6 +832,9 @@ python 3_analysis/summarize_conformal_results.py \
     --results-dir outputs/results_v2_four_dataset_conformal \
     --k-target 20 \
     --k-adapter 20
+
+# Paper-facing k-shot scaling figure from existing CP + LODO k-sweep outputs
+python 3_analysis/plot_kshot_scaling.py
 ```
 
 All output JSONs and summary CSVs are committed under `outputs/results_v2*/`
@@ -825,6 +859,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/four_dataset_feature_transfer_stability.py` | exact all-pairs feature-transfer-stability score for the four-dataset extension |
 | `3_analysis/summarize_four_dataset_raw_capnorm.py` | raw-vs-capnorm 34-feature cross-dataset ablation summary |
 | `3_analysis/shap_feature_importance.py` | SHAP/XAI attribution for primary within-dataset models, joined to transfer-stability or conditional-slope classes |
+| `3_analysis/build_shap_regime_table.py` | all-pairs SHAP × conditional-regime table using source-side attributions and direction-specific slope labels |
 | `3_analysis/survival_censoring.py` | Kaplan-Meier/log-rank censoring sensitivity for the 6 censored MATR cells |
 | `3_analysis/survival_censoring_four_dataset.py` | four-dataset Kaplan-Meier/RMST/log-rank/KS censoring audit |
 | `3_analysis/concept_shift_diagnostics.py` | KS test + residual constant-bias decomposition |
@@ -835,6 +870,8 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/target_rescaling.py` | k-shot residual-mean/linear target-calibration baseline (§7 precursor) |
 | `3_analysis/summarize_target_rescaling.py` | compact k=20 target-calibration tables for four-dataset cross-checking |
 | `3_analysis/lodo_source_expert_transfer.py` | leave-one-dataset-out pooled/source-expert adaptation with k-shot source selection, convex weighting, source+model selection, and residual/linear target adapters |
+| `3_analysis/plot_lodo_main_si.py` | LODO one-panel main figure plus SI best-by-k, k20 ranking, and protocol-family tables |
+| `3_analysis/plot_kshot_scaling.py` | paper-facing k-shot scaling figure joining CP reliability and LODO point-accuracy curves |
 | `3_analysis/validate_four_dataset_extension.py` | validates four-dataset feature tables, splits, and within/cross result matrices |
 | `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
