@@ -32,6 +32,8 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "matplot
 PROTOCOL_LABELS = {
     "Target CP": "Target CP",
     "Adapted CP": "Residual-adapted CP",
+    "Residual-adapted CP": "Residual-adapted CP",
+    "Linear-adapted CP": "Linear-adapted CP",
 }
 
 TARGET_LABELS = {
@@ -44,6 +46,7 @@ TARGET_LABELS = {
 COLORS = {
     "Target CP": "#4C78A8",
     "Residual-adapted CP": "#F58518",
+    "Linear-adapted CP": "#5F3DC4",
     "MATR": "#4C78A8",
     "HUST": "#54A24B",
     "Sandia": "#E45756",
@@ -197,7 +200,7 @@ def plot_kshot_scaling(cp_summary: pd.DataFrame, lodo_summary: pd.DataFrame, out
     ax_cov.yaxis.set_major_formatter(PercentFormatter(1.0))
     ax_cov.legend(frameon=False, loc="lower right")
 
-    ax_width.set_title("B. Residual adaptation narrows intervals")
+    ax_width.set_title("B. Target adaptation narrows intervals")
     ax_width.set_xlabel("Target labels used for calibration (k)")
     ax_width.set_ylabel("Median interval width (cycles)")
     ax_width.set_xticks([5, 10, 15, 20])

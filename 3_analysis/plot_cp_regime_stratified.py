@@ -21,20 +21,28 @@ DEFAULT_CP_SUMMARY = ROOT / "outputs/results_v2_four_dataset_conformal/paper_cp_
 DEFAULT_REGIME_SUMMARY = ROOT / "data/intermediate/four_dataset_conditional_shift_direction_summary.csv"
 DEFAULT_OUTPUT_DIR = ROOT / "outputs/results_v2_four_dataset_conformal"
 
-SCENARIO_ORDER = [
+SCENARIO_KEEP = [
     "cross_source_calibrated_cp",
     "cross_target_calibrated_cp",
     "cross_target_adapted_cp",
 ]
-SCENARIO_LABELS = {
-    "cross_source_calibrated_cp": "Source-calibrated",
-    "cross_target_calibrated_cp": "Target-domain",
-    "cross_target_adapted_cp": "Residual-adapted",
+PROTOCOL_ORDER = [
+    "source_calibrated",
+    "target_domain",
+    "residual_adapted",
+    "linear_adapted",
+]
+PROTOCOL_LABELS = {
+    "source_calibrated": "Source-calibrated",
+    "target_domain": "Target-domain",
+    "residual_adapted": "Residual-adapted",
+    "linear_adapted": "Linear-adapted",
 }
-SCENARIO_COLORS = {
-    "cross_source_calibrated_cp": "#9aa0a6",
-    "cross_target_calibrated_cp": "#4c78a8",
-    "cross_target_adapted_cp": "#f58518",
+PROTOCOL_COLORS = {
+    "source_calibrated": "#9aa0a6",
+    "target_domain": "#4c78a8",
+    "residual_adapted": "#f58518",
+    "linear_adapted": "#5f3dc4",
 }
 REGIME_ORDER = {
     "strong_rank_signal": 0,
@@ -75,12 +83,26 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
     return "\n".join([header, sep, *body])
 
 
+def protocol_key(row: pd.Series) -> str:
+    scenario = str(row.get("scenario", ""))
+    adapter = str(row.get("adapter_type", ""))
+    if scenario == "cross_source_calibrated_cp":
+        return "source_calibrated"
+    if scenario == "cross_target_calibrated_cp":
+        return "target_domain"
+    if scenario == "cross_target_adapted_cp" and adapter == "linear":
+        return "linear_adapted"
+    if scenario == "cross_target_adapted_cp":
+        return "residual_adapted"
+    return scenario
+
+
 def load_regime_cp(cp_path: Path, regime_path: Path, confidence: float) -> pd.DataFrame:
     cp = pd.read_csv(cp_path)
     regimes = pd.read_csv(regime_path)
 
     cp = cp[
-        cp["scenario"].isin(SCENARIO_ORDER)
+        cp["scenario"].isin(SCENARIO_KEEP)
         & np.isclose(cp["confidence_level"].astype(float), float(confidence))
     ].copy()
     if cp.empty:
@@ -101,7 +123,8 @@ def load_regime_cp(cp_path: Path, regime_path: Path, confidence: float) -> pd.Da
         missing = cp.loc[cp["rank_signal_class"].isna(), ["source", "target"]].drop_duplicates()
         raise ValueError(f"Missing regime labels for directions:\n{missing.to_string(index=False)}")
 
-    cp["scenario_short"] = cp["scenario"].map(SCENARIO_LABELS)
+    cp["protocol_key"] = cp.apply(protocol_key, axis=1)
+    cp["scenario_short"] = cp["protocol_key"].map(PROTOCOL_LABELS).fillna(cp["protocol_key"])
     cp["direction"] = cp["source"].str.upper() + " -> " + cp["target"].str.upper()
     cp["regime_short"] = cp["rank_signal_class"].map(REGIME_LABELS).fillna(cp["rank_signal_class"])
     cp["regime_order"] = cp["rank_signal_class"].map(REGIME_ORDER).fillna(99).astype(int)
@@ -111,7 +134,7 @@ def load_regime_cp(cp_path: Path, regime_path: Path, confidence: float) -> pd.Da
         .rename(columns={"MAE_mean": "source_cp_MAE", "coverage_mean": "source_cp_coverage"})
     )
     cp = cp.merge(naive, on=["source", "target"], how="left", validate="many_to_one")
-    cp["scenario_order"] = cp["scenario"].map({name: i for i, name in enumerate(SCENARIO_ORDER)})
+    cp["scenario_order"] = cp["protocol_key"].map({name: i for i, name in enumerate(PROTOCOL_ORDER)})
     cp = cp.sort_values(
         ["regime_order", "source_cp_MAE", "source", "target", "scenario_order"],
         ascending=[True, True, True, True, True],
@@ -172,10 +195,11 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
     )
     plot_df = df.merge(direction_order[["direction", "y"]], on="direction", how="left")
 
+    protocols = [name for name in PROTOCOL_ORDER if name in set(plot_df["protocol_key"])]
+    offset_step = 0.18 if len(protocols) > 3 else 0.22
     offsets = {
-        "cross_source_calibrated_cp": -0.22,
-        "cross_target_calibrated_cp": 0.0,
-        "cross_target_adapted_cp": 0.22,
+        name: offset_step * (i - (len(protocols) - 1) / 2.0)
+        for i, name in enumerate(protocols)
     }
 
     plt.rcParams.update(
@@ -202,16 +226,16 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
     ]
 
     for ax, (metric, title, xlim) in zip(axes, metrics):
-        for scenario in SCENARIO_ORDER:
-            block = plot_df[plot_df["scenario"].eq(scenario)]
-            y = block["y"].to_numpy(dtype=float) + offsets[scenario]
+        for protocol in protocols:
+            block = plot_df[plot_df["protocol_key"].eq(protocol)]
+            y = block["y"].to_numpy(dtype=float) + offsets[protocol]
             x = block[metric].to_numpy(dtype=float)
             ax.scatter(
                 x,
                 y,
                 s=52,
-                color=SCENARIO_COLORS[scenario],
-                label=SCENARIO_LABELS[scenario],
+                color=PROTOCOL_COLORS[protocol],
+                label=PROTOCOL_LABELS[protocol],
                 edgecolor="white",
                 linewidth=0.6,
                 zorder=3,
@@ -224,7 +248,7 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
                     y,
                     xerr=np.vstack([x - lower, upper - x]),
                     fmt="none",
-                    ecolor=SCENARIO_COLORS[scenario],
+                    ecolor=PROTOCOL_COLORS[protocol],
                     elinewidth=1.0,
                     alpha=0.45,
                     zorder=2,
@@ -256,7 +280,7 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
             ax.axhspan(y_min, y_max, color="#f6f8fa", alpha=0.6 if len(group) > 1 else 0.35, zorder=0)
 
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles[:3], labels[:3], loc="lower center", ncol=3, frameon=False, bbox_to_anchor=(0.53, 0.01))
+    fig.legend(handles[: len(protocols)], labels[: len(protocols)], loc="lower center", ncol=len(protocols), frameon=False, bbox_to_anchor=(0.53, 0.01))
     fig.suptitle(
         f"Cross-Dataset Conformal Prediction by Transfer Regime ({confidence:.0%} intervals)",
         x=0.53,

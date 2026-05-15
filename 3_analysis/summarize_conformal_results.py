@@ -4,9 +4,8 @@ Build paper-facing summaries from MAPIE conformal prediction outputs.
 Primary manuscript policy:
   - confidence levels: 90% and 95% if present
   - target-domain CP k_target = 20
-  - target-adapted CP uses residual_mean adapter
+  - target-adapted CP shows each available adapter type
   - adapter set size k_adapter = 20
-  - linear adapter rows, if present, are sensitivity only and excluded here
 
 Inputs:
     outputs/results_v2_conformal/results_summary.csv
@@ -38,7 +37,12 @@ SCENARIO_LABELS = {
     "within_split_cp": "Within-dataset CP",
     "cross_source_calibrated_cp": "Naive source-calibrated cross CP",
     "cross_target_calibrated_cp": "Target-domain CP, no adapter",
-    "cross_target_adapted_cp": "Residual-mean target-adapted CP",
+    "cross_target_adapted_cp": "Target-adapted CP",
+}
+
+ADAPTER_LABELS = {
+    "residual_mean": "Residual-mean target-adapted CP",
+    "linear": "Linear target-adapted CP",
 }
 
 
@@ -77,7 +81,6 @@ def select_primary(summary: pd.DataFrame, k_target: int, k_adapter: int) -> pd.D
     keep.append(
         summary[
             summary["scenario"].eq("cross_target_adapted_cp")
-            & summary["adapter_type"].eq("residual_mean")
             & summary["k_target"].eq(float(k_target))
             & summary["k_adapter"].eq(float(k_adapter))
         ]
@@ -85,6 +88,12 @@ def select_primary(summary: pd.DataFrame, k_target: int, k_adapter: int) -> pd.D
     primary = pd.concat(keep, ignore_index=True)
     primary = primary.copy()
     primary["scenario_label"] = primary["scenario"].map(SCENARIO_LABELS)
+    adapted_mask = primary["scenario"].eq("cross_target_adapted_cp")
+    primary.loc[adapted_mask, "scenario_label"] = (
+        primary.loc[adapted_mask, "adapter_type"]
+        .map(ADAPTER_LABELS)
+        .fillna(primary.loc[adapted_mask, "scenario_label"])
+    )
     primary["direction"] = primary["source"].str.upper() + " -> " + primary["target"].str.upper()
     primary.loc[primary["scenario"].eq("within_split_cp"), "direction"] = primary["target"].str.upper()
     if "confidence_level" not in primary.columns:
@@ -105,32 +114,33 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
         ]
         if match.empty:
             continue
-        row = match.iloc[0]
-        rows.append(
-            {
-                "direction": f"{str(base['source']).upper()} -> {str(base['target']).upper()}",
-                "model": base["model"],
-                "confidence_level": base["confidence_level"],
-                "coverage_no_adapter": base["coverage_mean"],
-                "coverage_adapted": row["coverage_mean"],
-                "median_width_no_adapter": base["median_width_mean"],
-                "median_width_adapted": row["median_width_mean"],
-                "median_width_reduction_pct": 100.0 * (1.0 - row["median_width_mean"] / base["median_width_mean"]),
-                "finite_interval_fraction_no_adapter": base.get("finite_interval_fraction_mean", float("nan")),
-                "finite_interval_fraction_adapted": row.get("finite_interval_fraction_mean", float("nan")),
-                "MAE_no_adapter": base["MAE_mean"],
-                "MAE_adapted": row["MAE_mean"],
-                "MAE_reduction_pct": 100.0 * (1.0 - row["MAE_mean"] / base["MAE_mean"]),
-                "R2_no_adapter": base["R2_mean"],
-                "R2_adapted": row["R2_mean"],
-                "winkler_no_adapter": base["winkler_mean_mean"],
-                "winkler_adapted": row["winkler_mean_mean"],
-                "winkler_reduction_pct": 100.0 * (1.0 - row["winkler_mean_mean"] / base["winkler_mean_mean"]),
-                "short_life_coverage_adapted": row.get("coverage_short_life_mean", float("nan")),
-                "long_life_coverage_adapted": row.get("coverage_long_life_mean", float("nan")),
-                "short_long_coverage_gap_adapted": row.get("short_long_coverage_gap_mean", float("nan")),
-            }
-        )
+        for _, row in match.iterrows():
+            rows.append(
+                {
+                    "direction": f"{str(base['source']).upper()} -> {str(base['target']).upper()}",
+                    "model": base["model"],
+                    "confidence_level": base["confidence_level"],
+                    "adapter_type": row.get("adapter_type", ""),
+                    "coverage_no_adapter": base["coverage_mean"],
+                    "coverage_adapted": row["coverage_mean"],
+                    "median_width_no_adapter": base["median_width_mean"],
+                    "median_width_adapted": row["median_width_mean"],
+                    "median_width_reduction_pct": 100.0 * (1.0 - row["median_width_mean"] / base["median_width_mean"]),
+                    "finite_interval_fraction_no_adapter": base.get("finite_interval_fraction_mean", float("nan")),
+                    "finite_interval_fraction_adapted": row.get("finite_interval_fraction_mean", float("nan")),
+                    "MAE_no_adapter": base["MAE_mean"],
+                    "MAE_adapted": row["MAE_mean"],
+                    "MAE_reduction_pct": 100.0 * (1.0 - row["MAE_mean"] / base["MAE_mean"]),
+                    "R2_no_adapter": base["R2_mean"],
+                    "R2_adapted": row["R2_mean"],
+                    "winkler_no_adapter": base["winkler_mean_mean"],
+                    "winkler_adapted": row["winkler_mean_mean"],
+                    "winkler_reduction_pct": 100.0 * (1.0 - row["winkler_mean_mean"] / base["winkler_mean_mean"]),
+                    "short_life_coverage_adapted": row.get("coverage_short_life_mean", float("nan")),
+                    "long_life_coverage_adapted": row.get("coverage_long_life_mean", float("nan")),
+                    "short_long_coverage_gap_adapted": row.get("short_long_coverage_gap_mean", float("nan")),
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -138,7 +148,6 @@ def build_k_sweep(summary: pd.DataFrame) -> pd.DataFrame:
     target = summary[summary["scenario"].eq("cross_target_calibrated_cp")].copy()
     adapted = summary[
         summary["scenario"].eq("cross_target_adapted_cp")
-        & summary["adapter_type"].eq("residual_mean")
         & summary["k_target"].eq(summary["k_adapter"])
     ].copy()
     k_sweep = pd.concat([target, adapted], ignore_index=True)
@@ -146,11 +155,22 @@ def build_k_sweep(summary: pd.DataFrame) -> pd.DataFrame:
         return k_sweep
 
     k_sweep["scenario_label"] = k_sweep["scenario"].map(SCENARIO_LABELS)
+    adapted_mask = k_sweep["scenario"].eq("cross_target_adapted_cp")
+    k_sweep.loc[adapted_mask, "scenario_label"] = (
+        k_sweep.loc[adapted_mask, "adapter_type"]
+        .map(ADAPTER_LABELS)
+        .fillna(k_sweep.loc[adapted_mask, "scenario_label"])
+    )
     k_sweep["protocol"] = k_sweep["scenario"].map(
         {
             "cross_target_calibrated_cp": "Target CP",
             "cross_target_adapted_cp": "Adapted CP",
         }
+    )
+    k_sweep.loc[adapted_mask, "protocol"] = (
+        k_sweep.loc[adapted_mask, "adapter_type"]
+        .map({"residual_mean": "Residual-adapted CP", "linear": "Linear-adapted CP"})
+        .fillna("Adapted CP")
     )
     k_sweep["direction"] = k_sweep["source"].str.upper() + " -> " + k_sweep["target"].str.upper()
     cols = [
@@ -161,6 +181,7 @@ def build_k_sweep(summary: pd.DataFrame) -> pd.DataFrame:
         "confidence_level",
         "k_target",
         "k_adapter",
+        "adapter_type",
         "coverage_mean",
         "coverage_wilson95_lower_mean",
         "coverage_wilson95_upper_mean",
@@ -236,7 +257,7 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
     table = table.sort_values(["Confidence", "Scenario", "Direction", "Model"])
 
     lines = ["# Paper CP Summary", ""]
-    lines.append("Primary policy: MAPIE split CP at 90% and 95% if present; target rows use k_target=20; adapted rows use residual-mean k_adapter=20.")
+    lines.append("Primary policy: MAPIE split CP at 90% and 95% if present; target rows use k_target=20; adapted rows use k_adapter=20 and include each available point adapter.")
     lines.append("Wilson columns are 95% Wilson score intervals for empirical coverage; short/long coverage splits each test set by observed lifetime.")
     lines.append("")
     lines.append(dataframe_to_markdown(table))
@@ -289,16 +310,28 @@ def maybe_write_plot(primary: pd.DataFrame, path: Path, confidence_level: float)
             "cross_target_adapted_cp": "Adapted CP",
         }
     )
+    adapted_mask = cross["scenario"].eq("cross_target_adapted_cp")
+    cross.loc[adapted_mask, "protocol"] = (
+        cross.loc[adapted_mask, "adapter_type"]
+        .map({"residual_mean": "Residual-adapted CP", "linear": "Linear-adapted CP"})
+        .fillna("Adapted CP")
+    )
     cross["label"] = cross["source"].str.upper() + "->" + cross["target"].str.upper() + " " + cross["model"].str.replace("_", " ")
 
     labels = list(dict.fromkeys(cross["label"]))
-    protocols = ["Source CP", "Target CP", "Adapted CP"]
-    colors = {"Source CP": "#9b2226", "Target CP": "#ca6702", "Adapted CP": "#0a9396"}
+    protocols = [p for p in ["Source CP", "Target CP", "Residual-adapted CP", "Linear-adapted CP"] if p in set(cross["protocol"])]
+    colors = {
+        "Source CP": "#9b2226",
+        "Target CP": "#ca6702",
+        "Residual-adapted CP": "#0a9396",
+        "Linear-adapted CP": "#5f3dc4",
+    }
 
     fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True)
     x = range(len(labels))
-    width = 0.24
-    offsets = {"Source CP": -width, "Target CP": 0.0, "Adapted CP": width}
+    width = 0.18 if len(protocols) > 3 else 0.24
+    offset_values = [width * (i - (len(protocols) - 1) / 2.0) for i in range(len(protocols))]
+    offsets = dict(zip(protocols, offset_values))
     for protocol in protocols:
         sub = cross[cross["protocol"].eq(protocol)].set_index("label")
         cov = [sub.loc[label, "coverage_mean"] if label in sub.index else float("nan") for label in labels]
@@ -338,8 +371,8 @@ def maybe_write_k_sweep_plot(k_sweep: pd.DataFrame, path: Path, confidence_level
     )
     labels = list(dict.fromkeys(plot_df["line_label"]))
     fig, ax = plt.subplots(figsize=(11, 5.5))
-    colors = {"Target CP": "#ca6702", "Adapted CP": "#0a9396"}
-    markers = {"Target CP": "o", "Adapted CP": "s"}
+    colors = {"Target CP": "#ca6702", "Residual-adapted CP": "#0a9396", "Linear-adapted CP": "#5f3dc4"}
+    markers = {"Target CP": "o", "Residual-adapted CP": "s", "Linear-adapted CP": "^"}
     for label in labels:
         sub = plot_df[plot_df["line_label"].eq(label)].sort_values("k_target")
         protocol = str(sub["protocol"].iloc[0])

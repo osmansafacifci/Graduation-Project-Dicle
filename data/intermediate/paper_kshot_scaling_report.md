@@ -8,6 +8,7 @@ Main 90% CP result at k=20:
 
 | Protocol | Mean coverage | Median width | Finite interval fraction |
 |---|---:|---:|---:|
+| Linear-adapted CP | 0.903 | 1372 | 1.000 |
 | Residual-adapted CP | 0.911 | 1466 | 1.000 |
 | Target CP | 0.909 | 2868 | 1.000 |
 

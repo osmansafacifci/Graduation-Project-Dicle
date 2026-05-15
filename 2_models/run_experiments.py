@@ -8,9 +8,10 @@ Setup (per the supervisor's email):
 - Splits:   5 seeds × 70/15/15 (cell-level, lifetime-stratified, censored excluded)
 - Standardization: Z-score; fit StandardScaler on TRAIN ONLY,
                    transform calibration and test sets with the same scaler.
-- Metrics:  MAE, sMAPE, R², bootstrap 95% CI from pooled out-of-split
-            predictions across the 5 seeds; seed-mean bootstrap intervals are
-            retained as audit columns when prediction rows are available.
+- Metrics:  MAE, sMAPE, R², bootstrap 95% CI. Within-dataset summaries use
+            pooled out-of-split predictions across the 5 seeds. Cross-dataset
+            summaries keep mean per-seed bootstrap intervals because each seed
+            evaluates the same fixed target cells.
 - Target:   cycle_life (single-cycle EOL @ 0.85 × Q0; computed in the feature builder)
 
 Inputs:

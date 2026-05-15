@@ -82,7 +82,7 @@ the SOP12 capacity-only features.
 | **Paper extension** | Paper-facing regime-stratified CP figure | ✅ | Sorts all 12 cross-dataset directions by rank-signal regime and naive CP MAE, then compares coverage, width, and finite-interval fraction |
 | **+** | SHAP/XAI attribution for primary within-dataset models | ✅ | Explains MATR/HUST champions and Sandia/Luh TreeSHAP-compatible primary models, joined to transfer-stability or conditional-slope classes; all-pairs SHAP × regime table added |
 | **+** | Survival/censoring sensitivity | ✅ | Kaplan-Meier, log-rank, and lower-bound imputation for 6 censored MATR cells |
-| §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean target-adapted; default target k sweep now covers {5, 10, 15, 20}; linear adapter is sensitivity |
+| §7 | Conformal prediction (Split CP, target recalibration) | ✅ | MAPIE implementation added: 90%/95%, Wilson coverage CI, short-/long-life stratified coverage, within, naive cross, target-calibrated, residual-mean and linear target-adapted CP; default target k sweep now covers {5, 10, 15, 20} |
 | **Paper extension** | Four-dataset validation | ✅ | MATR/HUST/Sandia/Luh feature counts, split completeness, and 56-row within / 168-row cross result matrices pass |
 | **Paper extension** | Four-dataset survival/censoring audit | ✅ | Sandia 11/61 censored, Luh 2/108 censored; Kaplan-Meier curves, RMST bootstrap CIs, pairwise RMST differences, and pairwise tests committed |
 
@@ -92,10 +92,12 @@ the SOP12 capacity-only features.
 
 ### Within-dataset (primary configuration: 34-feat + log-target)
 
-Fixed protocol: 5 seeds, N=100, best model selected by mean R². Bootstrap
-intervals are computed from pooled out-of-split predictions across the 5
-official splits; seed-to-seed standard deviations and the earlier seed-mean
-bootstrap intervals are retained in the result CSVs as audit columns.
+Fixed protocol: 5 seeds, N=100, best model selected by mean R².
+Within-dataset bootstrap intervals are computed from pooled out-of-split
+predictions across the 5 official splits; seed-to-seed standard deviations and
+the earlier seed-mean bootstrap intervals are retained in the result CSVs as
+audit columns. Cross-dataset intervals use mean per-seed bootstraps on the
+fixed target set because the same target cells are evaluated in every seed.
 
 | Dataset | Best model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] |
 |---|---|---|---|---|
@@ -108,12 +110,12 @@ HUST 60 / 43.
 Four-dataset paper extension at the same N=100 / 34-feature / log-target
 setting:
 
-| Dataset | Best model | MAE | sMAPE | R² | Cells / modeled / censored |
+| Dataset | Best model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] | Cells / modeled / censored |
 |---|---|---:|---:|---:|---:|
-| MATR | CatBoost | 171.7 | 23.7 | 0.575 | 135 / 129 / 6 |
-| HUST | Random Forest | 178.0 | 12.2 | 0.340 | 77 / 77 / 0 |
-| Sandia 0-100 SOC | XGBoost | 120.8 | 23.4 | 0.940 | 61 / 50 / 11 |
-| Luh/KIT | Gaussian Process | 115.8 | 18.4 | 0.769 | 108 / 106 / 2 |
+| MATR | CatBoost | 171.7 [140.1, 202.1] | 23.7 [19.8, 28.2] | 0.575 [0.458, 0.646] | 135 / 129 / 6 |
+| HUST | Random Forest | 178.0 [148.0, 214.1] | 12.2 [10.0, 14.8] | 0.340 [0.072, 0.512] | 77 / 77 / 0 |
+| Sandia 0-100 SOC | XGBoost | 120.8 [67.7, 183.3] | 23.4 [17.0, 30.2] | 0.940 [0.804, 0.987] | 61 / 50 / 11 |
+| Luh/KIT | Gaussian Process | 115.8 [90.0, 145.3] | 18.4 [15.2, 21.7] | 0.769 [0.675, 0.843] | 108 / 106 / 2 |
 
 The validation audit is
 `data/intermediate/four_dataset_validation_report.md`.
@@ -134,6 +136,11 @@ Reference points:
 - Dicle's prior result on MATR (R²=0.087, ElasticNet=R²=-0.37) — corrected SOP fixed this
 
 ### Cross-dataset (best per direction, N=100)
+
+Cross-dataset uncertainty intervals are summarized as averaged per-seed
+bootstrap CIs on the fixed target dataset. Unlike the within-dataset splits,
+pooled-row CIs would double-count target cells because the full target set is
+reused across all source-seed refits.
 
 | Direction | Feature set | Best model | MAE | R² |
 |---|---|---|---|---|
@@ -467,7 +474,9 @@ adapters across all 12 directions.
 **Take-away:** k = 20 target labels recover R² from −10 to ≈ −0.05 across all
 tree-based models. The cross-dataset failure is recovered from "catastrophic"
 to "approximately equivalent to predicting the target's marginal mean" — and
-the fix only needs ~20 labeled cells. This is a 50× to 500× MSE reduction.
+the fix only needs ~20 labeled cells. For the hardest MATR→HUST cases this is
+roughly a 10× to 20× MSE reduction; across the MATR↔HUST headline cases the
+range is about 3.5× to 20×.
 
 ### LODO source-expert adaptation
 
@@ -520,10 +529,10 @@ Primary policy: MAPIE split CP at 90% and 95%, N=100. The original MATR/HUST
 run uses CatBoost + Random Forest; the four-dataset extension uses each
 source dataset's primary model (MATR CatBoost, HUST Random Forest, Sandia
 XGBoost, Luh Gaussian Process). Target rows use `k_target=20`; adapted rows
-use residual-mean `k_adapter=20` on a disjoint target subset before CP
-calibration. Outputs include 95% Wilson score intervals for empirical coverage,
-finite-interval fraction, and short-/long-life stratified coverage. The
-reproducibility sweep covers
+use `k_adapter=20` on a disjoint target subset before CP calibration and report
+both residual-mean and linear point adapters when present. Outputs include 95%
+Wilson score intervals for empirical coverage, finite-interval fraction, and
+short-/long-life stratified coverage. The reproducibility sweep covers
 `k_target,k_adapter ∈ {5, 10, 15, 20}`; `paper_cp_k_sweep.csv` and
 `paper_cp_k_sweep_coverage.png` expose the recalibration coverage curve while
 the manuscript headline stays at the stable `k=20` policy. Small-k rows are
@@ -552,10 +561,15 @@ including the easier Sandia↔Luh pair (0.630–0.732). Target-domain CP with
 `k_target=20` restores nominal coverage across directions (0.902–0.914) but
 often with wide intervals. Residual-mean adapted CP with `k_adapter=20` and
 `k_target=20` keeps coverage near nominal (0.892–0.928), all intervals finite,
-and reduces median width in most directions. Key examples at 90%: MATR→HUST
-improves from source-CP coverage 0.177 to adapted-CP coverage 0.906 with
-median width 1007; HUST→MATR from 0.203 to 0.915 with width 1303;
-Sandia→Luh from 0.630 to 0.905 with width 1314 and R²=0.154. Outputs are in
+and reduces median width in most directions; linear adapted CP is now reported
+side-by-side (coverage 0.896–0.915, median width median 1372). Key examples at
+90%: MATR→HUST improves from source-CP coverage 0.177 to residual-adapted
+coverage 0.906 with median width 1007; HUST→MATR from 0.203 to 0.915 with
+width 1303; Sandia→Luh benefits from linear adaptation (coverage 0.903, median
+width 1098, R²=0.430 vs residual R²=0.154). Target=Sandia directions remain
+poor for point accuracy under the source-primary CP model even when coverage is
+restored, which is why the linear adapter is shown visibly rather than hidden
+as a sensitivity. Outputs are in
 `outputs/results_v2_four_dataset_conformal/`. Paper-facing regime-stratified
 outputs are `paper_cp_regime_stratified_{90,95}.png/.md` and
 `paper_cp_regime_stratified.csv`; they order all 12 cross-dataset directions
@@ -697,7 +711,8 @@ stacking decision, and main-text-vs-SI split are maintained in
   surprisingly absent from the battery RUL literature.
 - The empirical demonstration (MMD drops 71% but R² doesn't move) is a
   clean visual that reviewers will remember.
-- The practical fix (k=20 cells → 50× MSE reduction) is industry-relevant.
+- The practical fix (k=20 cells → about 3.5× to 20× MSE reduction across the
+  MATR↔HUST headline cases) is industry-relevant.
 
 ### Extensions still worth doing for the paper
 
@@ -826,6 +841,7 @@ python 3_analysis/conformal_prediction.py \
     --windows 100 \
     --target-k-values 5 10 15 20 \
     --adapter-k-values 5 10 15 20 \
+    --adapter-types residual_mean linear \
     --target-repeats 20 \
     --confidence-levels 0.90 0.95 \
     --output-dir outputs/results_v2_four_dataset_conformal
@@ -877,7 +893,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `3_analysis/plot_cp_regime_stratified.py` | paper-facing CP coverage, width, and finite-interval figure organized by conditional-shift rank-signal regime |
 | `3_analysis/plot_kshot_scaling.py` | paper-facing k-shot scaling figure joining CP reliability and LODO point-accuracy curves |
 | `3_analysis/validate_four_dataset_extension.py` | validates four-dataset feature tables, splits, and within/cross result matrices |
-| `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean target-adapted; optional linear sensitivity |
+| `3_analysis/conformal_prediction.py` | MAPIE standard split CP intervals: 90%/95%, target k sweep {5, 10, 15, 20}, Wilson coverage CI, short-/long-life stratified coverage, within, cross source-calibrated diagnostic, cross target-calibrated, and residual-mean/linear target-adapted CP |
 | `3_analysis/summarize_conformal_results.py` | paper-facing CP tables, k-sweep coverage table/figure, stratified coverage table, and coverage/width figure |
 | `notebooks/run_pipeline_colab.ipynb` | Phase A Colab runner |
 | `docs/MANUSCRIPT_POSITIONING.md` | manuscript claim, related-work positioning, Pareto table, and main-text-vs-SI decisions |

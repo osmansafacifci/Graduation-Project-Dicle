@@ -34,16 +34,19 @@ Bootstrap intervals now come from pooled out-of-split predictions across the
 five official splits (MATR: 100 prediction rows / 75 distinct test cells; HUST:
 60 / 43). Seed-to-seed standard deviations and the earlier seed-mean bootstrap
 intervals remain in `outputs/results_v2_34feat_log/results_summary.csv`.
+Cross-dataset result CSVs use mean per-seed bootstrap intervals instead of
+pooled rows because every seed evaluates the same full target dataset; row
+pooling would count the same target cells multiple times.
 
 **Four-dataset paper extension (34 features + log-target, N=100, fixed
 four-dataset splits):**
 
-| Dataset | Best within model | Within R² | Within MAE | Cells / modeled / censored |
-|---|---|---:|---:|---:|
-| MATR | CatBoost | 0.575 | 171.7 | 135 / 129 / 6 |
-| HUST | Random Forest | 0.340 | 178.0 | 77 / 77 / 0 |
-| Sandia 0-100 SOC | XGBoost | 0.940 | 120.8 | 61 / 50 / 11 |
-| Luh/KIT | Gaussian Process | 0.769 | 115.8 | 108 / 106 / 2 |
+| Dataset | Best within model | MAE [bootstrap 95% CI] | sMAPE [bootstrap 95% CI] | R² [bootstrap 95% CI] | Cells / modeled / censored |
+|---|---|---:|---:|---:|---:|
+| MATR | CatBoost | 171.7 [140.1, 202.1] | 23.7 [19.8, 28.2] | 0.575 [0.458, 0.646] | 135 / 129 / 6 |
+| HUST | Random Forest | 178.0 [148.0, 214.1] | 12.2 [10.0, 14.8] | 0.340 [0.072, 0.512] | 77 / 77 / 0 |
+| Sandia 0-100 SOC | XGBoost | 120.8 [67.7, 183.3] | 23.4 [17.0, 30.2] | 0.940 [0.804, 0.987] | 61 / 50 / 11 |
+| Luh/KIT | Gaussian Process | 115.8 [90.0, 145.3] | 18.4 [15.2, 21.7] | 0.769 [0.675, 0.843] | 108 / 106 / 2 |
 
 The extension validation report is
 `data/intermediate/four_dataset_validation_report.md`.
@@ -55,8 +58,8 @@ centralized in `docs/MANUSCRIPT_POSITIONING.md`.
 
 | Direction | Naïve R² | After 2-param rescaling on k=20 target cells |
 |---|---|---|
-| MATR → HUST | −10 to −20 | **−0.02 to −0.13** (50–500× MSE reduction) |
-| HUST → MATR | −1.5 to −3 | **−0.05 to −0.11** |
+| MATR → HUST | −10 to −20 | **−0.02 to −0.13** (~10–20× MSE reduction) |
+| HUST → MATR | −1.5 to −3 | **−0.05 to −0.11** (~3–4× in the headline stacking case) |
 
 Naïve transfer fails on every (model, feature-set, direction) combination,
 even after capacity normalization aligns 71% of the feature-space shift
@@ -64,6 +67,9 @@ even after capacity normalization aligns 71% of the feature-space shift
 alone; conditional/concept shift in the lifetime map remains, and a
 2-parameter mean-and-slope correction fit on a small target labeled set
 recovers the bulk of the loss.
+Cross-dataset uncertainty intervals are reported as averaged per-seed
+bootstraps on the fixed target set, not pooled prediction rows, to avoid
+double-counting target cells that appear in every seed.
 
 ---
 
@@ -217,6 +223,7 @@ python 3_analysis/conformal_prediction.py \
     --windows 100 \
     --target-k-values 5 10 15 20 \
     --adapter-k-values 5 10 15 20 \
+    --adapter-types residual_mean linear \
     --target-repeats 20 \
     --confidence-levels 0.90 0.95 \
     --output-dir outputs/results_v2_four_dataset_conformal
@@ -255,7 +262,7 @@ python 3_analysis/summarize_conformal_results.py \
 | **Paper extension** | Leave-one-dataset-out pooled/source-expert adaptation: hold out each target, train on the other three datasets, and use k-shot target labels for pooled ERM, source-expert selection, convex source-expert weighting, or source+model selection; includes main-panel and SI packaging | `3_analysis/lodo_source_expert_transfer.py`, `3_analysis/plot_lodo_main_si.py` | `outputs/results_v2_four_dataset_lodo_source_expert/...`, `data/intermediate/four_dataset_lodo_source_expert_*`, `data/intermediate/paper_lodo_*` |
 | **Paper extension** | Paper-facing k-shot scaling figure combining CP reliability and LODO point-accuracy scaling | `3_analysis/plot_kshot_scaling.py` | `outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.*`, `data/intermediate/paper_kshot_*` |
 | **§7 diagnostic** | Importance-weighted source CP under covariate shift, with cross-fitted logistic density ratios, ESS, target-mass fraction, clipping sweep, and side-by-side target-adapted CP comparison | `3_analysis/importance_weighted_conformal.py` | `outputs/results_v2_importance_weighted_cp/...` |
-| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean target-adapted CP with separate target calibration; optional four-dataset primary-model extension and regime-stratified paper figure) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py`, `3_analysis/plot_cp_regime_stratified.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` and `paper_cp_regime_stratified_*` |
+| §7 | Standard split conformal prediction with MAPIE (90%/95%; k sweep {5, 10, 15, 20}; Wilson coverage CI; short-/long-life stratified coverage; within split CP; cross source-calibrated diagnostic; cross target-calibrated CP; residual-mean and linear target-adapted CP with separate target calibration; optional four-dataset primary-model extension and regime-stratified paper figure) | `3_analysis/conformal_prediction.py`, `3_analysis/summarize_conformal_results.py`, `3_analysis/plot_cp_regime_stratified.py` | `outputs/results_v2_conformal/...`, `outputs/results_v2_four_dataset_conformal/...`, including `paper_cp_k_sweep.*` and `paper_cp_regime_stratified_*` |
 
 ---
 
@@ -613,10 +620,12 @@ adapters for `k={5,10,15,20}` across all 12 directions.
 | CatBoost | −3.06 | −0.87 | −0.30 | −0.07 |
 | Random Forest | −2.40 | −0.99 | −0.66 | −0.06 |
 
-Tree-based models recover from R² ≈ −10 to ≈ −0.05 with k = 20 calibration
-cells — a 50× to 500× MSE reduction. R² ≈ 0 means the rescaled model now
-matches the target's marginal-mean predictor, consistent with the 91.5% /
-74.2% constant-bias share found in the residual decomposition.
+Tree-based models recover from catastrophic negative R² to approximately zero
+with k = 20 calibration cells. For the hardest MATR→HUST cases this corresponds
+to roughly a 10× to 20× MSE reduction; the HUST→MATR headline recovery is
+smaller, around 3× to 4×. R² ≈ 0 means the rescaled model now matches the
+target's marginal-mean predictor, consistent with the 91.5% / 74.2%
+constant-bias share found in the residual decomposition.
 
 For the four-dataset extension, the conservative audit fixes the naive-best
 model per direction before applying k=20 adapters:
@@ -683,10 +692,11 @@ largest reduction on Sandia (470.3 -> 277.5 cycles).
 ### Conformal Prediction
 
 Primary policy: MAPIE split CP at 90% and 95%, N=100, CatBoost + Random
-Forest. Target rows use `k_target=20`; adapted rows use residual-mean
-`k_adapter=20` on a disjoint target subset before CP calibration. Outputs now
-include 95% Wilson score intervals for empirical coverage and short-/long-life
-stratified coverage. The default recalibration sweep now covers
+Forest. Target rows use `k_target=20`; adapted rows use `k_adapter=20` on a
+disjoint target subset before CP calibration and report both residual-mean and
+linear point adapters when present. Outputs now include 95% Wilson score
+intervals for empirical coverage and short-/long-life stratified coverage. The
+default recalibration sweep now covers
 `k_target,k_adapter ∈ {5, 10, 15, 20}`; `paper_cp_k_sweep.csv` and
 `paper_cp_k_sweep_coverage.png` expose the coverage curve while the headline
 policy remains `k=20`. Small-k rows are kept as sensitivity checks and include
@@ -713,7 +723,9 @@ Four-dataset CP uses each source dataset's primary model (MATR CatBoost, HUST
 Random Forest, Sandia XGBoost, Luh Gaussian Process) on the capacity-normalized
 four-dataset feature table. The same MAPIE split-CP protocol is run for all 12
 cross directions, with `k_target,k_adapter ∈ {5, 10, 15, 20}` and 20 random
-target draws.
+target draws. The paper-facing tables show residual-mean and linear
+target-adapted CP side by side rather than treating linear adaptation as a
+hidden sensitivity.
 
 | Four-dataset protocol at 90% | Coverage range | Median width summary | Interpretation |
 |---|---:|---:|---|
@@ -721,14 +733,16 @@ target draws.
 | Naive source-calibrated cross CP | 0.00–0.732 | 623–1056 | Source-calibrated CP fails under shift in every cross direction. |
 | Target-domain CP, k=20 | 0.902–0.914 | median 2868 | Target calibration restores nominal coverage, often with very wide intervals. |
 | Residual-mean adapted CP, k=20+20 | 0.892–0.928 | median 1466 | Coverage stays near nominal and intervals shrink in most directions. |
+| Linear adapted CP, k=20+20 | 0.896–0.915 | median 1372 | Often narrows intervals further, but can be unstable when source predictions have weak rank signal. |
 
 At 90%, all k=20 four-dataset target/adapted intervals are finite
 (`finite_interval_fraction=1.0`). The easiest pair, Sandia↔Luh, still shows the
 same reliability pattern: naive source CP under-covers (0.630–0.732) and
-target-domain CP restores coverage (~0.91). Residual-mean adaptation gives the
-useful point/interval trade-off for Sandia→Luh (coverage 0.905, median width
-1314, R²=0.154), while Luh→Sandia needs the linear point adapter rather than a
-residual-mean-only adapter for good point accuracy. Outputs are in
+target-domain CP restores coverage (~0.91). Showing both adapters exposes the
+Sandia heterogeneity limitation cleanly: Sandia→Luh benefits from linear
+adaptation (coverage 0.903, median width 1098, R²=0.430 vs residual R²=0.154),
+but target=Sandia directions remain poor for point accuracy under the
+source-primary CP model even when coverage is restored. Outputs are in
 `outputs/results_v2_four_dataset_conformal/paper_cp_summary.*`,
 `paper_cp_k_sweep.*`, `paper_cp_stratified_coverage.csv`, and
 `paper_cp_regime_stratified_{90,95}.png`. The regime-stratified figure orders

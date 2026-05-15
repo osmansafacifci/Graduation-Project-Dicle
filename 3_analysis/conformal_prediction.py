@@ -28,7 +28,8 @@ The cross-dataset modes are labeled by their calibration domain:
        Train on the source dataset, fit a small target-domain point adapter
        on k_adapter labeled target cells. The default adapter is residual_mean,
        i.e. a constant residual correction y_adapted = y_source + mean residual.
-       A two-parameter linear adapter is available as a sensitivity check.
+       A two-parameter linear adapter can be run side by side with the
+       residual-mean adapter.
        conformalize on a disjoint k_target labeled target calibration set,
        then test on the remaining target cells.
 
@@ -166,7 +167,10 @@ class TargetPointAdapter:
             raise ValueError(f"Unknown adapter_type: {adapter_type}")
         if np.std(y_pred) < 1e-12:
             return cls(adapter_type, 1.0, float(np.mean(y_true - y_pred)))
-        slope, intercept = np.polyfit(y_pred, y_true, 1)
+        rank_warning = getattr(getattr(np, "exceptions", np), "RankWarning", Warning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=rank_warning)
+            slope, intercept = np.polyfit(y_pred, y_true, 1)
         return cls(adapter_type, float(slope), float(intercept))
 
     def predict(self, y_pred: np.ndarray) -> np.ndarray:
@@ -903,7 +907,7 @@ def parse_args() -> argparse.Namespace:
         choices=ALL_ADAPTER_TYPES,
         help=(
             "Point adapters to fit before separate CP calibration in cross_target_adapted_cp. "
-            "Default: residual_mean. Add linear for a sensitivity check."
+            "Default: residual_mean. Use residual_mean linear to compare both adapters."
         ),
     )
     parser.add_argument("--target-repeats", type=int, default=DEFAULT_TARGET_REPEATS)
@@ -1039,7 +1043,7 @@ def main() -> int:
             "cross_source_calibrated_cp is diagnostic because source-calibration and target-test residuals are not exchangeable under dataset shift.",
             "cross_target_calibrated_cp is standard split CP with a labeled target-domain calibration set.",
             "cross_target_adapted_cp fits a target-domain point adapter on k_adapter target labels, then conformalizes on disjoint k_target target labels.",
-            "residual_mean is the default scientific adapter; linear is available via --adapter-types as a sensitivity check.",
+            "residual_mean and linear point adapters can be reported side by side; linear is useful for exposing residual-mean over-shift on heterogeneous targets.",
             "Very small calibration sets can produce infinite exact finite-sample intervals; finite_q records this explicitly.",
             "Coverage Wilson intervals are 95% Wilson score confidence intervals for empirical coverage.",
             "Size-stratified coverage splits each evaluation set into shorter-lived and longer-lived halves by observed target lifetime.",
