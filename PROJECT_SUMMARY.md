@@ -68,7 +68,7 @@ the SOP12 capacity-only features.
 | §4.3 | CatBoost (optional comparison) | ✅ | Same protocol as XGBoost |
 | §4 (extended) | +PLS, +Random Forest, +Gaussian Process, +Stacking | ✅ | We added these for diversity |
 | §4 (extended) | log-target option (`--log-target`) | ✅ | Default for all reported runs; rescues linear models |
-| **Paper extension** | 1D-CNN baseline | ✅ | Dependency-light NumPy CNN on early Q/Q0 trajectories; reviewer-facing baseline, not a new headline architecture |
+| **Paper extension** | 1D-CNN baseline | ✅ | PyTorch CNN (MPS-accelerated) on early Q/Q0 trajectories with inner-CV HP search over (filters, learning rate) and cluster bootstrap by cell_id; reviewer-facing baseline, not a new headline architecture |
 | §5.2 | Cross-dataset experiments (MATR ↔ HUST) | ✅ | Three feature-set ablations × two directions |
 | §6.3 | Shift metrics (MMD, Mahalanobis) | ✅ | Plus per-feature attribution + capnorm comparison |
 | **+** | Concept-shift diagnostics (KS test, residual decomposition) | ✅ | New finding (see below) |
@@ -122,13 +122,20 @@ The validation audit is
 
 The 1D-CNN reviewer baseline uses cycles 2..100 as two sequence channels
 (`Q_discharge/q0` and its first difference), trained with the same 5 split
-seeds. Within-dataset R² is MATR 0.613, HUST −0.407, Sandia 0.732, and
-Luh/KIT 0.814. This is useful as a deep-learning sanity check but not a better
-universal model: it improves MATR/Luh within-dataset fits, underperforms badly
-on HUST and Sandia, and does not repair naive transfer except the already
-easiest Sandia↔Luh direction. Outputs are in
-`outputs/results_v2_four_dataset_cnn_baseline/` and
-`data/intermediate/four_dataset_cnn_baseline_report.md`.
+seeds. A small PyTorch Conv1D-x2 model is selected via inner 5-fold CV over
+(filters, learning rate), matching the HP-search rigor of the gradient-boosted
+classical models. Within-dataset R² is MATR 0.305, HUST −0.174, Sandia 0.881,
+and Luh/KIT 0.761. The CNN is useful as a deep-learning sanity check but does
+not displace the classical lineup: it is competitive on Sandia and Luh,
+underperforms classical RF on HUST, and falls below CatBoost on MATR. Cross-
+dataset behavior preserves the rank-signal regime taxonomy (Sandia↔Luh remains
+positive at R²≈0.31–0.34, MATR↔HUST collapses at R² ≈ −3 to −6) and adds a new
+mechanistic observation: under distribution shift the CNN over-extrapolates
+when Sandia is the source (Sandia→MATR R²=−47.8, Sandia→HUST R²=−36.8),
+illustrating that deep architectures do not buy cross-dataset robustness on
+the capacity-only feature contract. Outputs are in
+`outputs/results_v2_four_dataset_cnn_pytorch/` and
+`data/intermediate/four_dataset_cnn_pytorch_report.md`.
 
 Reference points:
 - Severson 2019 (voltage-curve features, MATR): R² ≈ 0.85–0.92
@@ -871,7 +878,7 @@ in this document modulo the random seed used in the CV / fold splits.
 | `2_models/generate_splits.py` | 70/15/15 lifetime-stratified splits, 5 seeds |
 | `2_models/vif_screening.py` | §2.4 VIF report + iterative drop |
 | `2_models/run_experiments.py` | Within + cross-dataset experiments, 7 models |
-| `2_models/run_cnn_baseline.py` | dependency-light 1D-CNN baseline on early Q/Q0 trajectories using the four-dataset splits |
+| `2_models/run_cnn_pytorch.py` | PyTorch 1D-CNN baseline with inner-CV HP search and resumable per-unit checkpointing on early Q/Q0 trajectories using the four-dataset splits |
 | `3_analysis/shift_metrics.py` | §6.3 MMD + Mahalanobis + per-feature attribution |
 | `3_analysis/feature_transfer_stability.py` | feature-level transfer/stability analysis and SHAP bridge |
 | `3_analysis/four_dataset_geometric_shift.py` | four-dataset discriminator AUC, MMD, Mahalanobis, and per-feature centroid shifts on raw/capnorm tables |

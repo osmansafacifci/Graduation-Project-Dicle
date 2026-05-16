@@ -1,0 +1,73 @@
+{
+  "protocol": "pytorch_1d_cnn_v1",
+  "features_path": "data/intermediate/features_sop12_four_dataset.csv",
+  "splits_dir": "splits/sop_v2_four_dataset",
+  "datasets": [
+    "matr",
+    "hust",
+    "sandia",
+    "luh"
+  ],
+  "windows": [
+    100
+  ],
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1011
+  ],
+  "device": "mps",
+  "hp_grid": "full",
+  "hp_configs": [
+    [
+      8,
+      0.001
+    ],
+    [
+      8,
+      0.003
+    ],
+    [
+      8,
+      0.01
+    ],
+    [
+      16,
+      0.001
+    ],
+    [
+      16,
+      0.003
+    ],
+    [
+      16,
+      0.01
+    ],
+    [
+      32,
+      0.001
+    ],
+    [
+      32,
+      0.003
+    ],
+    [
+      32,
+      0.01
+    ]
+  ],
+  "kernel_size": 5,
+  "hidden_units": 32,
+  "dropout": 0.2,
+  "epochs": 400,
+  "patience": 60,
+  "cv_epochs": 200,
+  "cv_patience": 30,
+  "cv_folds": 5,
+  "batch_size": 32,
+  "l2": 0.0001,
+  "prediction_clip_std_margin": 0.0,
+  "torch_version": "2.12.0"
+}

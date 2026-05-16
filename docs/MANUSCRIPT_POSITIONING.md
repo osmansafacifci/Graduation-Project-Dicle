@@ -97,21 +97,36 @@ transfer breaks.
 
 ## 1D-CNN Baseline Decision
 
-The 1D-CNN baseline is now complete under the same four-dataset split protocol.
+The 1D-CNN baseline is complete under the same four-dataset split protocol.
 It uses early `Q_discharge/q0` trajectories and their first differences with a
-small NumPy Conv1D model, so it adds no heavyweight deep-learning dependency.
+small PyTorch Conv1D-x2 model. Hyperparameters (filters, learning rate) are
+selected via inner 5-fold CV on the train split, mirroring the XGBoost /
+CatBoost CV grid. Cluster bootstrap by `cell_id` is used for the pooled
+confidence intervals so cross-dataset CIs are not inflated by repeated target
+cells across seeds.
 
-Outcome:
+Outcome (5 seeds, full-grid HP search):
 
-| Dataset / direction | Result |
-|---|---|
-| MATR within | R² = 0.613, slightly above the CatBoost tabular headline |
-| Luh/KIT within | R² = 0.814, slightly above the Gaussian Process tabular headline |
-| Sandia within | R² = 0.732, far below the XGBoost tabular headline |
-| HUST within | R² = -0.407, fails under the narrow-lifetime HUST setting |
-| Naive cross | Still fails for most directions; only Sandia -> Luh (R² = 0.286) and Luh -> Sandia (R² = 0.352) are positive |
+| Dataset / direction | Result | vs. classical headline |
+|---|---|---|
+| Sandia within | R² = 0.881 [0.754, 0.950] | slightly below XGBoost 0.940 |
+| Luh/KIT within | R² = 0.761 [0.624, 0.857] | comparable to Gaussian Process 0.769 |
+| MATR within | R² = 0.305 [-0.250, 0.587] | below CatBoost 0.575 |
+| HUST within | R² = -0.174 [-0.440, -0.028] | fails; far below Random Forest 0.340 |
+| Naive cross — positive | Sandia↔Luh stay positive (Sandia→Luh R² = 0.343, Luh→Sandia R² = 0.314); MATR→Sandia near zero | Same regime-positive directions as the classical lineup |
+| Naive cross — collapsed | MATR↔HUST stay deeply negative (MATR→HUST R² = -6.2, HUST→MATR R² = -3.8) | Same regime-collapsed directions as the classical lineup |
+| Naive cross — over-extrapolation | Sandia source extrapolates badly to MATR/HUST (Sandia→MATR R² = -47.8, Sandia→HUST R² = -36.8) | Classical was already negative here, but CNN is dramatically worse |
 
-Decision: keep this as reviewer armor, not as a main contribution. It answers
-"why no deep baseline?" and reinforces the central claim: a sequence CNN can
-improve selected within-dataset fits, but architecture alone does not solve
-cross-dataset transfer under conditional shift.
+Decision: keep this as reviewer armor, not as a main contribution. Two
+manuscript-facing takeaways:
+
+1. **Rank-signal regime taxonomy is backbone-agnostic.** The CNN preserves the
+   classical taxonomy qualitatively — strong-rank pairs (Sandia↔Luh) stay
+   positive, rank-collapsed pairs (MATR↔HUST) stay catastrophic. This directly
+   answers the obvious reviewer question "but maybe a deep model breaks your
+   regime story?".
+2. **Deep architecture does not buy cross-dataset robustness on the
+   capacity-only contract.** The CNN over-extrapolates when source-target
+   shift is large (Sandia source → MATR/HUST). The (data minimality ×
+   within-dataset accuracy × CP validity) Pareto positioning therefore still
+   favors the classical lineup with target-side calibration.
