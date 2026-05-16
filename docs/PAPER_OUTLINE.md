@@ -258,7 +258,7 @@ full manifest.
 | F1 | Pipeline schematic + 4-dataset summary | (build for paper — schematic + small table) | Methods overview |
 | F2 | Within-dataset predictions vs truth (4 panels) | reuse from PyTorch CNN report or build new | §6.1 |
 | F3 | Geometric shift — Mahalanobis heatmap raw vs capnorm | `outputs/results_v2_four_dataset_conditional_shift/four_dataset_conditional_shift_heatmaps.png` (top half) | §6.3 |
-| F4 | **Key:** MMD drop vs R² change | (build new — 1 hour of matplotlib) | §6.3 |
+| F4 | **Key:** Mahalanobis reduction vs ΔR² scatter (12 directions, regime-coloured, MATR↔HUST highlighted) | `outputs/paper_figures/paper_covariate_vs_concept.png` (.pdf, .csv) | §6.3 |
 | F5 | **Paper-defining:** four-dataset conditional-shift heatmap with regime labels | `outputs/results_v2_four_dataset_conditional_shift/four_dataset_conditional_shift_heatmaps.png` | §6.4 |
 | F6 | k-shot scaling, R² vs k coloured by regime | `outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.png` (.pdf available) | §6.5 |
 | F7 | CP coverage and width | `outputs/results_v2_four_dataset_conformal/paper_cp_coverage_width.png` | §6.5 |
@@ -302,7 +302,7 @@ full manifest.
 - [ ] **Title chosen** (§0).
 - [ ] **Abstract finalized** (~250 w, §2).
 - [ ] **All figure files exported at journal resolution** (TIFF/PDF/PNG, 600 dpi).
-- [ ] **Figure 4 built** (MMD-drop-vs-R²-change scatter — does not yet exist).
+- [x] **Figure 4 built** — `outputs/paper_figures/paper_covariate_vs_concept.png` (built 2026-05-16 via `3_analysis/plot_covariate_vs_concept_scatter.py`).
 - [ ] **Figure 1 built** (pipeline schematic — schematic-style diagram).
 - [ ] **Pareto table T5 typeset** with current numbers; remove placeholder cells.
 - [ ] **Zenodo deposit** with v1.0.0 tag; DOI inserted into `CITATION.cff` and the manuscript bibliography (`docs/ZENODO.md`).
