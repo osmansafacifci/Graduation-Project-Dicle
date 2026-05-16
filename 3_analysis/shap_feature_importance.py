@@ -84,6 +84,7 @@ MODEL_FITTERS = {
 
 
 def display_path(path: Path) -> str:
+    """Return ``path`` relative to the project root, or absolute if outside."""
     try:
         return str(path.relative_to(PROJECT_ROOT))
     except ValueError:
@@ -91,22 +92,56 @@ def display_path(path: Path) -> str:
 
 
 def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
+    """Load the canonical ``{train, calibration, test}`` cell-ID split JSON."""
     path = splits_dir / f"{dataset}_{seed}.json"
     with path.open() as f:
         return json.load(f)
 
 
 def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
+    """Slice ``df`` to one dataset, one prediction window, uncensored cells only."""
     return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
 
 
 def model_list_for_dataset(requested: list[str], dataset: str) -> list[str]:
+    """Expand ``"primary"`` to the per-dataset SHAP-compatible primary model.
+
+    ``PRIMARY_MODEL_BY_DATASET`` maps each dataset to a tree-based primary
+    (MATR→CatBoost, HUST→RandomForest, Sandia→XGBoost, Luh→CatBoost). Tree
+    models are required because :func:`compute_tree_shap_values` uses
+    :class:`shap.TreeExplainer`, which exactly attributes a tree-ensemble
+    prediction whereas KernelSHAP / DeepSHAP would only approximate it.
+    """
     if "primary" in requested:
         return [PRIMARY_MODEL_BY_DATASET[dataset]]
     return requested
 
 
 def compute_tree_shap_values(model, X_test: np.ndarray) -> np.ndarray:
+    """Exact TreeSHAP attributions for a fitted tree-ensemble model.
+
+    Parameters
+    ----------
+    model : sklearn-like estimator
+        Tree-based regressor with a SHAP-compatible interface
+        (XGBoost / CatBoost / RandomForest).
+    X_test : np.ndarray, shape (n_cells, n_features)
+        Standardized test features.
+
+    Returns
+    -------
+    np.ndarray, shape (n_cells, n_features)
+        Per-cell × per-feature SHAP values in the model's log-cycle space
+        (the same space the model was fit in).
+
+    Notes
+    -----
+    ``check_additivity=False`` is passed because some boosters add a global
+    bias term that fails the strict additivity assertion at floating-point
+    precision; the resulting values are still exact attributions.
+    The (n_cells, n_features, 1) return shape from some SHAP versions is
+    squeezed to 2D for downstream code.
+    """
     try:
         import shap
     except ImportError as exc:
@@ -136,7 +171,17 @@ def benchmark_model_metrics(
     seed: int,
     model_name: str,
 ) -> dict:
-    """Return metrics from the canonical within-dataset benchmark helper."""
+    """Reuse ``run_experiments.evaluate_split`` so SHAP metrics match the
+    headline benchmark exactly.
+
+    Avoids duplicating the benchmark code path: this helper routes the
+    same (sub-frame, split, seed, model) through ``evaluate_split`` and
+    returns the dict of point metrics. The point of going through the
+    canonical helper is that the SHAP report's "Model check" R²/MAE row
+    is then guaranteed to match the headline table within rounding
+    (post-audit fix M2). Returns ``MAE``, ``SMAPE``, ``R2``, and the
+    bootstrap 95% CI block.
+    """
     experiments.SOP12_FEATURE_COLS = list(feature_cols)
     try:
         from joblib import parallel_backend
@@ -183,6 +228,23 @@ def evaluate_and_explain(
     model_name: str,
     splits_dir: Path,
 ) -> tuple[list[dict], dict]:
+    """Fit a within-dataset model and emit per-feature SHAP attribution rows.
+
+    For one (dataset, seed, n_cycles, model_name) combination:
+
+    1. Slice the within-dataset split (train + test cells).
+    2. Standardize features, fit on ``log(cycle_life)``.
+    3. Compute exact TreeSHAP values on the test set.
+    4. Aggregate to per-feature scalar attributions:
+       ``mean_abs_shap``, ``mean_shap`` (signed), ``relative_importance``,
+       and the within-split importance rank (1 = most important).
+    5. Call :func:`benchmark_model_metrics` so the "Model check" row of
+       the SHAP report matches the headline benchmark MAE/SMAPE/R².
+
+    Returns ``(rows, info_dict)`` where ``rows`` is the per-feature SHAP
+    record list and ``info_dict`` carries split-level metadata. Returns
+    ``([], {skipped: True, …})`` when train < 5 or test < 2 cells.
+    """
     split = load_split(dataset, seed, splits_dir)
     sub = dataset_window(df, dataset, n_cycles)
     train_df = sub[sub["cell_id"].isin(split["train"])].copy()
@@ -295,6 +357,24 @@ def evaluate_and_explain(
 
 
 def summarize_importance(detailed: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate per-seed SHAP rows into a per-feature × per-(dataset, model) table.
+
+    Computes:
+
+    - mean / std of absolute SHAP values across seeds (importance with
+      uncertainty)
+    - mean signed SHAP (direction of feature contribution to log-cycle-life)
+    - mean / std of relative importance (each cell normalized so a feature's
+      share sums to 1 across all 34 features)
+    - mean / std of the within-split rank (1 = most important)
+    - ``top5_rate`` and ``top10_rate``: fraction of seeds where the feature
+      lands in the top-5 / top-10 most important features
+    - benchmark MAE / sMAPE / R² (one number per (dataset, model), repeated
+      across feature rows for convenience)
+
+    Output is sorted by (window, dataset, model, descending importance).
+    Used to build the paper-facing SHAP × regime joined table.
+    """
     grouped = detailed.groupby(["n_cycles", "dataset", "model", "feature"], as_index=False)
     summary = grouped.agg(
         mean_abs_shap_log_cycles_mean=("mean_abs_shap_log_cycles", "mean"),
@@ -326,6 +406,18 @@ def summarize_importance(detailed: pd.DataFrame) -> pd.DataFrame:
 
 
 def join_transfer_stability(summary: pd.DataFrame, path: Path) -> pd.DataFrame:
+    """Left-join the SHAP summary table with the feature-transfer-stability table.
+
+    Adds per-feature transfer diagnostics from the
+    :file:`feature_transfer_stability.py` output: raw-vs-capnorm shift in
+    pooled-z units, MATR/HUST Spearman ρ with cycle-life and their delta,
+    sign agreement, within-dataset univariate R², residual-mean-adapted
+    cross-dataset R², the composite stability score, and the categorical
+    ``stability_class`` (scale_shift_fragile / relationship_unstable /
+    stable_candidate / weak_or_mixed).
+
+    Returns ``summary`` unchanged when the transfer file does not exist.
+    """
     if not path.exists():
         return summary
     transfer = pd.read_csv(path)
@@ -348,6 +440,23 @@ def join_transfer_stability(summary: pd.DataFrame, path: Path) -> pd.DataFrame:
 
 
 def join_conditional_shift(summary: pd.DataFrame, path: Path | None, pairs: list[str]) -> pd.DataFrame:
+    """Left-join the SHAP summary with per-pair conditional-shift slope labels.
+
+    For each dataset pair in ``pairs`` (e.g., ``["matr_vs_hust",
+    "sandia_vs_luh"]``), pulls the per-feature centred-log slope shift
+    label (``slope_stable`` / ``slope_shifted``) and the universal
+    log-life offset from the conditional-shift output, then attaches them
+    to the SHAP summary with namespaced column names like
+    ``matr_vs_hust_shift_class``.
+
+    This is the join that produces the manuscript-facing claim "feature X
+    is in the top-5 SHAP for MATR CatBoost AND is slope-shifted across
+    MATR/HUST" — i.e., the within-domain model leans on a feature that
+    does not carry consistent semantics across datasets.
+
+    Returns ``summary`` unchanged when the path is missing or ``pairs`` is
+    empty.
+    """
     if path is None or not path.exists() or not pairs:
         return summary
     shifts = pd.read_csv(path)
@@ -385,6 +494,26 @@ def write_report(
     top_k: int,
     features_path: Path,
 ) -> None:
+    """Render the human-readable SHAP report at ``out_path``.
+
+    Sections written:
+
+    1. Header (protocol, feature-table provenance, note that model-check
+       metrics use the canonical benchmark helper).
+    2. Per-(dataset, model) model-check MAE/SMAPE/R² aggregated across
+       seeds — these *should* match the headline benchmark table.
+    3. Top-``top_k`` SHAP features per (dataset, model) with their
+       transfer-stability class and (where available) the conditional-
+       shift slope class.
+    4. "Important but transfer-fragile" subsection: features that are
+       both top-``top_k`` SHAP *and* labelled fragile/unstable by the
+       stability join — the manuscript's "covariate alignment is not
+       concept alignment at the feature level" closing loop.
+
+    The output is plain text rather than Markdown so it renders cleanly
+    in CI logs and email summaries; the paper-facing version is produced
+    by :file:`build_shap_regime_table.py` from the same CSVs.
+    """
     lines: list[str] = []
     lines.append("SHAP feature attribution summary")
     lines.append("=" * 80)

@@ -1,0 +1,45 @@
+# Pinned dependency set for bit-exact reproduction of v1.0.0 results.
+#
+# This file pins exact upper bounds; use `requirements.txt` for everyday
+# development with floor-only constraints. Recreate the pinned environment
+# with:
+#
+#     python -m venv .venv
+#     source .venv/bin/activate
+#     pip install -r requirements-pinned.txt
+#     # for the PyTorch CNN baseline (Apple Silicon MPS):
+#     pip install --no-cache-dir torch==2.12.0
+#
+# Python version: 3.13 (3.10–3.13 should work)
+# Last verified on macOS arm64 (Apple Silicon, M1) — May 2026
+
+# --- data fetching ---
+gdown==6.0.0
+
+# --- core scientific stack ---
+numpy==2.3.0
+pandas==2.3.3
+scipy==1.17.0
+h5py==3.14.0
+matplotlib==3.10.8
+
+# --- modeling ---
+scikit-learn==1.8.0
+MAPIE==1.4.0
+shap==0.50.0
+xgboost==3.2.0
+catboost==1.2.10
+
+# --- deep learning baseline (optional but recommended for full reproduction) ---
+# Install separately: `pip install --no-cache-dir torch==2.12.0`
+# torch==2.12.0   # uncomment to make the deep-baseline a hard requirement
+
+# --- transitive pins (recorded for archival reproducibility) ---
+joblib==1.5.3
+networkx==3.6.1
+sympy==1.14.0
+threadpoolctl==3.6.0
+Jinja2==3.1.6
+fsspec==2025.12.0
+numba==0.63.1
+llvmlite==0.46.0

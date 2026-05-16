@@ -102,6 +102,27 @@ FITTERS = {
 
 
 def bh_fdr(p_values: np.ndarray) -> np.ndarray:
+    """Benjamini-Hochberg false-discovery-rate correction.
+
+    Parameters
+    ----------
+    p_values : np.ndarray, shape (n_tests,)
+        Raw p-values from a family of hypothesis tests. NaN entries are
+        propagated.
+
+    Returns
+    -------
+    np.ndarray, shape (n_tests,)
+        FDR-adjusted q-values clipped to ``[0, 1]``, preserving the input
+        ordering.
+
+    Notes
+    -----
+    Used to control the FDR across the 34 per-feature slope-shift tests
+    in :func:`feature_slope_table`; a feature is declared
+    ``slope_shifted`` only if its q-value falls below 0.05 *and* its
+    bootstrap CI excludes zero. Reference: Benjamini & Hochberg (1995).
+    """
     p = np.asarray(p_values, dtype=float)
     q = np.full_like(p, np.nan)
     valid = np.isfinite(p)
@@ -111,6 +132,8 @@ def bh_fdr(p_values: np.ndarray) -> np.ndarray:
     order = np.argsort(pv)
     ranked = pv[order]
     m = len(ranked)
+    # BH adjustment: rescale each ranked p-value by m/rank, then take the
+    # running minimum from the largest p downwards (Hochberg's step-up).
     adj = ranked * m / np.arange(1, m + 1)
     adj = np.minimum.accumulate(adj[::-1])[::-1]
     out = np.empty_like(pv)
@@ -120,6 +143,26 @@ def bh_fdr(p_values: np.ndarray) -> np.ndarray:
 
 
 def bootstrap_p_value(samples: np.ndarray) -> float:
+    """Two-sided bootstrap p-value for a "different from zero" null.
+
+    Parameters
+    ----------
+    samples : np.ndarray, shape (n_bootstrap,)
+        Bootstrap distribution of a test statistic (e.g., the
+        HUST-minus-MATR slope difference for one feature).
+
+    Returns
+    -------
+    float
+        Empirical two-sided p-value: ``2 * min(P(stat <= 0), P(stat >= 0))``.
+        Lower-bounded at ``1 / (n + 1)`` to avoid reporting ``p = 0`` from a
+        finite bootstrap.
+
+    Notes
+    -----
+    Used by :func:`feature_slope_table` to test ``slope_HUST - slope_MATR =
+    0`` for each feature; q-values are then computed with :func:`bh_fdr`.
+    """
     samples = np.asarray(samples, dtype=float)
     samples = samples[np.isfinite(samples)]
     if len(samples) == 0:
@@ -129,12 +172,56 @@ def bootstrap_p_value(samples: np.ndarray) -> float:
 
 
 def center_log_life(y: np.ndarray) -> tuple[np.ndarray, float]:
+    """Return ``log(y) - mean(log(y))`` and the mean offset itself.
+
+    Centring is done within-dataset so that the universal HUST-minus-MATR
+    log-life offset is reported separately (one scalar per pair) and does
+    not contaminate per-feature slope estimates.
+
+    Parameters
+    ----------
+    y : np.ndarray, shape (n_cells,)
+        Strictly positive cycle-life values for one dataset's modelled
+        (uncensored) cells.
+
+    Returns
+    -------
+    centered : np.ndarray, shape (n_cells,)
+        ``log(y) - mean(log(y))``.
+    mean_log : float
+        The within-dataset mean of ``log(y)``. NaN for empty input.
+    """
     y_log = np.log(np.asarray(y, dtype=float))
     mean_log = float(np.mean(y_log)) if len(y_log) else float("nan")
     return y_log - mean_log, mean_log
 
 
 def fit_univariate_centered_log_slope(x: np.ndarray, y_centered_log: np.ndarray) -> tuple[float, float]:
+    """OLS slope of ``y_centered_log`` regressed on a (typically z-scored) ``x``.
+
+    Parameters
+    ----------
+    x : np.ndarray, shape (n_cells,)
+        Within-dataset z-scored feature values for one dataset.
+    y_centered_log : np.ndarray, shape (n_cells,)
+        Within-dataset centred log-life values (see :func:`center_log_life`).
+
+    Returns
+    -------
+    intercept : float
+        OLS intercept. Defaults to ``mean(y_centered_log)`` when ``x`` is
+        degenerate (zero variance or empty).
+    slope : float
+        OLS slope of ``y_centered_log = intercept + slope * x``. Zero on
+        degenerate input.
+
+    Notes
+    -----
+    Using *centred* log-life on the y-side strips the global HUST/MATR
+    log-life offset from the regression intercept, so the slope captures
+    purely *how* the feature ranks within-dataset cycle-life rather than the
+    absolute lifetime difference between datasets.
+    """
     x = np.asarray(x, dtype=float)
     y_centered_log = np.asarray(y_centered_log, dtype=float)
     if len(x) == 0 or np.std(x) < 1e-12:
@@ -144,6 +231,13 @@ def fit_univariate_centered_log_slope(x: np.ndarray, y_centered_log: np.ndarray)
 
 
 def within_dataset_zscore(values: np.ndarray) -> np.ndarray:
+    """Z-score a feature *within* its dataset (mean 0, std 1; ddof=0).
+
+    The z-scoring is per-dataset rather than pooled because a pooled mean
+    would conflate covariate-shift offsets with within-dataset rank order;
+    this routine is the first step of the centred-log slope decomposition,
+    which deliberately strips both offsets.
+    """
     values = np.asarray(values, dtype=float)
     std = float(np.std(values, ddof=0))
     if std < 1e-12:
@@ -159,6 +253,40 @@ def feature_slope_table(
     n_boot: int,
     seed: int,
 ) -> pd.DataFrame:
+    """Build the per-feature HUST-vs-MATR slope-shift table.
+
+    For each of the 34 capacity-only features, fit the centred-log slope
+    ``log(life) ~ intercept + slope * z(feature)`` independently on MATR
+    and on HUST, bootstrap the slope difference ``slope_HUST - slope_MATR``
+    with ``n_boot`` resamples, apply Benjamini-Hochberg FDR across the 34
+    features, and classify each feature as ``slope_stable`` or
+    ``slope_shifted`` (q < 0.05 *and* bootstrap CI excludes zero).
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Combined feature table with ``dataset, cell_id, n_cycles,
+        is_censored, cycle_life`` plus the per-feature columns.
+    feature_cols : list of str
+        Feature names to test (typically all 34 capacity-only features).
+    n_cycles : int
+        Prediction window (50 or 100). Filters ``df`` to that window.
+    n_boot : int
+        Number of paired bootstrap iterations per feature; 300–1000 are
+        typical. The published paper uses 1000.
+    seed : int
+        RNG seed for the bootstrap resampler (one shared RNG across all
+        features).
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per feature, sorted by ``shift_class`` then by FDR-adjusted
+        p-value. Columns include the per-dataset slopes, the universal
+        log-life offset, the slope difference, its 95% bootstrap CI, the
+        raw and FDR-adjusted p-values, and the ``slope_shifted``
+        significance flag and class label.
+    """
     matr = df[(df["dataset"] == "matr") & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
     hust = df[(df["dataset"] == "hust") & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
     rng = np.random.default_rng(seed)
@@ -225,6 +353,13 @@ def feature_slope_table(
 
 
 def safe_pred(model: object, x: np.ndarray) -> np.ndarray:
+    """Predict and sanitize: ravel, replace NaN/inf, clip to ``[-1e9, 1e9]``.
+
+    Linear models trained on log-life can produce extreme out-of-distribution
+    predictions in cross-dataset transfer; this helper keeps downstream
+    metrics finite without silently masking the failure mode (clipped
+    predictions still register as large errors in MAE / R²).
+    """
     raw = model.predict(x)
     if hasattr(raw, "ravel"):
         raw = raw.ravel()
@@ -233,6 +368,11 @@ def safe_pred(model: object, x: np.ndarray) -> np.ndarray:
 
 
 def load_split(dataset: str, seed: int) -> dict:
+    """Load the JSON split file produced by ``2_models/generate_splits.py``.
+
+    Returns a dict with ``train``, ``calibration``, ``test`` lists of cell
+    IDs plus split metadata (ratios, seed, stratification scheme).
+    """
     with (SPLITS_DIR / f"{dataset}_{seed}.json").open() as f:
         return json.load(f)
 
@@ -248,6 +388,36 @@ def fit_source_predict_target(
     n_cycles: int,
     log_target: bool,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Train a model on ``source['train']`` cells, predict on full ``target`` set.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Combined feature table (must contain both ``source`` and ``target``
+        datasets).
+    feature_cols : list of str
+        Feature names to use as model inputs.
+    source, target : str
+        Dataset identifiers (``matr``, ``hust``, ``sandia``, ``luh``).
+    model_name : str
+        One of :data:`FITTERS` keys.
+    seed : int
+        Seed selecting the ``source`` split file and the model RNG.
+    n_cycles : int
+        Prediction window.
+    log_target : bool
+        If True, train on ``log(cycle_life)`` and convert predictions back
+        to cycle space before returning.
+
+    Returns
+    -------
+    target_cell_ids : np.ndarray of str
+        Cell identifiers (preserving ``df`` order) of the target test cells.
+    y_target : np.ndarray, shape (n_target,)
+        Ground-truth cycle-life in the target dataset.
+    y_pred : np.ndarray, shape (n_target,)
+        Source-model predictions in cycle space, post-clipping.
+    """
     from sklearn.preprocessing import StandardScaler
 
     src = df[(df["dataset"] == source) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
@@ -275,6 +445,17 @@ def fit_source_predict_target(
 
 
 def fit_alpha_beta(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float]:
+    """OLS linear adapter: fit ``y_true = alpha * y_pred + beta``.
+
+    Returns ``(alpha, beta)``. If predictions are degenerate (std near zero
+    or fewer than two cells), falls back to a residual-mean adapter
+    (``alpha = 1``, ``beta = mean(y_true - y_pred)``).
+
+    This is the *linear adapter* of the k-shot target-calibration protocol.
+    On directions with weak rank signal it can fit a near-singular alpha on
+    small samples; see :data:`fit_robust_alpha_beta` for Theil-Sen and
+    Huber alternatives.
+    """
     if len(y_true) < 2 or np.std(y_pred) < 1e-12:
         return 1.0, float(np.mean(y_true - y_pred))
     alpha, beta = np.polyfit(y_pred, y_true, 1)
@@ -282,6 +463,13 @@ def fit_alpha_beta(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float
 
 
 def pearson_summary(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float]:
+    """Pearson correlation r between ``y_pred`` and ``y_true`` plus its p-value.
+
+    Returns ``(nan, nan)`` on degenerate input (fewer than three points or
+    zero-variance arrays). Used as the *rank-signal* diagnostic: Pearson r
+    captures whether the source model's predictions preserve the target's
+    rank order, which is what the regime taxonomy hinges on.
+    """
     y_true = np.asarray(y_true, dtype=float)
     y_pred = np.asarray(y_pred, dtype=float)
     if len(y_true) < 3 or np.std(y_true) < 1e-12 or np.std(y_pred) < 1e-12:
@@ -300,6 +488,31 @@ def fit_robust_alpha_beta(
     method: str,
     seed: int,
 ) -> tuple[float, float, float]:
+    """Robust analogues of the OLS linear adapter: Theil-Sen or Huber.
+
+    Parameters
+    ----------
+    y_true, y_pred : np.ndarray
+        Target ground-truth and source-model predictions in cycle space.
+    method : {"theil_sen", "huber"}
+        Estimator to use. Theil-Sen is the median-of-pairwise-slopes
+        estimator (breakdown ~29%); Huber down-weights residuals beyond a
+        learned threshold.
+    seed : int
+        RNG seed for Theil-Sen subpopulation sampling.
+
+    Returns
+    -------
+    (alpha, beta, R2) : tuple of float
+        Robust slope, intercept, and the R² of the *adapter-corrected*
+        prediction ``alpha * y_pred + beta`` against ``y_true``.
+
+    Notes
+    -----
+    These are reported alongside the OLS adapter so a reviewer can verify
+    that the alpha sign and direction-asymmetry findings are not artefacts
+    of OLS sensitivity to outliers on small samples.
+    """
     if len(y_true) < 2 or np.std(y_pred) < 1e-12:
         beta = float(np.mean(y_true - y_pred))
         pred = y_pred + beta
@@ -336,6 +549,59 @@ def alpha_beta_table(
     seed: int,
     log_target: bool,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Cross-direction alpha/beta calibration over (source, target, model, seed).
+
+    For each direction in ``[("matr", "hust"), ("hust", "matr")]``, each
+    model in ``models``, and each split seed in ``seeds``:
+
+    1. Fit the source model on its train split (see
+       :func:`fit_source_predict_target`).
+    2. Predict the *full* uncensored target dataset.
+    3. Compute the OLS, Theil-Sen, and Huber linear adapters
+       (``y_target = alpha * y_pred + beta``), plus the residual-mean
+       constant adapter.
+    4. Bootstrap the OLS adapter and Pearson r over the per-cell
+       predictions, using paired resampling.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Combined feature table.
+    feature_cols : list of str
+        Feature names for the model.
+    n_cycles : int
+        Prediction window.
+    seeds : list of int
+        Source-split seeds to aggregate over.
+    models : list of str
+        Source models to test (keys of :data:`FITTERS`).
+    n_boot : int
+        Bootstrap iterations for the alpha/beta and Pearson-r intervals.
+    seed : int
+        RNG seed; offset by ``+991`` to decorrelate from the per-feature
+        bootstrap RNG used in :func:`feature_slope_table`.
+    log_target : bool
+        Pass through to :func:`fit_source_predict_target`.
+
+    Returns
+    -------
+    alpha_rows : pandas.DataFrame
+        One row per (direction, model, seed). Columns include raw R² of
+        the source predictions, the OLS / Theil-Sen / Huber / constant
+        adapter parameters and their R²s, the share of squared error
+        absorbed by the residual-mean constant, and the bootstrap CIs.
+    pred_rows : pandas.DataFrame
+        Per-cell ``(direction, model, seed, cell_id, cycle_life,
+        source_prediction, residual)`` table; used by the manuscript-
+        facing scatter plots.
+
+    Notes
+    -----
+    Pearson r is reported alongside alpha because alpha alone can be
+    near-zero with the *wrong sign* on weak-rank-signal directions, where
+    the OLS slope is a noisy estimate; the rank-signal regime taxonomy
+    therefore reads alpha *and* r together.
+    """
     rng = np.random.default_rng(seed + 991)
     rows = []
     pred_rows = []

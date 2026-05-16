@@ -1,0 +1,94 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software or its derived feature tables in your research,
+  please cite the manuscript (preprint / journal) when available and the
+  software record below. Both are interlinked through the Zenodo deposit.
+title: >-
+  Battery Lifetime Prediction — SOP-Compliant Pipeline for Cross-Dataset
+  Transfer with Conformal Uncertainty
+authors:
+  - family-names: Demir
+    given-names: Durukan
+  - family-names: Çoban
+    given-names: Dicle
+  - family-names: Sarp
+    given-names: Salih
+  - family-names: Çifçi
+    given-names: Osman Safa
+type: software
+abstract: >-
+  Reproducible pipeline for early-cycle lithium-ion battery cycle-life
+  prediction across four public datasets (MATR/Severson, HUST, Sandia/SNL,
+  Luh/KIT) under a capacity-only feature contract. Implements within- and
+  cross-dataset experiments with seven classical regressors plus a PyTorch
+  1D-CNN baseline, MMD/Mahalanobis distribution-shift quantification,
+  centered-log per-feature slope tests with BH-FDR correction, importance-
+  weighted conformal prediction falsifier, SHAP×regime joint analysis,
+  Kaplan-Meier survival audit, Hankel-DMD dynamics diagnostic, and
+  MAPIE split conformal prediction with k-shot target calibration. Companion
+  to a manuscript on cross-dataset transfer regimes and valid uncertainty
+  intervals for battery RUL.
+keywords:
+  - lithium-ion battery
+  - remaining useful life
+  - cycle-life prediction
+  - cross-dataset transfer
+  - conformal prediction
+  - covariate shift
+  - concept shift
+  - rank-signal regime taxonomy
+  - explainable AI
+  - SHAP
+  - reproducible research
+  - Kaplan-Meier
+  - MAPIE
+license: MIT
+repository-code: "https://github.com/osmansafacifci/Graduation-Project-Dicle"
+# After Zenodo deposit:
+#   1. zenodo.org/account/settings/github → enable Graduation-Project-Dicle
+#   2. `git tag -a v1.0.0 -m "Manuscript v1.0"`
+#   3. `git push origin v1.0.0`
+#   4. Zenodo mints DOI; paste it below as `doi:` and uncomment the
+#      `identifiers` block. Re-issue any preprint with the DOI.
+# doi: "10.5281/zenodo.XXXXXXX"
+# identifiers:
+#   - description: "Persistent archive of the v1.0.0 release"
+#     type: doi
+#     value: "10.5281/zenodo.XXXXXXX"
+version: "1.0.0"
+date-released: "2026-05-16"
+references:
+  - type: article
+    title: >-
+      Data-driven prediction of battery cycle life before capacity
+      degradation
+    authors:
+      - family-names: Severson
+        given-names: Kristen A.
+    year: 2019
+    journal: Nature Energy
+    doi: 10.1038/s41560-019-0356-8
+  - type: article
+    title: >-
+      Real-time personalized health status prediction of lithium-ion
+      batteries using deep transfer learning
+    authors:
+      - family-names: Ma
+        given-names: Guijun
+    year: 2022
+    journal: Energy & Environmental Science
+    doi: 10.1039/D2EE01416G
+  - type: article
+    title: >-
+      Degradation of commercial lithium-ion cells as a function of
+      chemistry and cycling conditions
+    authors:
+      - family-names: Preger
+        given-names: Yuliya
+    year: 2020
+    journal: Journal of The Electrochemical Society
+    doi: 10.1149/1945-7111/abae37
+  - type: data
+    title: "Luh KIT RADAR battery aging dataset"
+    repository: KITopen
+    doi: 10.35097/1947

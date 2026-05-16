@@ -140,6 +140,31 @@ PRIMARY_MODEL_BY_DATASET = {
 
 @dataclass
 class FittedPredictor:
+    """Encapsulates a trained source model plus its preprocessor.
+
+    Bundling the fitted model, its z-score scaler, the feature column
+    order, and the log-target flag avoids spreading these four state
+    variables across the CP wrapper, the adapter, and the MAPIE estimator.
+    The fitted predictor is reusable across CP modes (within / source-
+    calibrated cross / target-calibrated cross / target-adapted).
+
+    Attributes
+    ----------
+    model_name : str
+        Identifier of the source model (e.g., ``"catboost"``).
+    model : object
+        Trained sklearn-like estimator with a ``.predict()`` method.
+    scaler : sklearn.preprocessing.StandardScaler
+        Z-score scaler fit on the source training set only.
+    feature_cols : list of str
+        Column order used at training time; the same order must be passed
+        at prediction time.
+    log_target : bool
+        If True, the model was trained on ``log(cycle_life)`` and
+        predictions must be converted back via :func:`to_cycles` before
+        adapter / CP calibration.
+    """
+
     model_name: str
     model: object
     scaler: StandardScaler
@@ -149,7 +174,34 @@ class FittedPredictor:
 
 @dataclass
 class TargetPointAdapter:
-    """Scientific target-domain point adapter before CP calibration."""
+    """Target-side point adapter applied *before* CP calibration.
+
+    Two adapter families are supported:
+
+    - ``"residual_mean"``: a constant offset
+      ``y_adapted = y_pred + mean(y_target_calib - y_pred_calib)``.
+      Identity slope; robust to small ``k_adapter`` samples.
+    - ``"linear"``: an affine fit
+      ``y_adapted = alpha * y_pred + beta`` via OLS on the adapter cells.
+      Provides scale correction in addition to offset; on weak-rank-signal
+      directions with very small ``k_adapter`` it can produce degenerate
+      slopes — see the *median R²* reporting policy in
+      :mod:`summarize_conformal_results`.
+
+    The adapter is fit on a disjoint *adapter set* of target cells and
+    then applied to the *calibration set* (a different disjoint subset)
+    before MAPIE computes the conformity-score quantile. This three-way
+    split (adapter / calibration / test) is what gives the adapted CP its
+    finite-sample coverage guarantee under exchangeability of the target
+    cells within those three subsets.
+
+    Attributes
+    ----------
+    adapter_type : str
+        ``"residual_mean"`` or ``"linear"``.
+    slope, intercept : float
+        Affine coefficients; ``slope = 1`` for residual-mean.
+    """
 
     adapter_type: str
     slope: float
@@ -157,6 +209,29 @@ class TargetPointAdapter:
 
     @classmethod
     def fit(cls, y_pred: np.ndarray, y_true: np.ndarray, adapter_type: str) -> "TargetPointAdapter":
+        """Fit a target-side point adapter from a small calibration set.
+
+        Parameters
+        ----------
+        y_pred : np.ndarray
+            Source-model predictions on ``k_adapter`` target cells.
+        y_true : np.ndarray
+            Ground-truth cycle-life on the same target cells.
+        adapter_type : {"residual_mean", "linear"}
+            ``"residual_mean"``: identity slope, intercept = mean residual.
+            ``"linear"``: OLS fit of ``y_true ~ alpha * y_pred + beta``.
+
+        Returns
+        -------
+        TargetPointAdapter
+            Falls back to a constant adapter when the input is empty or
+            when predictions have zero variance (linear adapter degenerate).
+
+        Notes
+        -----
+        Numpy's ``RankWarning`` from ``polyfit`` is suppressed; degenerate
+        polyfits are caught upstream by the ``std(y_pred) < 1e-12`` guard.
+        """
         y_pred = np.asarray(y_pred, dtype=float)
         y_true = np.asarray(y_true, dtype=float)
         if len(y_pred) == 0:
@@ -174,12 +249,33 @@ class TargetPointAdapter:
         return cls(adapter_type, float(slope), float(intercept))
 
     def predict(self, y_pred: np.ndarray) -> np.ndarray:
+        """Apply the adapter ``alpha * y_pred + beta``, clip to [1, 1e9]."""
         adapted = self.slope * np.asarray(y_pred, dtype=float) + self.intercept
         return np.clip(np.nan_to_num(adapted, nan=1.0, posinf=1e9, neginf=1.0), 1.0, 1e9)
 
 
 class MapieCycleRegressor(RegressorMixin, BaseEstimator):
-    """sklearn-compatible regressor exposing cycle-space predictions to MAPIE."""
+    """sklearn-compatible regressor exposing cycle-space predictions to MAPIE.
+
+    MAPIE's :class:`SplitConformalRegressor` expects a scikit-learn-style
+    estimator with ``.fit()`` / ``.predict()``. Our actual predictor is a
+    bundle of (model, scaler, log-target flag, optional target adapter)
+    that already produces calibrated cycle-space predictions. This thin
+    wrapper makes that bundle look like an estimator MAPIE can call
+    `prefit`-style — ``fit()`` is a no-op since the model is already
+    trained, and ``predict()`` runs the bundle in the right order:
+
+      1. Scale ``X`` with the source-train scaler.
+      2. Call the model, sanitize the prediction, optionally exp()
+         back to cycle space.
+      3. Apply the target-side adapter (if any) before returning.
+
+    The adapter is intentionally applied *inside* this predict() rather
+    than as a separate post-MAPIE step so that MAPIE's calibration
+    residuals are computed in the adapter-corrected space, which is what
+    makes the resulting intervals coverage-valid under exchangeability of
+    the (adapter, calibration, test) cells.
+    """
 
     def __init__(self, predictor: FittedPredictor, target_adapter: TargetPointAdapter | None = None):
         self.predictor = predictor
@@ -190,14 +286,17 @@ class MapieCycleRegressor(RegressorMixin, BaseEstimator):
         self.feature_names_in_ = np.asarray(predictor.feature_cols, dtype=object)
 
     def fit(self, X, y=None):
+        """No-op (the underlying model is already trained). Returns ``self``."""
         self.is_fitted_ = True
         self.fitted_ = True
         return self
 
     def __sklearn_is_fitted__(self) -> bool:
+        # MAPIE's prefit pathway calls this hook to skip its own fitting step.
         return True
 
     def predict(self, X):
+        """Scale → model → cycle space → (optional) adapter."""
         X_s = self.predictor.scaler.transform(np.asarray(X, dtype=float))
         X_s = np.clip(np.nan_to_num(X_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
         pred = to_cycles(safe_pred(self.predictor.model, X_s), log_target=self.predictor.log_target)
@@ -207,6 +306,13 @@ class MapieCycleRegressor(RegressorMixin, BaseEstimator):
 
 
 def safe_pred(model: object, X: np.ndarray) -> np.ndarray:
+    """Predict and sanitize: ravel, replace NaN/inf, clip to ``[-1e9, 1e9]``.
+
+    Identical contract to the helper of the same name in other analysis
+    scripts; defends downstream metrics against linear-model overflow on
+    cross-dataset transfer without hiding the failure (clipped values still
+    register as large absolute errors).
+    """
     raw = model.predict(X)
     if hasattr(raw, "ravel"):
         raw = raw.ravel()
@@ -222,6 +328,31 @@ def fit_predictor(
     seed: int,
     log_target: bool,
 ) -> FittedPredictor:
+    """Fit a source model and return a :class:`FittedPredictor` bundle.
+
+    Parameters
+    ----------
+    train_df : pandas.DataFrame
+        Source-side training rows (already filtered to a single dataset
+        and window, censored cells removed).
+    feature_cols : list of str
+        Feature names — column order must be stable across train and
+        downstream predict steps.
+    model_name : str
+        Key into :data:`FITTERS` (e.g., ``"catboost"``, ``"random_forest"``).
+    seed : int
+        RNG seed for the model fitter.
+    log_target : bool
+        If True, fit on ``log(cycle_life)``; predictions later convert
+        back via :func:`to_cycles`.
+
+    Returns
+    -------
+    FittedPredictor
+        Reusable bundle of (trained model, fitted scaler, feature
+        column order, log-target flag). Pass it to
+        :func:`mapie_split_interval` for CP intervals.
+    """
     X_train = train_df[feature_cols].to_numpy(dtype=float)
     y_train = train_df["cycle_life"].to_numpy(dtype=float)
     y_train_fit = np.log(y_train) if log_target else y_train
@@ -236,6 +367,16 @@ def fit_predictor(
 
 
 def predict_cycles(predictor: FittedPredictor, df: pd.DataFrame) -> np.ndarray:
+    """Run a :class:`FittedPredictor` end-to-end on rows of ``df``.
+
+    Steps: extract feature columns, scale with the predictor's stored
+    StandardScaler, sanitize NaN/inf, model.predict(), convert log-space
+    output to cycle space if needed, and clip to ``[1, 1e9]`` cycles.
+
+    Used to compute adapter-set predictions (so the adapter can be fit
+    *before* CP calibration); MAPIE calls go through
+    :class:`MapieCycleRegressor` instead.
+    """
     X = df[predictor.feature_cols].to_numpy(dtype=float)
     X_s = predictor.scaler.transform(X)
     X_s = np.clip(np.nan_to_num(X_s, nan=0.0, posinf=0.0, neginf=0.0), -1e6, 1e6)
@@ -249,6 +390,48 @@ def mapie_split_interval(
     confidence_level: float,
     target_adapter: TargetPointAdapter | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, bool, int]:
+    """Run MAPIE split CP and return predictions, interval bounds, and q_hat.
+
+    Parameters
+    ----------
+    predictor : FittedPredictor
+        Trained source model bundle.
+    cal_df : pandas.DataFrame
+        Calibration cells. Their absolute residuals form the conformity
+        scores used to compute the prediction-interval half-width.
+    test_df : pandas.DataFrame
+        Cells the intervals should be reported on.
+    confidence_level : float
+        Nominal coverage (e.g., 0.90 or 0.95).
+    target_adapter : TargetPointAdapter, optional
+        If provided, predictions are adapter-corrected *before* MAPIE
+        calibrates on ``cal_df``. Pass an adapter fit on a *disjoint*
+        target-side adapter set to obtain valid adapted-CP intervals.
+
+    Returns
+    -------
+    pred_test : np.ndarray, shape (n_test,)
+        Adapter-corrected point predictions on the test cells.
+    lower, upper : np.ndarray, shape (n_test,)
+        Lower/upper prediction-interval bounds. ``+inf`` is possible when
+        the calibration set is too small for a finite quantile (see
+        :func:`finite_sample_quantile`).
+    q_hat : float
+        Calibration quantile width (the conformity-score quantile that
+        determines half-interval width). ``+inf`` when finite-sample
+        correction makes the interval unbounded.
+    finite_q : bool
+        ``True`` iff ``q_hat`` is finite (a finite interval is reportable).
+    quantile_rank : int
+        The integer rank used by the finite-sample correction:
+        ``ceil((n_cal + 1) * confidence_level)``.
+
+    Notes
+    -----
+    Conformity score is ``|y - y_pred|`` (``conformity_score="absolute"``).
+    The wrapper uses MAPIE's prefit pathway because the source model is
+    already trained outside MAPIE.
+    """
     estimator = MapieCycleRegressor(predictor, target_adapter=target_adapter)
     X_cal = cal_df[predictor.feature_cols].to_numpy(dtype=float)
     y_cal = cal_df["cycle_life"].to_numpy(dtype=float)
@@ -290,6 +473,21 @@ def finite_sample_quantile(abs_residuals: np.ndarray, alpha: float) -> tuple[flo
 
 
 def winkler_score(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray, alpha: float) -> np.ndarray:
+    """Per-cell Winkler interval score: width + miscoverage penalty.
+
+    Score per cell ``= (upper - lower) + (2/alpha) * miss``, where
+    ``miss = max(lower - y, 0) + max(y - upper, 0)``. Lower is better.
+    Used as a single scalar that jointly summarizes interval *sharpness*
+    (the width term) and *calibration* (the miscoverage penalty); see
+    Gneiting & Raftery (2007).
+
+    Parameters
+    ----------
+    y_true, lower, upper : np.ndarray
+        Ground-truth, interval lower bounds, and upper bounds (same shape).
+    alpha : float
+        Miscoverage level (``1 - confidence_level``; e.g., 0.10 at 90% CP).
+    """
     width = upper - lower
     below = y_true < lower
     above = y_true > upper
@@ -300,6 +498,15 @@ def winkler_score(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray, alph
 
 
 def wilson_interval(successes: int, n: int, confidence_level: float = 0.95) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion.
+
+    Used to attach reviewer-defensible 95% CIs to empirical CP coverage
+    values, which are binomial in nature (each test cell is either covered
+    or not). Wilson is preferred over the normal approximation for small
+    ``n`` and proportions near 0 or 1.
+
+    Returns ``(nan, nan)`` for ``n <= 0``.
+    """
     if n <= 0:
         return float("nan"), float("nan")
     z = NormalDist().inv_cdf(0.5 + confidence_level / 2.0)
@@ -311,6 +518,12 @@ def wilson_interval(successes: int, n: int, confidence_level: float = 0.95) -> t
 
 
 def coverage_stats(covered: np.ndarray) -> dict[str, float | int]:
+    """Empirical coverage plus Wilson 95% CI from a boolean ``covered`` vector.
+
+    Returns a dict with ``n``, ``covered_count``, ``coverage`` (the
+    empirical fraction), and Wilson 95% lower/upper bounds for the
+    coverage. Reported in every CP results row.
+    """
     n = int(len(covered))
     successes = int(np.sum(covered)) if n else 0
     lo, hi = wilson_interval(successes, n)
@@ -324,6 +537,14 @@ def coverage_stats(covered: np.ndarray) -> dict[str, float | int]:
 
 
 def stratified_coverage(y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> dict[str, float | int]:
+    """Coverage on short / mid / long-life terciles of the evaluation set.
+
+    Splits the test cells into three equal-count terciles by
+    ``y_true`` (cycle-life), then reports per-tercile coverage. Used as a
+    reviewer-facing sanity check that CP intervals are not over-covering
+    the easy (short-life) cells while under-covering the long-life tail.
+    Returns NaNs for ``len(y_true) < 3``.
+    """
     if len(y_true) < 3:
         return {
             "coverage_short": float("nan"),
@@ -414,6 +635,47 @@ def evaluate_interval(
     quantile_rank: int,
     confidence_level: float,
 ) -> dict:
+    """Build a single results row given test-set predictions and intervals.
+
+    This is the *one-stop summary builder* called by every CP scenario
+    (within / source-cal / target-cal / target-adapted). Given the four
+    arrays needed to score an interval (``y_test``, ``pred_test``,
+    ``lower``, ``upper``), it computes:
+
+    - empirical coverage + Wilson 95% CI
+    - finite-interval fraction (relevant when ``q_hat = inf``)
+    - mean / median interval width
+    - Winkler interval score (joint sharpness × calibration metric)
+    - point-prediction metrics (MAE, sMAPE, R²) on the adapter-corrected
+      predictions, for cross-comparability with the classical pipeline
+    - lifetime-tercile coverage and short-vs-long coverage gap
+
+    All scalar identifiers (``scenario``, ``source``, ``k_target`` …) are
+    passed through verbatim so the resulting flat dict can be appended
+    to a row list and dumped to CSV without further processing.
+
+    Parameters
+    ----------
+    scenario : str
+        One of ``within_split_cp``, ``cross_source_calibrated_cp``,
+        ``cross_target_calibrated_cp``, ``cross_target_adapted_cp``.
+    calibration_domain : str
+        ``source`` or ``target`` — which dataset the calibration cells
+        came from.
+    repeat, k_target, k_adapter : int or None
+        Repeat index and k values for target-side scenarios; ``None`` for
+        within-CP rows.
+    n_train, n_adapter, n_calibration : int
+        Cell counts in each role (audit columns).
+    adapter_type, adapter_slope, adapter_intercept : str / float
+        Adapter identity for the row (``None`` / NaN for non-adapted rows).
+    y_test, pred_test, lower, upper : np.ndarray
+        Per-test-cell arrays (same shape).
+    q_hat, finite_q, quantile_rank : float / bool / int
+        Output of :func:`finite_sample_quantile` on the calibration set.
+    confidence_level : float
+        Nominal coverage (0.90, 0.95, …).
+    """
     alpha = 1.0 - confidence_level
     covered = (y_test >= lower) & (y_test <= upper)
     width = upper - lower
@@ -471,6 +733,12 @@ def display_path(path: Path) -> str:
 
 
 def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
+    """Load the JSON split file produced by ``2_models/generate_splits.py``.
+
+    Returns ``{"train": [cell_ids], "calibration": [...], "test": [...], ...}``.
+    Raises ``FileNotFoundError`` if the seed × dataset combination has not
+    been generated yet.
+    """
     split_path = splits_dir / f"{dataset}_{seed}.json"
     if not split_path.exists():
         raise FileNotFoundError(f"Missing split file: {split_path}")
@@ -479,10 +747,12 @@ def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
 
 
 def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
+    """Return uncensored rows of ``df`` for one dataset and one prediction window."""
     return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
 
 
 def split_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Slice a (dataset, window) frame into train / calibration / test rows by ``cell_id``."""
     train = sub[sub["cell_id"].isin(split["train"])].copy()
     cal = sub[sub["cell_id"].isin(split["calibration"])].copy()
     test = sub[sub["cell_id"].isin(split["test"])].copy()
@@ -490,11 +760,27 @@ def split_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataF
 
 
 def stable_seed(*parts: object) -> int:
+    """Cheap deterministic hash that turns arbitrary identifiers into an int seed.
+
+    Used for per-(direction, model, seed, repeat) RNGs in the target-side
+    sampling loop. Does *not* aim for cryptographic strength — just for a
+    reproducible mapping from a tuple of strings/ints into ``[0, 2**32-1]``
+    that survives across Python versions.
+    """
     text = "|".join(str(p) for p in parts)
     return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
 
 
 def model_list_for_source(models: list[str], dataset: str) -> list[str]:
+    """Expand the special token ``"primary"`` into each dataset's primary model.
+
+    The primary model per dataset comes from :data:`PRIMARY_MODEL_BY_DATASET`
+    (MATR→CatBoost, HUST→RF, Sandia→XGB, Luh→GP). Other entries are passed
+    through. The de-duplication uses ``dict.fromkeys`` to preserve order
+    while removing repeats — useful when a caller writes
+    ``--models primary catboost`` and ``catboost`` happens to be the
+    primary for MATR.
+    """
     expanded: list[str] = []
     for model in models:
         if model == "primary":
@@ -516,6 +802,20 @@ def within_split_cp(
     confidence_levels: list[float],
     log_target: bool,
 ) -> list[dict]:
+    """Within-dataset split CP across (dataset, seed, window, model, confidence).
+
+    Standard split CP recipe: train on ``split["train"]``, calibrate q_hat
+    on ``split["calibration"]``, evaluate intervals on ``split["test"]``.
+    Operates entirely within one dataset; no target adapter is used.
+    Skips any (dataset, seed) where the cell counts are too small for a
+    meaningful interval (train < 5 OR cal < 2 OR test < 2).
+
+    Returns
+    -------
+    list of dict
+        One row per (dataset, seed, window, model, confidence_level).
+        Pass through :func:`summarize` for the aggregated CSV.
+    """
     rows: list[dict] = []
     for dataset in datasets:
         for seed in seeds:
@@ -588,6 +888,42 @@ def cross_cp(
     adapter_types: list[str],
     target_repeats: int,
 ) -> list[dict]:
+    """Cross-dataset CP across (source, target, seed, window, model, k, adapter).
+
+    Runs three CP scenarios per ordered (source, target) pair:
+
+    1. **Naive source-calibrated cross CP** — calibrate q_hat on the source's
+       own calibration split and report intervals on the *entire* target
+       dataset. Diagnostic only; coverage typically collapses under shift.
+    2. **Target-domain CP, no adapter** — sample ``k_target`` target cells
+       for calibration; the model itself is unchanged. Intervals get wider
+       but coverage returns to nominal.
+    3. **Target-adapted CP** — sample ``k_adapter`` target cells, fit a
+       :class:`TargetPointAdapter`, then sample a *disjoint* ``k_target``
+       calibration subset and conformalize on the adapter-corrected
+       predictions. Reported separately per ``adapter_type`` in
+       ``{"residual_mean", "linear"}``.
+
+    The three-way (adapter, calibration, test) split inside the target
+    dataset is what makes the adapted-CP intervals coverage-valid.
+    Each (k_target, k_adapter) pair is repeated ``target_repeats`` times
+    with different random draws to estimate Monte-Carlo variability;
+    upstream aggregation reports per-direction medians (linear adapter
+    rows can have catastrophic individual draws — see
+    ``docs/MANUSCRIPT_POSITIONING.md`` §"CP outlier aggregation note").
+
+    Predictor caching: a (source, seed, window, model) combination is fit
+    once and reused for every k / adapter / confidence iteration. The
+    cache is local to the call and discarded on return.
+
+    Returns
+    -------
+    list of dict
+        Per-row CP results from :func:`evaluate_interval`. Length grows
+        like ``|directions| × |seeds| × |windows| × |models| ×
+        (1 + |k_target| + |k_adapter| × |adapter_types| × target_repeats)
+        × |confidence_levels|``.
+    """
     rows: list[dict] = []
     predictor_cache: dict[tuple[str, int, int, str], tuple[FittedPredictor, pd.DataFrame, pd.DataFrame]] = {}
     pairs = [(s, t) for s in datasets for t in datasets if s != t]
@@ -786,6 +1122,27 @@ def cross_cp(
 
 
 def summarize(rows: list[dict]) -> pd.DataFrame:
+    """Aggregate detailed per-run CP rows into the paper-facing summary table.
+
+    Groups by ``(scenario, source, target, calibration_domain, model,
+    n_cycles, confidence_level, adapter_type, k_adapter, k_target)`` and
+    computes mean / std / median of every numeric metric column.
+
+    For ``MAE``, ``SMAPE``, and ``R2`` the *median* is also written
+    alongside the mean — under linear target adaptation the OLS slope can
+    be fit on a tiny ``k_adapter`` sample and extrapolated to many test
+    cells, so rare degenerate fits inflate the arithmetic mean (e.g.
+    ``LUH → MATR`` linear-adapted ``R²_mean`` ≈ −3.5×10⁵ vs ``R²_median``
+    ≈ −0.04). Paper-facing tables use the median; the mean is retained as
+    an audit column.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per group, with columns
+        ``<metric>_mean``, ``<metric>_median``, ``<metric>_std`` and a
+        ``n_runs`` count of the grouped rows.
+    """
     detailed = pd.DataFrame(rows)
     if detailed.empty:
         return detailed

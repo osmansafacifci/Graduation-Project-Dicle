@@ -120,6 +120,18 @@ def cycle_table_path(dataset: str) -> Path:
 # -------------------- device --------------------
 
 def select_device(requested: str | None) -> torch.device:
+    """Pick a PyTorch device, with explicit-override and auto-detect modes.
+
+    Priority when ``requested`` is ``None`` (auto): MPS → CUDA → CPU.
+    Apple Silicon laptops (M1/M2/M3) hit the MPS branch; NVIDIA workstations
+    hit CUDA; everything else falls back to CPU. Passing ``"mps"`` or
+    ``"cuda"`` explicitly raises if the requested backend is not available,
+    which is the desired behaviour in CI / reproducibility scripts.
+
+    MPS results are not fully deterministic between sessions because some
+    reduction kernels are non-deterministic on Apple GPUs; pass
+    ``"cpu"`` for bit-exact reproduction at ~5–6× wall-clock cost.
+    """
     if requested == "cpu":
         return torch.device("cpu")
     if requested == "mps":
@@ -171,7 +183,46 @@ def build_sequence_dataset(
     datasets: list[str],
     n_cycles: int,
 ) -> tuple[np.ndarray, np.ndarray, pd.DataFrame]:
-    """Return X=(cells, channels=[retention, diff], cycles 2..N), y, metadata."""
+    """Convert per-cycle ``Q_discharge`` records into model-ready sequence tensors.
+
+    For each modelled (uncensored) cell present in ``feature_df`` and in
+    one of the requested ``datasets``:
+
+    1. Look up its per-cycle ``Q_discharge`` series from ``cycles_df``.
+    2. Interpolate the series onto integer cycles ``2..n_cycles``.
+    3. Normalize by the cell's ``q0`` to get retention ``q_discharge/q0``.
+    4. Compute the first difference of retention.
+    5. Stack ``(retention, diff)`` as two channels.
+
+    Cells missing cycle coverage, with non-positive ``q0``, or otherwise
+    malformed are skipped (and reported via ``[warn]``); this matches the
+    behaviour of the previous NumPy CNN so the two histories of results
+    are directly comparable.
+
+    Parameters
+    ----------
+    feature_df : pandas.DataFrame
+        Capacity-only feature table (``features_sop12_four_dataset.csv``).
+        We only read its ``cell_id``, ``dataset``, ``n_cycles``, ``q0``,
+        ``cycle_life``, ``is_censored`` columns.
+    cycles_df : pandas.DataFrame
+        Per-cycle tidy table from :func:`load_cycle_tables`.
+    datasets : list of str
+        Subset of ``{"matr", "hust", "sandia", "luh"}`` to include.
+    n_cycles : int
+        Length of the cycle window (50 or 100). Sequences span cycles
+        ``2..n_cycles`` (length ``n_cycles - 1``).
+
+    Returns
+    -------
+    X : np.ndarray, shape (n_cells, 2, n_cycles - 1), float32
+        Sequence tensor.
+    y : np.ndarray, shape (n_cells,), float32
+        Cycle-life targets.
+    meta : pandas.DataFrame
+        Row-aligned metadata (``dataset``, ``cell_id``, ``n_cycles``,
+        ``q0``, ``cycle_life``).
+    """
     feature_subset = feature_df[
         feature_df["dataset"].isin(datasets)
         & feature_df["n_cycles"].eq(n_cycles)
@@ -238,6 +289,12 @@ def subset_indices(meta: pd.DataFrame, cells: list[str]) -> np.ndarray:
 
 
 def fit_sequence_scaler(X_train: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Per-channel mean/std fit on the *train* set only.
+
+    Returns broadcastable ``(1, 2, 1)`` arrays so :func:`apply_sequence_scaler`
+    can z-score retention and diff channels independently. Zero-std
+    channels are protected with a floor of 1.0 to avoid division blow-up.
+    """
     mean = X_train.mean(axis=(0, 2), keepdims=True)
     std = X_train.std(axis=(0, 2), keepdims=True)
     std = np.where(std < 1e-8, 1.0, std)
@@ -245,6 +302,14 @@ def fit_sequence_scaler(X_train: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def apply_sequence_scaler(X: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray:
+    """Apply a fitted scaler to a sequence tensor, with sanitization and clipping.
+
+    Replaces NaN/inf with zero (a post-z-score zero is mean-of-distribution
+    in the absence of better information) and clips to ``[-20, 20]`` to
+    prevent extreme-tail inputs from destabilizing CNN training. The clip
+    bound is comfortably outside the empirical range of standardized
+    retention values on all four datasets.
+    """
     out = (X - mean) / std
     out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
     return np.clip(out, -20.0, 20.0).astype(np.float32)
@@ -253,7 +318,28 @@ def apply_sequence_scaler(X: np.ndarray, mean: np.ndarray, std: np.ndarray) -> n
 # -------------------- model --------------------
 
 class CNN1D(nn.Module):
-    """Small two-conv 1D CNN. ~2.5k params with default sizing."""
+    """Small two-conv 1D CNN baseline. ~2.5k params with default sizing.
+
+    Architecture::
+
+        Conv1d(channels → filters, k=5, padding=same) → ReLU
+        Conv1d(filters → filters, k=5, padding=same) → ReLU
+        mean-pool + max-pool over time → concat (2*filters)
+        Linear(2*filters → hidden) → ReLU → Dropout(0.2)
+        Linear(hidden → 1)
+
+    Output is a single standardized log-cycle scalar per cell; downstream
+    code multiplies back by the train-set log-life std and adds the mean
+    before exp-ing into cycle space.
+
+    Intentionally small (~2.5k parameters with defaults) to match the
+    n ≤ 135 cells per dataset; a heavier architecture would overfit and
+    its results would not be comparable to the seven classical baselines
+    that use 5-fold CV grids of similar (small) complexity. The two-layer
+    convolutional stack is the minimum that lets the receptive field span
+    a meaningful chunk of the 99-cycle sequence without growing into
+    Transformer territory.
+    """
 
     def __init__(
         self,
@@ -285,6 +371,21 @@ class CNN1D(nn.Module):
 
 @dataclass
 class TrainInfo:
+    """Convergence telemetry for one CNN training run.
+
+    Attributes
+    ----------
+    best_epoch : int
+        Epoch index (1-based) where the best validation MSE was observed.
+    epochs_run : int
+        Total epochs actually run before early-stopping or hitting
+        ``epochs`` cap.
+    best_val_loss : float
+        Best validation MSE in standardized log-life space.
+    final_train_loss : float
+        Training MSE of the best-state model on the full training set.
+    """
+
     best_epoch: int
     epochs_run: int
     best_val_loss: float
@@ -292,6 +393,11 @@ class TrainInfo:
 
 
 def seed_everything(seed: int) -> None:
+    """Seed NumPy and PyTorch for reproducibility within one process.
+
+    Note that MPS has non-deterministic kernels (some reductions); for
+    bit-exact reproduction across sessions, run with ``--device cpu``.
+    """
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -316,7 +422,23 @@ def train_one_model(
     lr: float,
     weight_decay: float,
 ) -> tuple[CNN1D, TrainInfo]:
-    """Train one CNN; returns best-state model and convergence info."""
+    """Train one :class:`CNN1D` with Adam, MSE loss, and early stopping on val.
+
+    The training loop is intentionally vanilla: full-batch when n is small
+    enough, mini-batches of ``batch_size`` otherwise; Adam with ``lr`` and
+    L2 ``weight_decay``; MSE loss in *standardized* log-life space (caller
+    pre-standardizes ``y``); early stopping after ``patience`` epochs
+    without ≥1e-5 improvement on validation MSE; ``epochs`` cap as an
+    upper bound.
+
+    On exit the model holds the best-validation-state weights (not the
+    final-epoch weights). When ``X_val`` is empty (very small datasets)
+    train MSE acts as a fallback validation signal, which is a known weak
+    spot but lets the code path keep working for the smallest splits
+    rather than skipping them entirely.
+
+    Returns the model and a :class:`TrainInfo` with convergence telemetry.
+    """
     seed_everything(seed)
     model = CNN1D(
         channels=X_train.shape[1],
@@ -411,6 +533,30 @@ def predict_cycles(
     log_lower: float,
     log_upper: float,
 ) -> np.ndarray:
+    """Run a trained :class:`CNN1D` and convert standardized log-life back to cycles.
+
+    Parameters
+    ----------
+    model : CNN1D
+        Trained model.
+    X : np.ndarray, shape (n, channels, time)
+        Pre-scaled sequence tensor.
+    device : torch.device
+        Device to run inference on.
+    y_mean, y_std : float
+        Train-set mean and std of ``log(cycle_life)``, used to de-standardize
+        the raw model output.
+    log_lower, log_upper : float
+        Clip bounds applied in *log* space before exp-ing. Set by the
+        caller to the source-train log-life range plus a margin
+        (``args.prediction_clip_std_margin * y_std``); this is the
+        "source-range clipping policy" referenced in the manuscript.
+
+    Returns
+    -------
+    np.ndarray, shape (n,)
+        Cycle-life predictions in cycles, clipped to ``[1, 1e9]``.
+    """
     if len(X) == 0:
         return np.empty(0, dtype=np.float64)
     model.eval()
@@ -439,7 +585,46 @@ def inner_cv_hp_search(
     weight_decay: float,
     n_folds: int,
 ) -> tuple[tuple[int, float], dict]:
-    """Return best (filters, lr) by mean fold val MAE in standardized log-space."""
+    """Inner ``n_folds``-fold CV over ``(filters, learning_rate)``.
+
+    Mirrors the XGBoost / CatBoost CV grid in
+    :file:`2_models/run_experiments.py` so the CNN HP-tuning rigour
+    matches the classical lineup. Scoring is mean fold MAE in *standardized
+    log-life* space (the model's training space); this is consistent with
+    the loss and avoids exp() in the inner loop, which would otherwise
+    amplify variance in fold MAEs and bias selection toward high-bias /
+    low-variance configurations.
+
+    For each (filters, lr) configuration, the routine runs ``n_folds``
+    independent training runs (each on n_folds-1 / n_folds of the train
+    set, validated on the held-out fold). The configuration with lowest
+    mean fold MAE wins; a final model is then retrained by the caller
+    on the full train set with that configuration.
+
+    Parameters
+    ----------
+    X_train, y_train_log_std : np.ndarray
+        Train-set features (already scaled) and standardized log-life
+        targets.
+    hp_grid : list of (int, float)
+        ``(filters, lr)`` pairs. Default grid in the paper is the 3×3
+        product {8, 16, 32} × {1e-3, 3e-3, 1e-2}.
+    kernel, hidden, dropout, weight_decay : non-tuned hyperparameters
+        Held fixed across the grid; matches classical CV grids which only
+        tune 2 hyperparameters and leave architecture-level choices fixed.
+    epochs, patience, batch_size : training control
+        Passed through to :func:`train_one_model` for every fold.
+    n_folds : int
+        Number of CV folds, clamped to ``[2, n-1]``.
+
+    Returns
+    -------
+    best_config : tuple of (int, float)
+        Winning ``(filters, lr)``.
+    info : dict
+        Per-fold MAE records, the full grid considered, and best-config
+        diagnostics. Persisted in the checkpoint for audit.
+    """
     n = len(y_train_log_std)
     n_folds = max(2, min(n_folds, n - 1))
     rng = np.random.default_rng(seed + 1000)
@@ -512,6 +697,16 @@ def inner_cv_hp_search(
 def prediction_rows(
     meta: pd.DataFrame, y_true: np.ndarray, y_pred: np.ndarray, base_row: dict
 ) -> list[dict]:
+    """Per-cell prediction-record rows for downstream pooled-bootstrap CIs.
+
+    Emits one row per test cell with ``y_true`` and ``y_pred`` plus the
+    identifying metadata from ``base_row`` (scenario, source, target,
+    seed, etc.). These rows accumulate into ``results_predictions.csv``
+    and are consumed by :func:`cluster_bootstrap_ci` in
+    :func:`aggregate_summary` to compute cell_id-level cluster bootstrap
+    CIs (rather than naive row-level CIs that would double-count cells
+    appearing in cross-dataset evaluations across multiple seeds).
+    """
     rows = []
     for cell_id, dataset, true, pred in zip(
         meta["cell_id"], meta["dataset"], y_true, y_pred, strict=False
@@ -546,6 +741,25 @@ def _train_and_predict(
     seed: int,
     args: argparse.Namespace,
 ) -> tuple[np.ndarray, dict, dict]:
+    """Shared core for :func:`evaluate_within` and :func:`evaluate_cross`.
+
+    Encapsulates the parts that are identical between within-dataset and
+    cross-dataset evaluation:
+
+    1. Standardize ``y_train`` by ``log(y).mean()`` and ``log(y).std()``.
+    2. Compute the source-train log-life range plus
+       ``prediction_clip_std_margin × std`` margin for the prediction clip.
+    3. Run :func:`inner_cv_hp_search` (or use fixed HPs if
+       ``--no-hp-search``).
+    4. Train one final model on the full ``X_train`` with the winning
+       configuration, using ``X_cal`` for early-stopping signal.
+    5. Predict on ``X_test`` and clip into source-range cycle space.
+
+    Returns ``(y_pred_cycles, train_block_dict, _aux)``. ``train_block``
+    carries the y-standardization parameters, the chosen HPs, the
+    convergence telemetry, and the full HP-search audit record so the
+    checkpoint JSON can be re-read offline.
+    """
     y_train_log = np.log(y_train)
     y_mean = float(y_train_log.mean())
     y_std = float(y_train_log.std() if y_train_log.std() > 1e-8 else 1.0)
@@ -635,6 +849,18 @@ def evaluate_within(
     device: torch.device,
     args: argparse.Namespace,
 ) -> tuple[dict, list[dict]]:
+    """Within-dataset CNN evaluation for one (dataset, seed) unit of work.
+
+    Slices ``X`` / ``y`` / ``meta`` to the dataset's train / calibration /
+    test cells via the seed's split JSON, fits the sequence scaler on the
+    train rows only, then routes through :func:`_train_and_predict`.
+
+    Raises ``ValueError`` (caught upstream as a unit failure) when train
+    has fewer than 5 cells or test fewer than 2.
+
+    Returns ``(row, pred_rows)``: a single results-detailed row and a
+    list of per-cell prediction rows.
+    """
     train_idx = subset_indices(meta, split["train"])
     cal_idx = subset_indices(meta, split["calibration"])
     test_idx = subset_indices(meta, split["test"])
@@ -689,6 +915,20 @@ def evaluate_cross(
     device: torch.device,
     args: argparse.Namespace,
 ) -> tuple[dict, list[dict]]:
+    """Cross-dataset CNN evaluation: train on ``source`` train, test on full ``target``.
+
+    Train + calibration cells come from the source dataset (selected by
+    the seed's source-split JSON); test cells are *all* uncensored cells
+    of the target dataset (no train/cal partitioning on the target side
+    — that is what the target-adapter and CP scenarios in
+    :file:`conformal_prediction.py` add).
+
+    Sequence scaler is fit on the source training rows only and applied
+    unchanged to target test rows; predictions are clipped to the source
+    train log-life range plus margin (the "source-range clipping" policy).
+
+    Returns ``(row, pred_rows)`` like :func:`evaluate_within`.
+    """
     source_positions = np.flatnonzero(meta["dataset"].eq(source).to_numpy())
     source_meta = meta.iloc[source_positions].reset_index(drop=True)
     train_local = subset_indices(source_meta, source_split["train"])
@@ -737,12 +977,31 @@ def evaluate_cross(
 # -------------------- checkpoint I/O --------------------
 
 def checkpoint_filename(scenario: str, source: str, target: str, seed: int, n_cycles: int) -> str:
+    """Deterministic checkpoint filename per unit of work.
+
+    ``within_{dataset}_seed{seed}_N{n_cycles}.json`` for within-dataset
+    units; ``cross_{source}_to_{target}_seed{seed}_N{n_cycles}.json`` for
+    cross-dataset units. The filename is what the resume logic uses to
+    decide whether to skip a unit on rerun, so it must be stable across
+    invocations.
+    """
     if scenario == "within_split":
         return f"within_{source}_seed{seed}_N{n_cycles}.json"
     return f"cross_{source}_to_{target}_seed{seed}_N{n_cycles}.json"
 
 
 def save_checkpoint(checkpoint_dir: Path, row: dict, pred_rows: list[dict]) -> Path:
+    """Atomically write a unit-of-work checkpoint JSON.
+
+    Writes to ``<filename>.tmp`` first, then renames to ``<filename>.json``.
+    The rename is atomic on POSIX filesystems, which means a crash mid-write
+    (out-of-memory, MPS reset, Ctrl-C) cannot leave a half-written
+    checkpoint that would mis-trigger the resume logic.
+
+    Stores ``{"schema": SCHEMA_VERSION, "detailed": row, "predictions":
+    pred_rows}`` so the schema version can be checked on load and we can
+    bump the version if the dict layout changes incompatibly.
+    """
     fname = checkpoint_filename(
         row["scenario"], row["source"], row["target"], int(row["seed"]), int(row["n_cycles"])
     )
@@ -759,6 +1018,12 @@ def save_checkpoint(checkpoint_dir: Path, row: dict, pred_rows: list[dict]) -> P
 
 
 def load_checkpoint(path: Path) -> tuple[dict, list[dict]] | None:
+    """Load a single checkpoint, returning ``None`` for missing / corrupt files.
+
+    Returns ``None`` (treated as "not yet computed") in three cases:
+    file missing, malformed JSON, or schema-version mismatch. The caller
+    re-runs the unit in that case.
+    """
     if not path.exists():
         return None
     try:
@@ -797,7 +1062,30 @@ def load_all_checkpoints(checkpoint_dir: Path) -> tuple[list[dict], list[dict]]:
 def cluster_bootstrap_ci(
     pred_block: pd.DataFrame, *, n_bootstrap: int = 1000, seed: int = 42
 ) -> dict[str, dict[str, float]]:
-    """Resample by cell_id, expand to all rows. Honest CI under repeated-cell pooling."""
+    """Cluster bootstrap by ``cell_id``, with full-row expansion per sample.
+
+    Sampling unit is the *cell*, not the row. Each of the ``n_bootstrap``
+    iterations samples ``n_cells`` cell IDs with replacement, then
+    concatenates *all* prediction rows belonging to those cells. Metrics
+    are recomputed on the expanded block.
+
+    This is the correct bootstrap protocol for two reasons:
+
+    1. **Cross-dataset rows duplicate cells across seeds.** The same
+       target cell ``X`` is predicted by 5 different seeds in cross-
+       dataset evaluations. A naive row-level bootstrap would treat the
+       same cell as 5 independent observations and produce an
+       artificially tight CI.
+    2. **Within-dataset test rows are mostly distinct across seeds** but
+       not always (some cells happen to land in test for multiple seeds
+       under lifetime-quartile stratification). Cluster bootstrap is
+       agnostic — it works correctly whether cells repeat across seeds or
+       not.
+
+    Returns ``{metric: {"lower": x, "upper": y}}`` for MAE / SMAPE / R²;
+    NaN bounds when fewer than 3 unique cells exist (e.g., a tiny test
+    split).
+    """
     unique_cells = pred_block["cell_id"].unique()
     n_cells = len(unique_cells)
     blank = {"lower": float("nan"), "upper": float("nan")}
@@ -831,6 +1119,24 @@ def cluster_bootstrap_ci(
 
 
 def aggregate_summary(detailed: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate per-seed detailed rows into the paper-facing summary table.
+
+    For each ``(scenario, experiment, source, target, model, n_cycles)``
+    group:
+
+    - Seed-aggregate metrics: ``MAE_mean``, ``MAE_std`` (and similarly for
+      SMAPE, R²); ``n_runs`` = number of seeds in the group.
+    - Cell counts (``train_cells_mean``, ``calibration_cells_mean``,
+      ``test_cells_mean``) and convergence (``best_epoch_mean``) as audit
+      columns.
+    - Pooled cluster-bootstrap CI on the predictions DataFrame restricted
+      to the same group, via :func:`cluster_bootstrap_ci`. Provides
+      ``MAE_cluster_ci95_lower/upper`` (and similarly for SMAPE, R²)
+      alongside ``bootstrap_prediction_rows`` and
+      ``bootstrap_distinct_cells`` for transparency.
+
+    Output is sorted by ``group_cols`` for stable diffs across reruns.
+    """
     group_cols = ["scenario", "experiment", "source", "target", "model", "n_cycles"]
     rows = []
     for keys, block in detailed.groupby(group_cols, sort=True):
@@ -1014,6 +1320,22 @@ def write_outputs(
 
 
 def main() -> int:
+    """Entry point: enumerate units of work, run + checkpoint, then aggregate.
+
+    Plans the full set of units (all enabled scenarios × seeds × windows ×
+    source/target pairs), skips any whose checkpoint JSON already exists
+    (resume), and runs the rest serially through :func:`evaluate_within` /
+    :func:`evaluate_cross`. After every unit, the checkpoint is written
+    atomically so a mid-run interruption loses at most one unit.
+
+    On completion (or after ``--aggregate-only``) reads every checkpoint
+    in the directory, calls :func:`aggregate_summary` for the paper-facing
+    summary CSV, writes the detailed and predictions CSVs, regenerates
+    the markdown report, and prints the summary head.
+
+    Return code is 0 on full success, 1 if any unit raised an exception
+    (the run continues past failures; the failures are listed at the end).
+    """
     args = parse_args()
     features_path = resolve_path(args.features_path)
     splits_dir = resolve_path(args.splits_dir)

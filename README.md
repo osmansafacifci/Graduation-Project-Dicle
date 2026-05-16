@@ -3,8 +3,13 @@
 Early-cycle lifetime prediction for lithium-ion cells (Severson/MATR and HUST
 public datasets, with Sandia/SNL and Luh/KIT extensions for the paper), built
 around an SOP that fixes label semantics, feature definitions, and split
-protocols. Companion to a thesis on cross-dataset transfer of capacity-only
-features.
+protocols. Companion to a manuscript on cross-dataset transfer regimes and
+valid uncertainty intervals for capacity-only features.
+
+**Authors:** Durukan Demir, Dicle Çoban, Salih Sarp, Osman Safa Çifçi
+**License:** [MIT](LICENSE)
+**Citation:** see [`CITATION.cff`](CITATION.cff); a Zenodo DOI will be minted
+on the v1.0.0 tag (see [`docs/ZENODO.md`](docs/ZENODO.md)).
 
 > **Status**
 > Within-dataset, cross-dataset, distribution-shift quantification,
@@ -910,12 +915,45 @@ Each script writes a JSON with the per-seed numbers and a summary CSV.
 
 ---
 
-## Background
+## Datasets and Citations
 
-- Severson et al. 2019, *Data-driven prediction of battery cycle life before
-  capacity degradation*, Nature Energy.
-  [doi:10.1038/s41560-019-0356-8](https://doi.org/10.1038/s41560-019-0356-8)
-- Ma et al. 2022, *Real-time personalized health status prediction of
-  lithium-ion batteries using deep transfer learning*, EES (HUST dataset).
-- BatteryML — Microsoft's reference data preprocessing for both datasets:
-  <https://github.com/microsoft/BatteryML>
+All four datasets in this pipeline are publicly available. The repository
+ships **only derived 34-feature CSVs** in `data/intermediate/`; raw cell-level
+files must be obtained from the original sources below.
+
+| Dataset | Cells (modeled / censored) | Chemistry / format | DOI / source | Original publication |
+|---|---:|---|---|---|
+| **MATR (Severson / TRI / MIT)** | 129 / 6 | LFP/graphite 18650, fast-charge | [DOI 10.1038/s41560-019-0356-8](https://doi.org/10.1038/s41560-019-0356-8) · [data.matr.io](https://data.matr.io/1/) | Severson et al., *Nature Energy* 4, 383–391 (2019) |
+| **HUST** | 77 / 0 | LFP/graphite, multi-stage discharge protocols | [DOI 10.1039/D2EE01416G](https://doi.org/10.1039/D2EE01416G) · [BatteryArchive HUST](https://www.batteryarchive.org/index.html) | Ma et al., *Energy Environ. Sci.* 15, 4083–4094 (2022) |
+| **Sandia / SNL (0–100% SOC subset)** | 50 / 11 | NCA/NMC/LFP 18650, mixed-temperature | [DOI 10.1149/1945-7111/abae37](https://doi.org/10.1149/1945-7111/abae37) · [BatteryArchive SNL](https://www.batteryarchive.org/snl_study.html) | Preger et al., *J. Electrochem. Soc.* 167, 120532 (2020) |
+| **Luh / KIT RADAR** | 106 / 2 | NMC, standard-cycling | [DOI 10.35097/1947](https://doi.org/10.35097/1947) · [KITopen](https://radar.kit.edu/) | KIT RADAR battery aging archive |
+
+Tooling references:
+
+- **BatteryML** (Microsoft, 2024) — reference raw preprocessing for MATR and
+  HUST: <https://github.com/microsoft/BatteryML>
+- **MAPIE** (scikit-learn-contrib) — conformal prediction library used in
+  `3_analysis/conformal_prediction.py`:
+  <https://github.com/scikit-learn-contrib/MAPIE>
+
+## How to cite
+
+If you use this software, its derived feature tables, or its analysis
+protocol, please cite both the manuscript (when published) and the software
+release. The software citation metadata lives in [`CITATION.cff`](CITATION.cff)
+and is auto-rendered by GitHub's "Cite this repository" button.
+
+```bibtex
+@software{cobandemir_battery_2026,
+  author       = {Demir, Durukan and Çoban, Dicle and Sarp, Salih and Çifçi, Osman Safa},
+  title        = {Battery Lifetime Prediction — SOP-Compliant Pipeline for
+                  Cross-Dataset Transfer with Conformal Uncertainty},
+  year         = {2026},
+  version      = {1.0.0},
+  url          = {https://github.com/osmansafacifci/Graduation-Project-Dicle},
+  note         = {Zenodo DOI will be added on the v1.0.0 tag.}
+}
+```
+
+When the corresponding manuscript is online, prefer the manuscript citation
+for *findings* and add the software citation for *reproducibility / methods*.
