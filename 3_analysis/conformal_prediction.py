@@ -835,14 +835,21 @@ def summarize(rows: list[dict]) -> pd.DataFrame:
         "n_short_life",
         "n_long_life",
     ]
+    # MAE/SMAPE/R2 also get a median aggregation. Under linear target
+    # adaptation, the slope alpha can be fit on a tiny k_adapter sample and
+    # extrapolated to many test cells; rare degenerate fits push individual
+    # per-run R² to extreme values that dominate the mean. Median is the
+    # robust summary used by the paper-facing regime-stratified table.
     agg_spec = {}
     for col in numeric_cols:
-        if col in detailed.columns:
-            agg_spec[col] = (
-                ["mean", "std"]
-                if col not in {"finite_q", "n_train", "n_adapter", "n_calibration", "n_test"}
-                else ["mean"]
-            )
+        if col not in detailed.columns:
+            continue
+        if col in {"finite_q", "n_train", "n_adapter", "n_calibration", "n_test"}:
+            agg_spec[col] = ["mean"]
+        elif col in {"MAE", "SMAPE", "R2"}:
+            agg_spec[col] = ["mean", "median", "std"]
+        else:
+            agg_spec[col] = ["mean", "std"]
     grouped = detailed.groupby(group_cols, dropna=False)
     summary = grouped.agg(agg_spec)
     summary.columns = [f"{base}_{stat}" for base, stat in summary.columns]

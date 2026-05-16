@@ -144,6 +144,11 @@ def load_regime_cp(cp_path: Path, regime_path: Path, confidence: float) -> pd.Da
 
 
 def write_markdown(df: pd.DataFrame, path: Path, confidence: float) -> None:
+    # R²_median is the robust per-direction aggregator across the (5 seeds × 20
+    # adapter repeats) per-run set. The linear adapter occasionally fits a
+    # near-singular slope on k_adapter=20 cells, producing extreme per-run R²
+    # that dominates an arithmetic mean (e.g., LUH→MATR linear-adapted R²_mean
+    # ≈ −3.5e5 vs R²_median ≈ −0.04). The mean column is kept for audit.
     pivot_cols = [
         "direction",
         "rank_signal_class",
@@ -153,29 +158,32 @@ def write_markdown(df: pd.DataFrame, path: Path, confidence: float) -> None:
         "coverage_wilson95_upper_mean",
         "median_width_mean",
         "finite_interval_fraction_mean",
-        "MAE_mean",
-        "R2_mean",
+        "MAE_median" if "MAE_median" in df.columns else "MAE_mean",
+        "R2_median" if "R2_median" in df.columns else "R2_mean",
     ]
     table = df[pivot_cols].copy()
+    r2_col = "R2_median" if "R2_median" in df.columns else "R2_mean"
+    mae_col = "MAE_median" if "MAE_median" in df.columns else "MAE_mean"
     for col in [
         "coverage_mean",
         "coverage_wilson95_lower_mean",
         "coverage_wilson95_upper_mean",
         "finite_interval_fraction_mean",
-        "R2_mean",
+        r2_col,
     ]:
         table[col] = table[col].map(lambda x: "" if pd.isna(x) else f"{x:.3f}")
     table["median_width_mean"] = table["median_width_mean"].map(lambda x: "" if pd.isna(x) else f"{x:.0f}")
-    table["MAE_mean"] = table["MAE_mean"].map(lambda x: "" if pd.isna(x) else f"{x:.0f}")
+    table[mae_col] = table[mae_col].map(lambda x: "" if pd.isna(x) else f"{x:.0f}")
 
     lines = [
         "# Regime-Stratified CP Summary",
         "",
         f"Confidence level: {confidence:.0%}. Rows are ordered by rank-signal regime, then naive source-calibrated CP MAE.",
+        f"MAE and R² columns are per-direction *medians* across the 5 seeds × adapter-repeat runs. Arithmetic means are retained in `results_summary.csv` for audit.",
         "",
         dataframe_to_markdown(table),
         "",
-        "Interpretation: source-calibrated CP under-covers in most regimes; target-domain and residual-adapted CP restore near-nominal coverage with finite intervals. The width column shows the reliability cost of that repair.",
+        "Interpretation: source-calibrated CP under-covers in most regimes; target-domain and residual-adapted CP restore near-nominal coverage with finite intervals. Linear-adapted CP behaves similarly to residual-mean on most directions but occasionally produces degenerate adapter fits on small k_adapter samples — visible in `results_summary.csv` as large R²_std and very negative R²_mean rows, and tamed by reporting R²_median here.",
     ]
     path.write_text("\n".join(lines))
 

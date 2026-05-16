@@ -59,6 +59,34 @@ This table is the defense if the paper is challenged for not chasing the
 largest deep architecture. The answer is: the contribution is orthogonal to
 architecture, and the pipeline can wrap any point predictor.
 
+### Pareto Table — concrete numbers (paper Table 5 candidate)
+
+This is the manuscript-ready comparison table. All MATR rows refer to the
+N=100 early-cycle setting. "Per-cycle data contract" means what each method
+must read for every cycle of every cell. Numbers are pulled from the cited
+publications; comparable but not identically-formed metrics are noted.
+
+| Method | Per-cycle data contract | MATR within-error | Cross-dataset transfer | Valid CP intervals? | Compute footprint |
+|---|---|---|---|---|---|
+| Severson 2019, *Nature Energy* | Discharge voltage curve V(Q) | ~10% MAPE (test) | Not assessed | No | Minutes (elastic net) |
+| BatLiNet, *Nature MI* 2024 | Discharge V(Q), 401-cell joint training | 6% MAPE (MATR-1), 11% (MATR-2) | Joint training across datasets, not naive transfer | No | Hours on GPU |
+| EES 2025 (surface T features) | Surface temperature T(V), T(Q) first 10 cycles | 12% MAPE (TRI primary) | OOD secondary tests; no cross-dataset transfer matrix | No | Minutes (gradient boosting) |
+| DCIR cross-manufacturer 2024 | DCIR pulses at 10 SoCs (extra protocol) | n/a (different metric) | 150-cycle MAE *cross-manufacturer in one lab* (not cross-dataset) | No | Minutes (elastic net) |
+| Domain-Adaptive Transformer, *Energy* 2025 | V, Q, ΔQ, ΔV trajectories | n/a | RUL RMSE 178 cycles after fine-tuning (cross-discharge / cross-chemistry) | No | Hours on GPU |
+| **This work — classical lineup** | **Discharge capacity Q_dis(c) only** | **24% sMAPE (~22% MAPE)** | **R² = −0.05 after k=20 target calibration on rank-signal-preserving directions** | **Yes — 90% / 95% coverage at finite width** | **Seconds–minutes on CPU** |
+| **This work — PyTorch CNN** | Discharge capacity Q_dis(c) only | sMAPE not reported; R² = 0.305 | Same regime taxonomy as classical; over-extrapolates with Sandia source | Yes (same CP wrapper) | ~60 min on M1 MPS |
+
+Reading guide for reviewers:
+- Row 1–5 show the recent-SOTA Pareto axis: voltage / impedance / temperature
+  features give better absolute accuracy, but each requires per-cycle data
+  beyond capacity, and none ships with valid prediction intervals on
+  cross-dataset transfer.
+- Row 6–7 show this work's chosen frontier point: capacity-only contract +
+  valid CP, with the explicit reliability guarantee that the SOTA rows lack.
+- The CNN row (7) confirms that adding deep architecture does not change the
+  qualitative answer — see the regime-taxonomy preservation result in §1D-CNN
+  Baseline Decision.
+
 ## What Goes in Main Text vs SI
 
 | Component | Main text | SI / appendix |
@@ -130,3 +158,38 @@ manuscript-facing takeaways:
    shift is large (Sandia source → MATR/HUST). The (data minimality ×
    within-dataset accuracy × CP validity) Pareto positioning therefore still
    favors the classical lineup with target-side calibration.
+
+### Manuscript-ready discussion paragraph
+
+Drop-in paragraph for the paper's Discussion or Limitations section.
+
+> We add a PyTorch 1D-CNN baseline to test whether a sequence model on the
+> early Q/Q₀ trajectory changes the structural conclusions of the classical
+> pipeline. With inner-CV hyperparameter selection matched to the
+> gradient-boosted models, the CNN is competitive on Sandia (R²=0.881) and
+> Luh/KIT (R²=0.761), is below the classical headline on MATR (CNN 0.305 vs
+> CatBoost 0.575), and fails on the narrow-lifetime HUST set (R²=−0.174). Two
+> qualitative findings transfer from the classical results: the rank-signal
+> regime taxonomy is preserved — Sandia↔Luh remain the only directions with
+> positive naive cross-dataset R² (0.31–0.34), and MATR↔HUST stay catastrophic
+> (R²≈−4 to −6) regardless of architecture. The CNN additionally amplifies
+> source-specific signal under shift: Sandia-as-source over-extrapolates to
+> MATR/HUST with R² as low as −47.8, where the classical pipeline only
+> reached R²≈−1. Together these results support the central claim of the
+> paper: cross-dataset RUL transfer on the capacity-only feature contract is
+> not architecture-limited; it is governed by the rank-signal regime of the
+> source/target pair, and the practical fix remains a small target-side
+> calibration set with conformal coverage rather than a heavier model.
+
+### CP outlier aggregation note
+
+The regime-stratified CP table reports the per-direction *median* of R²/MAE/
+sMAPE across the 5-seed × 20-repeat run set rather than the arithmetic mean.
+On directions with weak rank signal and a small adapter set (k_adapter=20),
+the linear adapter occasionally fits a near-singular slope on its tiny
+calibration draw, producing isolated catastrophic R² values that dominate the
+arithmetic mean (e.g., LUH→MATR linear-adapted R²_mean = −3.5×10⁵ versus
+R²_median = −0.04). Arithmetic means and standard deviations are retained in
+`results_summary.csv` and `paper_cp_delta_summary.csv` as audit columns; the
+SI should expose them with a one-sentence footnote describing the failure
+mode of the linear adapter on extremely small k_adapter samples.

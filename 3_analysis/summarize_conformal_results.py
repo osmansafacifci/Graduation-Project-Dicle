@@ -131,8 +131,10 @@ def build_delta(primary: pd.DataFrame) -> pd.DataFrame:
                     "MAE_no_adapter": base["MAE_mean"],
                     "MAE_adapted": row["MAE_mean"],
                     "MAE_reduction_pct": 100.0 * (1.0 - row["MAE_mean"] / base["MAE_mean"]),
-                    "R2_no_adapter": base["R2_mean"],
-                    "R2_adapted": row["R2_mean"],
+                    "R2_no_adapter": base.get("R2_median", base["R2_mean"]),
+                    "R2_adapted": row.get("R2_median", row["R2_mean"]),
+                    "R2_mean_no_adapter": base["R2_mean"],
+                    "R2_mean_adapted": row["R2_mean"],
                     "winkler_no_adapter": base["winkler_mean_mean"],
                     "winkler_adapted": row["winkler_mean_mean"],
                     "winkler_reduction_pct": 100.0 * (1.0 - row["winkler_mean_mean"] / base["winkler_mean_mean"]),
@@ -191,8 +193,11 @@ def build_k_sweep(summary: pd.DataFrame) -> pd.DataFrame:
         "short_long_coverage_gap_mean",
         "median_width_mean",
         "winkler_mean_mean",
+        "MAE_median",
         "MAE_mean",
+        "SMAPE_median",
         "SMAPE_mean",
+        "R2_median",
         "R2_mean",
         "finite_q_mean",
         "n_runs",
@@ -219,9 +224,9 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
         "short_long_coverage_gap_mean",
         "median_width_mean",
         "winkler_mean_mean",
-        "MAE_mean",
-        "SMAPE_mean",
-        "R2_mean",
+        "MAE_median",
+        "SMAPE_median",
+        "R2_median",
         "n_runs",
     ]
     cols = [c for c in cols if c in primary.columns]
@@ -240,15 +245,15 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
         "Short/long gap",
         "Median width",
         "Winkler",
-        "MAE",
-        "sMAPE",
-        "R2",
+        "MAE (median)",
+        "sMAPE (median)",
+        "R2 (median)",
         "Runs",
     ][: len(table.columns)]
-    for col in ["Confidence", "Coverage", "Wilson low", "Wilson high", "Finite interval frac.", "Short-life cov.", "Long-life cov.", "Short/long gap", "R2"]:
+    for col in ["Confidence", "Coverage", "Wilson low", "Wilson high", "Finite interval frac.", "Short-life cov.", "Long-life cov.", "Short/long gap", "R2 (median)"]:
         if col in table.columns:
             table[col] = table[col].map(lambda x: fmt(x, 3))
-    for col in ["Median width", "Winkler", "MAE", "sMAPE"]:
+    for col in ["Median width", "Winkler", "MAE (median)", "sMAPE (median)"]:
         if col in table.columns:
             table[col] = table[col].map(lambda x: fmt(x, 1))
     if "Runs" in table.columns:
@@ -259,6 +264,7 @@ def write_markdown(primary: pd.DataFrame, delta: pd.DataFrame, path: Path) -> No
     lines = ["# Paper CP Summary", ""]
     lines.append("Primary policy: MAPIE split CP at 90% and 95% if present; target rows use k_target=20; adapted rows use k_adapter=20 and include each available point adapter.")
     lines.append("Wilson columns are 95% Wilson score intervals for empirical coverage; short/long coverage splits each test set by observed lifetime.")
+    lines.append("MAE, sMAPE and R² in this table are per-direction *medians* across the 5 seeds × adapter-repeat runs (robust to occasional degenerate linear-adapter fits on small k_adapter samples); arithmetic means stay in `results_summary.csv`.")
     lines.append("")
     lines.append(dataframe_to_markdown(table))
     lines.append("")
