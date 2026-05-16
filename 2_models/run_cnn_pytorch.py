@@ -70,7 +70,8 @@ try:
     from torch.utils.data import DataLoader, TensorDataset
 except ImportError as exc:
     raise SystemExit(
-        "PyTorch is required. On M1: `pip install --no-cache-dir torch`\n"
+        "PyTorch is required. Install the project dependencies with "
+        "`pip install -r requirements.txt` (or `requirements-pinned.txt`).\n"
         f"(import failed with: {exc})"
     )
 
@@ -195,9 +196,8 @@ def build_sequence_dataset(
     5. Stack ``(retention, diff)`` as two channels.
 
     Cells missing cycle coverage, with non-positive ``q0``, or otherwise
-    malformed are skipped (and reported via ``[warn]``); this matches the
-    behaviour of the previous NumPy CNN so the two histories of results
-    are directly comparable.
+    malformed are skipped (and reported via ``[warn]``); this keeps the
+    sequence contract aligned with the earlier CNN audit outputs.
 
     Parameters
     ----------

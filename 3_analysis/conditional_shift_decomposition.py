@@ -55,6 +55,8 @@ from scipy.stats import pearsonr
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import HuberRegressor, TheilSenRegressor
 
+from plot_style import apply_science_style
+
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
@@ -717,6 +719,7 @@ def write_alpha_beta_scatter(pred_rows: pd.DataFrame, alpha_rows: pd.DataFrame, 
         import matplotlib.pyplot as plt
     except Exception:
         return None
+    apply_science_style()
 
     sub = pred_rows[pred_rows["seed"] == seed].copy()
     if sub.empty:
@@ -791,6 +794,7 @@ def write_directional_asymmetry_scatter(
         import matplotlib.pyplot as plt
     except Exception:
         return None
+    apply_science_style()
 
     sub = pred_rows[pred_rows["seed"] == seed].copy()
     if sub.empty:

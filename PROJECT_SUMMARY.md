@@ -526,9 +526,11 @@ source-relevance caveats rather than as a universally dominant method.
 outputs into a paper-facing four-panel scaling figure at
 `outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.png`/`.pdf`.
 At k=20, 90% residual-adapted CP averages 0.911 coverage with median width
-1466 cycles, versus target-domain CP at 0.909 coverage and median width 2868
-cycles. LODO MAE improves from k=5 to k=20 for every held-out target; Sandia
-has the largest drop (470.3 -> 277.5 cycles).
+1466 cycles by the direction-level median (mean direction width 2194 cycles),
+versus target-domain CP at 0.909 coverage and median width 2868 cycles by the
+direction-level median (mean direction width 3074 cycles). LODO MAE improves
+from k=5 to k=20 for every held-out target; Sandia has the largest drop
+(470.3 -> 277.5 cycles).
 
 ### Conformal prediction (§7)
 
@@ -569,7 +571,7 @@ including the easier Sandia↔Luh pair (0.630–0.732). Target-domain CP with
 often with wide intervals. Residual-mean adapted CP with `k_adapter=20` and
 `k_target=20` keeps coverage near nominal (0.892–0.928), all intervals finite,
 and reduces median width in most directions; linear adapted CP is now reported
-side-by-side (coverage 0.896–0.915, median width median 1372). Key examples at
+side-by-side (coverage 0.896–0.915, direction-level median width 1372). Key examples at
 90%: MATR→HUST improves from source-CP coverage 0.177 to residual-adapted
 coverage 0.906 with median width 1007; HUST→MATR from 0.203 to 0.915 with
 width 1303; Sandia→Luh benefits from linear adaptation (coverage 0.903, median

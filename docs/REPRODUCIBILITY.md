@@ -38,6 +38,8 @@ python -m venv .venv
 source .venv/bin/activate
 
 # 1. pinned dependencies (exact-version archival)
+#    Includes torch==2.12.0 for the PyTorch CNN baseline and
+#    SciencePlots==2.2.0 for manuscript-style matplotlib figures.
 pip install -r requirements-pinned.txt
 
 # 2. status — see which stages are already populated by the committed CSVs
@@ -94,7 +96,6 @@ python 3_analysis/lodo_source_expert_transfer.py \
     --k-report 20
 
 # PyTorch CNN baseline (Apple Silicon: ~60 min; CPU only: ~5–6 hours)
-pip install --no-cache-dir torch==2.12.0
 python 2_models/run_cnn_pytorch.py            # default: 80 units, full HP grid
 
 # Aggregate-only rebuild from existing checkpoints (no retraining)

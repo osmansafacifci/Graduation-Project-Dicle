@@ -15,6 +15,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from plot_style import apply_science_style
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CP_SUMMARY = ROOT / "outputs/results_v2_four_dataset_conformal/paper_cp_summary.csv"
@@ -191,6 +193,7 @@ def write_markdown(df: pd.DataFrame, path: Path, confidence: float) -> None:
 def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
     import matplotlib.pyplot as plt
 
+    apply_science_style()
     direction_order = (
         df[["direction", "regime_short", "rank_signal_class", "source_cp_MAE", "regime_order"]]
         .drop_duplicates()

@@ -55,6 +55,8 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from plot_style import apply_science_style
+
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
@@ -600,6 +602,7 @@ def write_plots(
         import matplotlib.pyplot as plt
     except Exception:
         return []
+    apply_science_style()
 
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []

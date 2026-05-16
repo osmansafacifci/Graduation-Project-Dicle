@@ -7,8 +7,6 @@
 #     python -m venv .venv
 #     source .venv/bin/activate
 #     pip install -r requirements-pinned.txt
-#     # for the PyTorch CNN baseline (Apple Silicon MPS):
-#     pip install --no-cache-dir torch==2.12.0
 #
 # Python version: 3.13 (3.10–3.13 should work)
 # Last verified on macOS arm64 (Apple Silicon, M1) — May 2026
@@ -22,6 +20,7 @@ pandas==2.3.3
 scipy==1.17.0
 h5py==3.14.0
 matplotlib==3.10.8
+SciencePlots==2.2.0
 
 # --- modeling ---
 scikit-learn==1.8.0
@@ -29,10 +28,7 @@ MAPIE==1.4.0
 shap==0.50.0
 xgboost==3.2.0
 catboost==1.2.10
-
-# --- deep learning baseline (optional but recommended for full reproduction) ---
-# Install separately: `pip install --no-cache-dir torch==2.12.0`
-# torch==2.12.0   # uncomment to make the deep-baseline a hard requirement
+torch==2.12.0
 
 # --- transitive pins (recorded for archival reproducibility) ---
 joblib==1.5.3

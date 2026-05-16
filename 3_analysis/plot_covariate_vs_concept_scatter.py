@@ -32,6 +32,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from plot_style import apply_science_style
+
 ROOT = Path(__file__).resolve().parents[1]
 
 # Midnight Executive palette (matches PROJECT slide deck for visual continuity)
@@ -145,6 +147,7 @@ LABEL_OFFSETS = {
 
 
 def plot_figure(df: pd.DataFrame, out_path: Path):
+    apply_science_style()
     fig, ax = plt.subplots(figsize=(9.0, 5.8), dpi=200)
 
     # Background bands: tolerance strip around ΔR²=0 highlights the

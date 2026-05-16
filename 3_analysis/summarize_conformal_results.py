@@ -29,6 +29,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from plot_style import apply_science_style
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2_conformal"
 
@@ -299,6 +301,7 @@ def maybe_write_plot(primary: pd.DataFrame, path: Path, confidence_level: float)
     except ImportError:
         return
 
+    apply_science_style()
     if "confidence_level" in primary.columns:
         primary = primary[primary["confidence_level"].round(6).eq(round(confidence_level, 6))].copy()
     if primary.empty:
@@ -362,6 +365,7 @@ def maybe_write_k_sweep_plot(k_sweep: pd.DataFrame, path: Path, confidence_level
     except ImportError:
         return
 
+    apply_science_style()
     if k_sweep.empty:
         return
     plot_df = k_sweep[k_sweep["confidence_level"].round(6).eq(round(confidence_level, 6))].copy()

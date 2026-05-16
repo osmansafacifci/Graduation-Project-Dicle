@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp
 
+from plot_style import apply_science_style
 from survival_censoring import (
     kaplan_meier,
     logrank_test,
@@ -232,6 +233,7 @@ def make_plot(curves: pd.DataFrame, event_table: pd.DataFrame) -> None:
         import matplotlib.pyplot as plt
     except ImportError:
         return
+    apply_science_style()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     colors = {

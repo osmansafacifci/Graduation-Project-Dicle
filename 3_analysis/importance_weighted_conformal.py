@@ -51,6 +51,8 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from plot_style import apply_science_style
+
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
@@ -487,6 +489,7 @@ def write_paper_comparison_plot(comparison: pd.DataFrame, output_dir: Path, *, c
     except Exception:
         return None
 
+    apply_science_style()
     plot_df = comparison[np.isclose(comparison["confidence_level"].astype(float), confidence_level)].copy()
     if plot_df.empty:
         return None

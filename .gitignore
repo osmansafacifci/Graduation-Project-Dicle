@@ -22,4 +22,7 @@ catboost_info/
 
 # Local experiment scratch
 /tmp/
+logs/
+.cloud/
+.claude/
 *.log

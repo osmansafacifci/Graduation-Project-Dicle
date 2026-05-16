@@ -38,6 +38,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import chi2, ks_2samp
 
+from plot_style import apply_science_style
+
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
@@ -258,6 +260,7 @@ def make_plot(curves: pd.DataFrame, event_table: pd.DataFrame, output_dir: Path)
         import matplotlib.pyplot as plt
     except ImportError:
         return
+    apply_science_style()
 
     output_dir.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(8, 5))

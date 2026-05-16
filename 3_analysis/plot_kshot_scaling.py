@@ -19,6 +19,8 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
+from plot_style import apply_science_style
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CP_PATH = ROOT / "outputs/results_v2_four_dataset_conformal/paper_cp_k_sweep.csv"
@@ -132,6 +134,7 @@ def summarize_lodo(lodo: pd.DataFrame) -> pd.DataFrame:
 def set_style() -> None:
     import matplotlib as mpl
 
+    apply_science_style()
     mpl.rcParams.update(
         {
             "figure.dpi": 160,

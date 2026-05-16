@@ -49,6 +49,8 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
+from plot_style import apply_science_style
+
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
@@ -583,6 +585,7 @@ def make_top_feature_plot(summary: pd.DataFrame, output_dir: Path, *, top_k: int
     except ImportError:
         return
 
+    apply_science_style()
     blocks = list(summary.groupby(["dataset", "model"], sort=True))
     if not blocks:
         return

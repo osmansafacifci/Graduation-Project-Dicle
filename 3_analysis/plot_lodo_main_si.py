@@ -19,6 +19,8 @@ import tempfile
 import numpy as np
 import pandas as pd
 
+from plot_style import apply_science_style
+
 
 ROOT = Path(__file__).resolve().parents[1]
 INTERMEDIATE_DIR = ROOT / "data/intermediate"
@@ -248,6 +250,7 @@ def build_protocol_family_summary(lodo: pd.DataFrame) -> pd.DataFrame:
 def plot_main_panel(main: pd.DataFrame, out_png: Path) -> None:
     import matplotlib.pyplot as plt
 
+    apply_science_style()
     plt.rcParams.update(
         {
             "figure.dpi": 160,

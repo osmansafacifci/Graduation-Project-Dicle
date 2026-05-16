@@ -183,6 +183,11 @@ python run_pipeline.py --phase model             # splits + VIF + within-dataset
 python run_pipeline.py --phase analysis          # shift + XAI + survival + concept + rescaling + CP
 ```
 
+`requirements.txt` now explicitly includes PyTorch (`torch>=2.12`) for the
+1D-CNN baseline and SciencePlots (`SciencePlots>=2.2`) for all paper-facing
+matplotlib figures. Use `requirements-pinned.txt` for exact archival versions
+(`torch==2.12.0`, `SciencePlots==2.2.0`).
+
 Or call individual scripts:
 
 ```bash
@@ -690,9 +695,11 @@ SI report: `data/intermediate/paper_lodo_si_report.md`.
 The paper-facing k-shot scaling figure combines the CP and LODO sweeps in
 `outputs/results_v2_four_dataset_kshot_scaling/paper_kshot_scaling.png`/`.pdf`.
 At `k=20`, 90% residual-adapted CP averages 0.911 coverage with median width
-1466 cycles, versus target-domain CP at 0.909 coverage and median width 2868
-cycles. LODO MAE drops from k=5 to k=20 for every held-out target, with the
-largest reduction on Sandia (470.3 -> 277.5 cycles).
+1466 cycles by the direction-level median (mean direction width 2194 cycles),
+versus target-domain CP at 0.909 coverage and median width 2868 cycles by the
+direction-level median (mean direction width 3074 cycles). LODO MAE drops from
+k=5 to k=20 for every held-out target, with the largest reduction on Sandia
+(470.3 -> 277.5 cycles).
 
 ### Conformal Prediction
 
@@ -736,9 +743,9 @@ hidden sensitivity.
 |---|---:|---:|---|
 | Within-dataset CP | 0.875–0.967 | 623–1056 | Standard CP remains well behaved on Sandia and Luh. |
 | Naive source-calibrated cross CP | 0.00–0.732 | 623–1056 | Source-calibrated CP fails under shift in every cross direction. |
-| Target-domain CP, k=20 | 0.902–0.914 | median 2868 | Target calibration restores nominal coverage, often with very wide intervals. |
-| Residual-mean adapted CP, k=20+20 | 0.892–0.928 | median 1466 | Coverage stays near nominal and intervals shrink in most directions. |
-| Linear adapted CP, k=20+20 | 0.896–0.915 | median 1372 | Often narrows intervals further, but can be unstable when source predictions have weak rank signal. |
+| Target-domain CP, k=20 | 0.902–0.914 | median 2868; mean 3074 | Target calibration restores nominal coverage, often with very wide intervals. |
+| Residual-mean adapted CP, k=20+20 | 0.892–0.928 | median 1466; mean 2194 | Coverage stays near nominal and intervals shrink in most directions. |
+| Linear adapted CP, k=20+20 | 0.896–0.915 | median 1372; mean 2459 | Often narrows intervals further, but can be unstable when source predictions have weak rank signal. |
 
 At 90%, all k=20 four-dataset target/adapted intervals are finite
 (`finite_interval_fraction=1.0`). The easiest pair, Sandia↔Luh, still shows the

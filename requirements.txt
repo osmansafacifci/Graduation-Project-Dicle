@@ -18,6 +18,7 @@ pandas>=2.1
 scipy>=1.11
 h5py>=3.10
 matplotlib>=3.8
+SciencePlots>=2.2
 
 # modeling
 scikit-learn>=1.4
@@ -25,3 +26,4 @@ mapie>=1.4
 shap>=0.50
 xgboost>=2.0
 catboost>=1.2
+torch>=2.12
