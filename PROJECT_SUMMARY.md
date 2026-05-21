@@ -624,43 +624,55 @@ finite-interval fraction.
 >    10.84 σ pooled-z mean shift). Capacity normalization (SOP §2.3)
 >    closes 71% of the geometric gap.
 >
-> 4. **But geometric alignment is not prediction alignment.** Re-running
->    cross-dataset with capacity-normalized features does NOT improve R²
->    and even degrades it on HUST → MATR. *The Q0 gap was carrying
->    predictive dataset-identity signal; removing it breaks the implicit
->    predictor without fixing the y-distribution mismatch.* This is the
->    classical covariate-vs-concept-shift distinction.
+> 4. **Geometric alignment is necessary but not sufficient for prediction
+>    alignment.** Re-running cross-dataset with capacity-normalized features
+>    does NOT recover R² and even degrades it on HUST → MATR (12-feat:
+>    −1.53 → −3.82). *The Q0 gap was carrying predictive dataset-identity
+>    signal; removing it geometrically breaks the implicit predictor without
+>    fixing the y-distribution mismatch.* Reading along the classical
+>    covariate-vs-concept-shift dichotomy.
 >
-> 5. **Direct evidence of concept shift in y**: MATR (mean=778, std=361)
->    and HUST (mean=1490, std=274) cycle_life marginals are statistically
->    distinct (KS = 0.827, p = 3.6e-34). HUST cells live ~1.9× longer.
+> 5. **The KS test on cycle_life marginals confirms a y-distribution
+>    difference**: MATR (mean=778, std=361) vs HUST (mean=1490, std=274) are
+>    statistically distinct (KS = 0.827, p = 3.6e-34, ~1.9× longer life on
+>    HUST). This is part of, not all of, the conditional-shift story.
 >
 > 6. **A large dataset-level offset coexists with feature-level slope shifts.**
 >    Adding the right bias (914 cycles for MATR → HUST, −601 for the other
 >    direction) brings R² from −11 toward zero in the diagnostic, but the
 >    centered-log per-feature test shows the shift is not purely additive:
 >    18/34 features are slope-stable and 16/34 show slope changes after BH
->    correction. Pearson r makes the directional asymmetry clearer:
->    HUST → MATR keeps weak positive rank signal (`r≈0.22–0.27`), whereas
->    MATR → HUST is effectively uncorrelated with target lifetimes
->    (`r≈−0.12 to −0.14`, bootstrap CIs cross zero). The precise claim is
->    therefore *dominant conditional offset with structured feature-level
->    changes and asymmetric rank-transfer loss*, not label shift and not pure
->    additive shift.
+>    correction. Pearson r confirms directional sensitivity *to the choice
+>    of source model*: under the four-dataset best-model column (GP for both
+>    MATR↔HUST directions) r is slightly negative with a CI that crosses
+>    zero; under CatBoost / Random Forest, HUST → MATR retains weak positive
+>    rank signal `r≈0.22–0.27`. We report both and frame the MATR ↔ HUST
+>    pair as RANK_COLLAPSED *as a class label*, on the grounds that no
+>    source model in the tested lineup produces a positive post-calibration
+>    R² with k=20 — the class label is robust to the sign of slightly-
+>    negative r.
 >
-> 7. **A covariate-shift CP falsifier fails usefully.** Importance-weighted
->    source CP with cross-fitted logistic density ratios gives dataset
->    discriminator AUC ≈ 0.994–0.996 and raw ESS/n ≈ 0.55–0.59, but coverage is
->    recovered only by returning infinite intervals almost everywhere
->    (finite-interval fraction ≤0.9% at 90%). This supports the interpretation
->    that covariate weighting alone cannot repair target uncertainty.
+> 7. **The importance-weighted CP probe is a *falsifier*, not a proof of
+>    concept shift.** Cross-fitted logistic density ratios give a dataset
+>    discriminator AUC ≈ 0.994–0.996 and raw ESS/n ≈ 0.55–0.59; coverage is
+>    recovered only by emitting infinite intervals almost everywhere
+>    (finite-interval fraction ≤ 0.9 % at 90 %). The near-perfect AUC is
+>    consistent with two non-exclusive causes (poor source-target support
+>    overlap *or* conditional shift); jointly with the unchanged-or-worse
+>    R² after capnorm and the centred-log slope-shift counts, the evidence
+>    is inconsistent with a purely-covariate-shift explanation.
 >
 > 8. **A two-parameter linear correction fit on k=20 target cells recovers
->    the bulk of the failure**: R² goes from −10 to −0.05 across all tree-
->    based models. The fix needs only a tiny target labeled set, no
->    domain-adaptation infrastructure, no architecture changes. Conformal
->    prediction (§7) extends this from point-estimate correction to
->    valid prediction intervals, which is the natural next step.
+>    the bulk of the failure on the salvageable regimes**: R² goes from −10
+>    to −0.05 across all tree-based models on MATR↔HUST, and from +0.49 to
+>    +0.84 on Sandia ↔ Luh under the linear adapter. The fix needs only a
+>    tiny target labeled set, no domain-adaptation infrastructure, and no
+>    architecture changes *within the architectures we tested* — seven
+>    classical regressors and one compact PyTorch 1D-CNN under matched
+>    inner-CV protocol. Rank-collapsed regimes (MATR ↔ HUST) are not
+>    rescued by either k-shot or the CNN backbone. Conformal prediction
+>    (§7) extends this from point-estimate correction to coverage-valid
+>    prediction intervals, which is the natural next step.
 
 ---
 

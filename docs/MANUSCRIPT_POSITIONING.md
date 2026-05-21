@@ -146,40 +146,52 @@ Outcome (5 seeds, full-grid HP search):
 | Naive cross — over-extrapolation | Sandia source extrapolates badly to MATR/HUST (Sandia→MATR R² = -47.8, Sandia→HUST R² = -36.8) | Classical was already negative here, but CNN is dramatically worse |
 
 Decision: keep this as reviewer armor, not as a main contribution. Two
-manuscript-facing takeaways:
+manuscript-facing takeaways (bounded — see `docs/PAPER_OUTLINE.md` §9.5
+for the reviewer-anticipation context):
 
-1. **Rank-signal regime taxonomy is backbone-agnostic.** The CNN preserves the
-   classical taxonomy qualitatively — strong-rank pairs (Sandia↔Luh) stay
-   positive, rank-collapsed pairs (MATR↔HUST) stay catastrophic. This directly
-   answers the obvious reviewer question "but maybe a deep model breaks your
-   regime story?".
-2. **Deep architecture does not buy cross-dataset robustness on the
-   capacity-only contract.** The CNN over-extrapolates when source-target
-   shift is large (Sandia source → MATR/HUST). The (data minimality ×
-   within-dataset accuracy × CP validity) Pareto positioning therefore still
-   favors the classical lineup with target-side calibration.
+1. **Within the architectures we tested, the rank-signal regime taxonomy
+   is robust to a change of backbone.** The compact PyTorch 1D-CNN
+   preserves the classical taxonomy qualitatively — strong-rank pairs
+   (Sandia↔Luh) stay positive, rank-collapsed pairs (MATR↔HUST) stay
+   catastrophic. This is the relevant check for the diagnostic-and-
+   calibration framework; we do not claim that no neural architecture can
+   solve the rank-collapsed regime (transformer / graph / domain-
+   adversarial models are out of scope).
+2. **A compact deep model does not buy cross-dataset robustness on the
+   capacity-only contract.** The CNN over-extrapolates when the source is
+   heterogeneous (Sandia source → MATR/HUST). The (data minimality ×
+   within-dataset accuracy × CP validity) Pareto positioning therefore
+   still favours the classical lineup with target-side calibration *for
+   this feature contract*.
 
 ### Manuscript-ready discussion paragraph
 
 Drop-in paragraph for the paper's Discussion or Limitations section.
+Wording reviewed against the seven reviewer-anticipation risks listed in
+`docs/PAPER_OUTLINE.md` §9.5.
 
-> We add a PyTorch 1D-CNN baseline to test whether a sequence model on the
-> early Q/Q₀ trajectory changes the structural conclusions of the classical
-> pipeline. With inner-CV hyperparameter selection matched to the
-> gradient-boosted models, the CNN is competitive on Sandia (R²=0.881) and
-> Luh/KIT (R²=0.761), is below the classical headline on MATR (CNN 0.305 vs
-> CatBoost 0.575), and fails on the narrow-lifetime HUST set (R²=−0.174). Two
-> qualitative findings transfer from the classical results: the rank-signal
-> regime taxonomy is preserved — Sandia↔Luh remain the only directions with
-> positive naive cross-dataset R² (0.31–0.34), and MATR↔HUST stay catastrophic
-> (R²≈−4 to −6) regardless of architecture. The CNN additionally amplifies
-> source-specific signal under shift: Sandia-as-source over-extrapolates to
-> MATR/HUST with R² as low as −47.8, where the classical pipeline only
-> reached R²≈−1. Together these results support the central claim of the
-> paper: cross-dataset RUL transfer on the capacity-only feature contract is
-> not architecture-limited; it is governed by the rank-signal regime of the
-> source/target pair, and the practical fix remains a small target-side
-> calibration set with conformal coverage rather than a heavier model.
+> We add a small PyTorch 1D-CNN baseline to test whether a sequence model
+> on the early Q/Q₀ trajectory changes the structural conclusions of the
+> classical pipeline under matched inner-CV hyperparameter selection. The
+> CNN is competitive on Sandia (R²=0.881) and Luh/KIT (R²=0.761), is below
+> the classical headline on MATR (CNN 0.305 vs CatBoost 0.575), and fails
+> on the narrow-lifetime HUST set (R²=−0.174). Two qualitative findings
+> transfer from the classical results: the rank-signal regime taxonomy is
+> preserved — Sandia↔Luh remain the only directions with positive naive
+> cross-dataset R² (0.31–0.34) under the CNN backbone, and the MATR↔HUST
+> pair remains catastrophic (R²≈−4 to −6). The CNN additionally exhibits
+> an over-extrapolation failure mode when the source is heterogeneous:
+> Sandia-as-source reaches R² as low as −47.8 on the MATR / HUST targets,
+> where the classical lineup stays near R²≈−1. Read jointly, these results
+> are consistent with the central reading of the paper: across the seven
+> classical regressors and the compact CNN we evaluated under one matched
+> protocol, cross-dataset RUL transfer on a capacity-only feature contract
+> is governed by the rank-signal structure of the source/target pair, and
+> the practical fix on the salvageable regimes is a small target-side
+> calibration set with valid conformal coverage rather than a heavier
+> model. We make no claim about transformer-style or graph-based
+> architectures, or about domain-adversarial training — those are out of
+> scope for this paper and a natural extension.
 
 ### CP outlier aggregation note
 

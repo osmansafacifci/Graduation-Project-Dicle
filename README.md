@@ -488,8 +488,12 @@ Re-running cross-dataset with capacity-normalized features:
 Capacity normalization closed 71% of the feature-space shift but did not
 solve transfer. It helps slightly for MATR → HUST but degrades HUST → MATR;
 the absolute-capacity gap was carrying dataset-identity signal that the
-regressor leaned on. **This is the classical covariate-vs-concept-shift
-distinction** — covariate alignment without concept alignment.
+regressor leaned on. We read this **as a covariate-vs-concept-shift
+*signature*** — geometric alignment is necessary but not sufficient for
+prediction alignment. The importance-weighted CP probe (`§7` diagnostic
+below) and the centred-log per-feature slope tests (`§6.3++`) jointly
+argue against a purely-covariate-shift explanation; we do not claim that
+this one observation proves conditional shift by itself.
 
 ### Concept-shift diagnostics
 

@@ -50,9 +50,9 @@ Single paragraph. Structure:
 4. **Headline numbers (~50 w)** — Mahalanobis 71 % drop with no R² improvement (key finding); k=20 recovery on rank-preserving directions; valid 90 % / 95 % CP coverage; backbone-agnostic via PyTorch 1D-CNN.
 5. **Take-away (~30 w)** — `quantify shift → predict regime → choose k → deploy with CP`; no voltage curves, no adversarial DA, valid uncertainty by construction.
 
-Draft (placeholder, ~250 words; rewrite during final edit):
+Draft (placeholder, ~260 words; rewrite during final edit):
 
-> Battery remaining-useful-life (RUL) prediction has converged to within-dataset accuracy near the capacity-only ceiling. Real deployments, however, train on lab data and apply on field data with different chemistry, protocol, or cell format, where naive cross-dataset transfer fails on every benchmark we tested. The community largely treats this as a black-box engineering problem; we treat it as a measurable failure with a predictable structure. We assemble a four-dataset benchmark (MATR / HUST / Sandia / Luh-KIT, 362 modelled cells under a single capacity-only feature contract) and run twelve cross-dataset directions. We show that capacity normalisation closes 71 % of the geometric (Mahalanobis) gap without recovering any cross-dataset prediction R²; that an importance-weighted conformal-prediction falsifier returns valid coverage only by emitting infinite intervals; and that a centered-log per-feature slope test plus a Pearson-r rank-signal diagnostic partition the twelve directions into three deterministic regimes (strong-rank / offset-dominant / rank-collapsed). On the two salvageable regimes, a two-parameter linear adapter fit on k = 20 randomly chosen target cells plus MAPIE split conformal prediction recovers near-zero R² with finite intervals at empirical coverage 0.89–0.93 against a 0.90 nominal. A PyTorch 1D-CNN baseline preserves the regime taxonomy without changing its qualitative shape and over-extrapolates when the source is heterogeneous (Sandia → MATR R² ≈ −47.8) — confirming that the result is governed by the rank-signal structure of the source/target pair rather than the choice of backbone. Code, derived feature tables, and the reproducibility recipe are public; the framework requires neither voltage curves nor adversarial domain adaptation.
+> Battery remaining-useful-life (RUL) prediction has converged to within-dataset accuracy near the literature ceiling on rich-signal feature contracts (voltage curves, surface temperature, internal impedance). Real deployments, however, train on lab data and apply on field data with different chemistry, protocol, or cell format. Our central question is not whether richer signals beat capacity-only features on accuracy — they do — but whether a low-instrumentation capacity-only contract can *diagnose* the type of cross-dataset transfer failure and *deliver coverage-valid uncertainty intervals* for the surviving directions. We assemble a four-dataset benchmark (MATR / HUST / Sandia / Luh-KIT, 362 modelled cells under a single 34-feature capacity-only contract) and evaluate twelve cross-dataset directions. We show that capacity normalisation closes 71 % of the geometric (Mahalanobis) gap without recovering any cross-dataset prediction R²; that an importance-weighted conformal-prediction probe is unusable under the observed source-target support mismatch (discriminator AUC 0.994–0.996, finite-interval fraction ≤ 0.9 % at 90 % nominal); and that a centred-log per-feature slope test plus a Pearson-r rank-signal diagnostic — computed from source predictions on a small labelled target probe — partition the twelve directions into three regimes (strong-rank / offset-dominant / rank-collapsed). On the two salvageable regimes, a two-parameter linear adapter fit on k = 20 random target cells plus MAPIE split conformal prediction recovers near-zero R² with finite intervals at empirical coverage 0.89–0.93 against 0.90 nominal. A small PyTorch 1D-CNN trained under the same inner-CV protocol preserves the qualitative regime structure and over-extrapolates on heterogeneous-source directions, indicating that — under this feature contract and these compact-model classes — the failure is governed by the rank-signal structure of the source/target pair rather than by the choice of backbone. Code, derived feature tables, and the reproducibility recipe are public; the framework requires neither voltage curves nor adversarial domain adaptation.
 
 ---
 
@@ -67,17 +67,17 @@ Three paragraphs.
 - Cross-dataset transfer remains poorly characterised — papers either fine-tune (HybridoNet-Adapt, Domain-Adaptive Transformer) or report ad hoc transfer numbers without analysing *why* a particular direction works or fails.
 
 ### ¶2 (~350 w) — The gap, framed as questions
-- RQ1: Can the failure mode of a transfer direction be predicted from source/target statistics *before* training?
-- RQ2: When transfer fails, what minimum target-side correction recovers usable predictions with valid uncertainty?
-- RQ3: Does the answer survive a deep-learning backbone, or is it an artefact of classical regression?
-- The community currently lacks (a) a diagnostic that separates covariate shift from concept shift in battery RUL, (b) a deployment protocol with coverage-valid prediction intervals, (c) an architecture-agnostic empirical claim about cross-dataset failure structure.
+- RQ1: Can the failure mode of a transfer direction be *diagnosed* from a combination of unsupervised source-target geometric statistics and a small labelled target probe, before committing to a full retraining or adaptation effort?
+- RQ2: When transfer fails, what minimum target-side correction recovers usable point predictions *with valid uncertainty intervals*?
+- RQ3: Does the qualitative answer survive a compact deep-learning baseline trained under the same protocol — or is it an artefact of the classical-regression lineup we tested?
+- The community currently lacks (a) a diagnostic that separates a geometric (covariate-shift) explanation from a feature-y-relationship (conditional-shift) explanation in battery RUL, (b) a deployment protocol with coverage-valid cross-dataset prediction intervals, and (c) an empirical check on whether the same failure structure appears under both classical and compact-CNN backbones. We frame this as a *diagnosis-repair-uncertainty* triple rather than an architecture-search problem.
 
 ### ¶3 (~350 w) — Contributions (five bullets)
-1. **Four-dataset, capacity-only benchmark.** MATR, HUST, Sandia, Luh/KIT under a single 34-feature feature contract derived only from Q_dis(c).
-2. **Shift-decomposition framework.** MMD + Mahalanobis (geometric layer); centred-log per-feature slope tests with BH-FDR (conditional layer); importance-weighted CP as a falsifier (showing the geometric fix alone is not enough).
-3. **Rank-signal regime taxonomy.** Twelve transfer directions partition into three regimes determined by Pearson r between source predictions and target ground truth.
-4. **k-shot target calibration + split CP.** k = 20 random target cells + residual-mean / linear adapter + MAPIE split CP at 90 % / 95 %; coverage-valid and finite-interval everywhere.
-5. **Backbone-agnostic validation.** PyTorch 1D-CNN trained under the same inner-CV protocol confirms the taxonomy and exposes a deep-model over-extrapolation failure mode that classical regression avoids.
+1. **Four-dataset, capacity-only benchmark.** MATR, HUST, Sandia, Luh/KIT under a single 34-feature contract derived only from Q_dis(c) — a low-instrumentation contract that every public battery archive satisfies.
+2. **Two-layer shift-decomposition.** MMD + Mahalanobis (geometric layer); centred-log per-feature slope tests with BH-FDR (conditional layer). The geometric layer is reported alongside an importance-weighted conformal probe whose collapse to infinite intervals (finite-interval fraction ≤ 0.9 %) demonstrates that the observed source-target support mismatch makes a pure-covariate-shift repair unusable.
+3. **Rank-signal regime taxonomy.** Twelve transfer directions partition into three regimes — strong-rank / offset-dominant / rank-collapsed — determined by Pearson r between source predictions and the target ground truth of a small labelled probe; the regime labels predict the post-calibration R² recoverable with k = 20 target cells.
+4. **k-shot target calibration + split CP.** k = 20 random target cells + residual-mean / linear adapter + MAPIE split CP at 90 % / 95 %; coverage-valid and finite-interval everywhere on the salvageable regimes.
+5. **Compact-CNN backbone check.** A small PyTorch 1D-CNN trained under the same inner-CV protocol preserves the qualitative regime structure across twelve directions; we observe an additional over-extrapolation failure mode on heterogeneous-source directions (Sandia → MATR R² ≈ −47.8). This is presented as a *backbone sanity check under matched protocol*, not as a proof that no deep architecture can rescue these regimes.
 
 Reference figure / table from the outline: [F1] pipeline schematic + [T1] datasets summary.
 
@@ -117,10 +117,11 @@ Closing point: split CP with valid coverage on cross-dataset transfer + target-s
 
 ## 5. Datasets and methodology — target 1 500 words
 
-### 5.1 — Datasets (~250 w)
+### 5.1 — Datasets (~300 w)
 - [T1] table — MATR / HUST / Sandia / Luh-KIT counts, chemistry, lifetime range.
-- 362 modelled cells, 19 censored at 0.85 · Q0 EOL threshold.
+- 362 modelled cells, 19 censored at 0.85 · Q0 EOL threshold. **Censored cells are excluded from all regression metrics (MAE / sMAPE / R²) and retained only in the supplementary Kaplan-Meier / RMST audit.** This is the most conservative policy: censored cells contain no observed event time, so including them in regression would either require imputation (creates bias) or right-censored regression (changes the metric definition). The MATR audit shows that censoring is not the explanation for the dataset-level lifetime gap.
 - Cite each dataset DOI.
+- **Sandia is deliberately the heterogeneous-stress dataset.** Unlike MATR (single LFP/graphite chemistry under fast-charge), HUST (single LFP chemistry across multi-stage discharge protocols), and Luh/KIT (single NMC chemistry under standard cycling), the Sandia 0-100 % SOC subset mixes three chemistries (NCA / NMC / LFP), three temperatures (15 / 25 / 35 °C), and multiple discharge rates within a single 50-cell pool. This heterogeneity is part of the design — it lets us probe whether the rank-signal regime taxonomy still organises transfer correctly when one side of the pair is itself a mixture rather than a single condition. In §6.5 we report that target-side adaptation prefers the *linear* adapter over the *residual-mean* adapter when Sandia is the target, consistent with the heterogeneity hypothesis: the residual-mean adapter assumes a single constant target offset, while the linear adapter accommodates a per-direction scale change.
 
 ### 5.2 — Feature contract (~300 w)
 - Q_dis(c) only, cycles 2–N (N ∈ {50, 100}; primary results at N = 100).
@@ -134,12 +135,18 @@ Closing point: split CP with valid coverage on cross-dataset transfer + target-s
 - Log-target training, exp back to cycles for metrics.
 - PyTorch 1D-CNN (channels: retention + 1st-diff; Conv1d × 2 → mean+max pool → dense + dropout; inner 5-fold CV over (filters, lr) ∈ {8, 16, 32} × {1e-3, 3e-3, 1e-2}).
 
-### 5.4 — Shift, regime, and uncertainty (~400 w)
-- Geometric shift: MMD with RBF + median-bandwidth; Mahalanobis with pooled covariance + ridge.
-- Conditional shift: within-dataset z-score, within-dataset centring of log(cycle_life), univariate slope, 1000-bootstrap CI on the slope difference, BH-FDR across 34 features.
-- Rank-signal classifier: Pearson r between source predictions and target ground truth; partition into STRONG_RANK / OFFSET_DOMINANT / RANK_COLLAPSED via thresholds and CI checks.
-- k-shot adapters: residual-mean (constant offset) and linear (OLS slope+intercept) fit on k random target cells, scored on the rest.
-- Conformal prediction: MAPIE split CP, prefit estimator, absolute conformity score, finite-sample rank correction. Four scenarios — within / source-cal / target-cal / target-adapted.
+### 5.4 — Shift, regime, and uncertainty (~500 w)
+- **Geometric shift.** MMD with RBF + median-bandwidth; Mahalanobis with pooled covariance + 1e-6 ridge. Reported per unordered pair × {raw, capnorm} × {12, 34} feature set.
+- **Importance-weighted CP probe.** Cross-fitted logistic discriminator on source-vs-target labels, density-ratio weights ``p_target(X) / p_source(X)``, clipping at {5, 10, 20, ∞}. We report dataset-discriminator AUC, raw and clipped ESS / n, target-mass fraction, and the finite-interval fraction at 90 % nominal. **We frame the IW-CP probe as a falsifier, not as proof of concept shift.** A finite-interval fraction near zero is consistent with two causes (poor source-target support overlap, conditional shift in P(Y \| X), or both); we use it alongside the centred-log slope tests, the rank-signal r diagnostic, and the failure of capacity normalisation to repair R² as *jointly* arguing against a purely-covariate-shift explanation. No single one of these is sufficient.
+- **Conditional shift.** Within-dataset z-score, within-dataset centring of log(cycle_life), univariate OLS slope, 1000-iteration paired bootstrap CI on the slope difference, BH-FDR across the 34 features. Universal log-life offset is reported separately (one scalar per pair) so it is not confounded with the per-feature slope.
+- **Rank-signal classifier.** *Diagnostic, not pre-training oracle.* Computed from source-model predictions on a small labelled target probe (in our experiments the full uncensored target set; in deployment the same k = 20 cells used to fit the target adapter). Inputs: naive cross-dataset R², Pearson r between source predictions and target labels (with its 95 % bootstrap CI), the universal log-life offset, and the constant-share-of-SS decomposition. Partition into STRONG_RANK_SIGNAL (r ≥ 0.5 and naive R² ≥ 0.3), OFFSET_DOMINANT (r ≥ 0.5 but naive R² negative or near zero), RANK_COLLAPSED (r close to zero or its CI crosses zero). Thresholds are pre-registered in the analysis script; we report a per-direction summary in §6.4.
+- **k-shot adapters.** Residual-mean (alpha = 1, beta = mean residual) and linear (alpha, beta from OLS) fit on a target *adapter set* of k_adapter cells, scored on the *test set* of the remaining target cells. We sweep k_adapter ∈ {5, 10, 15, 20} with 20 random draws per k for Monte Carlo stability.
+- **Conformal prediction — split structure made explicit.** For each cross-dataset direction at each seed and each k we partition the target dataset into three disjoint subsets:
+   1. **Adapter set**: ``k_adapter`` random target cells; used to fit the adapter (not used by MAPIE).
+   2. **Calibration set**: a further ``k_target`` random cells, disjoint from the adapter set; used by MAPIE to compute the conformity-score quantile on the *adapter-corrected* predictions.
+   3. **Test set**: the remaining target cells; used to report empirical coverage, mean / median interval width, finite-interval fraction, Winkler score, and short-vs-long-life stratified coverage.
+   We use MAPIE's prefit pathway with the absolute conformity score and the finite-sample rank correction ``q = ceil((n_cal + 1)·(1 − α))``. Wilson 95 % intervals are reported alongside every empirical coverage value. Twenty random adapter+calibration draws give per-direction Monte Carlo variability; we aggregate to the paper-facing table by median across draws (mean is retained as an audit column in `results_summary.csv` because it is sensitive to occasional degenerate linear-adapter fits on small samples — see CP outlier note in `MANUSCRIPT_POSITIONING.md`).
+   Coverage validity assumes exchangeability *between the adapter, calibration, and test cells within the target dataset*. This is plausible because the three subsets are drawn uniformly at random from a single dataset; it does *not* require exchangeability between source and target.
 
 ### 5.5 — Reproducibility (~250 w)
 - All split JSONs and feature CSVs committed.
@@ -166,18 +173,32 @@ The bulk of the paper. Split into five subsections.
 - All R² < 0.5; some catastrophic, some near zero, two positive.
 - Lead the eye toward regime structure that emerges from these numbers without telling the reader the partition yet.
 
-### 6.3 — Geometric shift is not the problem (~500 w)
+### 6.3 — Geometric shift is necessary but not sufficient (~550 w)
 - [F3] Mahalanobis heatmap raw vs capnorm for the six pairs.
-- 71 % Mahalanobis reduction with capnorm.
-- [F4] **KEY**: MMD-drop-vs-R²-change scatter — visual proof of geometric ≠ prediction alignment.
-- Importance-weighted CP falsifier — finite-interval-fraction ≤ 0.9 % at 90 % nominal. Cited inline; full IWCP detail to SI.
+- 71 % Mahalanobis reduction with capacity normalisation (MATR↔HUST 12-feature: 13.10 → 3.75); MMD also drops (0.71 → 0.51).
+- [F4] **KEY**: Mahalanobis-reduction-vs-ΔR² scatter — across 12 directions, large geometric reductions do not translate into monotone prediction-R² gains.
+- IW-CP probe: cross-fitted logistic dataset discriminator reaches AUC 0.994–0.996 — *near-perfect separability*. Raw ESS / n drops to 0.55–0.59; finite-interval fraction at 90 % nominal is ≤ 0.9 %.
 
-### 6.4 — Conditional shift and regime taxonomy (~700 w)
+**Interpretation paragraph (precise; avoids the IW-CP-as-proof overclaim):**
+
+> The near-perfect dataset discriminator AUC has two non-exclusive interpretations: (a) the source and target marginal feature distributions ``p_source(X)`` and ``p_target(X)`` have very limited overlapping support, and (b) the conditional ``P(Y \| X)`` differs between datasets. The IW-CP probe cannot distinguish (a) and (b) on its own — both produce degenerate density ratios and infinite intervals — and we therefore treat it as a *falsifier of the purely-covariate-shift hypothesis*, not as proof of conditional shift. Combined with the unchanged-or-worse R² after capacity normalisation (Figure 4) and the centred-log slope-shift counts in §6.4 (which directly test feature-y relationship changes), we read the joint evidence as inconsistent with a pure-covariate-shift explanation. Whether the residual gap is conditional shift, support mismatch, or both, the practical implication is the same: a target-side calibration step is needed.
+
+Full IW-CP sweep (clipping table, ESS curves, infinite-interval fractions across confidence levels) deferred to SI.
+
+### 6.4 — Conditional shift and regime taxonomy (~750 w)
 - [F5] **PAPER-DEFINING**: conditional-shift heatmap (four-dataset slope-shift counts) with regime labels.
-- Centred-log slope test recap; report HUST−MATR slope shifts; 14/34 features shifted; universal log-life offset = 0.735.
-- Direction-level classifier: Pearson r between source predictions and target. Tabulate r and post-calibration R² for the 12 directions.
-- Three regimes with explicit thresholds.
-- [F10] supporting: directional-asymmetry scatter for MATR↔HUST exemplar.
+- Centred-log slope test recap; HUST↔MATR shifts 14/34 features after BH-FDR; universal log-life offset = 0.735 (HUST geometric mean ≈ 2.09× MATR).
+- Direction-level classifier: Pearson r between source predictions and the labelled target probe. Tabulate r and post-calibration R² for the 12 directions.
+- Three regimes with explicit thresholds (see §5.4): STRONG_RANK_SIGNAL, OFFSET_DOMINANT, RANK_COLLAPSED.
+- [F10] supporting: directional-asymmetry scatter for the MATR↔HUST pair, seed = 42 — explicitly using CatBoost and Random Forest as the source models so the comparison is well-defined.
+
+**Methodological note on model-family sensitivity (write explicitly to defuse a reviewer comment):**
+
+> The naive-best source model for each direction is selected by mean R² across five seeds; in the four-dataset extension this picks Gaussian Process for both MATR ↔ HUST directions (because both directions are catastrophic for all seven classical models, GP happens to be least bad). The Pearson r values feeding the regime classifier are therefore computed with GP. **The same MATR ↔ HUST pair evaluated with CatBoost or Random Forest retains weak positive rank signal ``r ≈ 0.22–0.27`` instead of the slightly-negative GP value.** Both observations are reported. Operationally, the regime label is robust *to the sign of the slightly-negative GP signal*: in either case the bootstrap CI for r crosses zero, no source model produces a positive post-calibration R² with k = 20, and the MATR ↔ HUST pair sits in the RANK_COLLAPSED class. We therefore frame the classifier as agreeing across reasonable model choices on the *class label* even where r values differ in sign by chance.
+
+**Why this matters for the deployment protocol:**
+
+> In deployment, a practitioner does not commit to a single source model before evaluating the regime. The recommended flow is: (1) train candidate source models on the source dataset; (2) run each candidate on the k=20 labelled target probe; (3) compute (r, naive R², constant-share-of-SS) per candidate; (4) take the *best* candidate per direction by Pearson r and classify the regime. If the best r is < ~0.2 with a CI crossing zero, the direction is rank-collapsed regardless of which candidate produced it — no within-source model-family change rescues that direction in our experiments.
 
 ### 6.5 — k-shot calibration and conformal prediction (~600 w)
 - [F6] k-shot scaling: R² vs k coloured by regime.
@@ -186,15 +207,18 @@ The bulk of the paper. Split into five subsections.
 - [F_extra] regime-stratified CP figure (existing `paper_cp_regime_stratified_90.png`).
 - Median R² aggregation footnote (linear adapter on small k_adapter occasionally degenerate).
 
-### 6.6 — Backbone-agnostic check via PyTorch CNN (~300 w)
-- CNN within-dataset numbers — competitive on Sandia/Luh, falls below classical on MATR/HUST.
-- CNN cross-dataset numbers — same regime taxonomy; over-extrapolation on Sandia source.
-- One-paragraph claim: regime structure is backbone-agnostic.
+### 6.6 — Compact-CNN backbone check (~350 w)
+- CNN within-dataset numbers — competitive on Sandia / Luh, falls below classical on MATR / HUST.
+- CNN cross-dataset numbers — same qualitative regime structure (Sandia ↔ Luh remain positive, MATR ↔ HUST remain catastrophic); additionally, the CNN exhibits a deep-model over-extrapolation failure mode when the source is heterogeneous (Sandia → MATR R² = −47.8, Sandia → HUST = −36.8).
+- **Carefully bounded claim (write verbatim):**
 
-### 6.7 — SHAP × regime closing loop (~200 w)
+  > Across the seven classical regressors and the small PyTorch 1D-CNN tested here, the rank-collapsed regime is not rescued by changing the model family. We do *not* claim that no neural architecture can solve these regimes — testing transformer-style or graph-based models, or fine-tuning a domain-adversarial network, are out of scope for this paper. The intended reading is that the qualitative regime structure is robust under matched-protocol changes of *backbone* across the eight architectures we evaluated, which is the relevant check for the diagnostic-and-calibration framework we propose.
+
+### 6.7 — SHAP × regime closing loop (~250 w)
 - [F8] SHAP top features per dataset.
-- Cross-reference with regime labels: high-importance ≠ transfer-stable.
-- One-sentence take-away: "*within-domain importance and cross-dataset reliability are different properties of a feature.*"
+- **Attribution models, stated explicitly.** TreeSHAP requires a tree ensemble. For MATR we use the within-dataset champion CatBoost; for HUST the champion Random Forest; for Sandia the champion XGBoost. For Luh / KIT the within-dataset champion is a Gaussian Process, which is *not* tree-SHAP compatible; we therefore use **CatBoost** as the Luh attribution model (CatBoost R² = 0.741 on Luh, the strongest tree-based runner-up to the GP champion). The SHAP report's "model-check" R² uses the canonical benchmark-helper path so it matches the headline benchmark numbers to 3 decimals.
+- Cross-reference with regime labels: high-importance features for MATR (`accel_mean`, `poly2_c`, `slope_last_quarter`, `range_Qdis`) are mostly slope-shifted across the MATR ↔ HUST pair; high-importance Sandia features (`Qdis_N`, `mad_Qdis`, `slope_linear`) are slope-stable across the Sandia ↔ Luh pair. The SHAP × regime joined table makes this contrast paper-facing.
+- One-sentence take-away: "*within-domain feature importance and cross-dataset feature reliability are different properties of a feature; the SHAP × regime join makes this distinction operational.*"
 
 ---
 
@@ -234,16 +258,36 @@ The bulk of the paper. Split into five subsections.
 
 ---
 
-## 9. Conclusion — target 150 words
+## 9. Conclusion — target 180 words
 
-Four numbered findings (already drafted in `docs/MANUSCRIPT_POSITIONING.md` §"Manuscript-ready discussion paragraph" — adapt verbatim):
+Four numbered findings (carefully hedged; matches `docs/MANUSCRIPT_POSITIONING.md` §"Manuscript-ready discussion paragraph" after the reviewer-anticipation revision):
 
-1. Cross-dataset transfer separates into three deterministic regimes.
-2. Covariate alignment ≠ concept alignment.
-3. k = 20 target calibration + MAPIE split CP repairs the salvageable regimes with valid coverage.
-4. The regime taxonomy is backbone-agnostic.
+1. Cross-dataset RUL transfer on a capacity-only feature contract organises into three regimes — strong-rank, offset-dominant, rank-collapsed — defined by source-prediction rank signal on a small labelled target probe.
+2. Closing the geometric (Mahalanobis / MMD) source-target gap is necessary but not sufficient for prediction-R² recovery; the IW-CP probe failure and the centred-log slope-shift counts jointly rule out a purely covariate-shift explanation.
+3. A k = 20 random-cell target probe + a two-parameter linear adapter + MAPIE split CP recovers near-zero R² with finite intervals at coverage 0.89–0.93 on the salvageable regimes; rank-collapsed regimes are not rescued by k-shot or by the compact CNN backbone we tested.
+4. The qualitative regime structure is preserved across seven classical regressors and one compact PyTorch 1D-CNN trained under matched inner-CV protocol; we expect rather than claim this to generalise to larger architectures, and we explicitly defer that test.
 
-One closing sentence on the practical recommendation.
+Closing sentence: *"Quantify the shift, classify the regime on a small probe, recalibrate. No voltage curves, no adversarial domain adaptation, valid uncertainty by construction."*
+
+---
+
+## 9.5 Reviewer-anticipation map — internal use, not for the paper
+
+This subsection is for the writing team only; do *not* include it in the
+manuscript. It maps each of the seven likely Reviewer #2 attack points to
+the specific outline section + wording mitigation. Use it as a checklist
+during writing and during cover-letter drafting.
+
+| Risk | Where mitigated | Mitigation wording (verbatim) |
+|---|---|---|
+| 1. "Predict before training" overclaim | §2 abstract, §3 RQ1, §5.4 rank-signal classifier, §6.4 deployment-flow note | Use *"diagnose from source-target geometric statistics + a small labelled target probe"*. Never claim a fully unsupervised pre-training classifier — the regime label uses Pearson r against labelled target cells. |
+| 2. HUST → MATR appears inconsistent across sources | §6.4 model-sensitivity note | Acknowledge upfront: the four-dataset best-model column picks GP; CatBoost / RF retain weak positive r. Report both; argue the *class label* (RANK_COLLAPSED) is robust to the sign of slightly-negative GP r because the CI crosses zero in every case. |
+| 3. "No architecture helps" | §6.6 bounded-claim paragraph, §9 finding 3, §9 finding 4 | Use *"none of the tested classical or compact-CNN backbones rescues rank-collapsed transfer"*. Do not generalise to transformers / GNNs / domain-adversarial. |
+| 4. CP validity is only valid under exchangeability | §5.4 split-structure paragraph, §6.5 caption | State the three target-side subsets (adapter / calibration / test) and that exchangeability is required *within the target dataset only*, not between source and target. |
+| 5. IW-CP as falsifier, not proof | §5.4 IW-CP probe paragraph, §6.3 interpretation paragraph | Explicitly: the AUC-near-one collapse is consistent with poor support overlap or with conditional shift; we use IW-CP *jointly* with capnorm-fails-to-fix-R² + slope-shift counts to rule out the purely-covariate-shift explanation. |
+| 6. TreeSHAP × GP wording | §6.7 attribution-models paragraph | Luh CatBoost is the TreeSHAP-compatible attribution model because the GP champion is not tree-based. |
+| 7. Capacity-only accuracy below SOTA | §2 abstract, §3 ¶1, §6.1 Pareto table T5 | Frame the contract as a deliberate Pareto choice — low instrumentation + valid CP. We do not claim to beat BatLiNet / EES-T / DCIR on accuracy; we claim to add valid uncertainty and diagnostic structure they do not provide. |
+| 8. Sandia heterogeneity | §5.1 Sandia paragraph, §6.5 linear-adapter preference | Pre-empt: Sandia is the deliberate heterogeneous-stress dataset. The linear adapter outperforms residual-mean when Sandia is the target — this is the expected outcome and we report it. |
 
 ---
 

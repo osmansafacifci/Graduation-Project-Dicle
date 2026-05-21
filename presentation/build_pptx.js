@@ -481,15 +481,16 @@ function next() { slideIdx += 1; return slideIdx; }
     });
     s.addText(bulletsContent([
         "Sandia ↔ Luh stay positive — salvageable.",
-        "MATR ↔ HUST catastrophic — no architecture helps.",
-        "Worst case: Sandia → MATR with PyTorch CNN reaches R² = −47.8.",
-        "Failure structure is not noise — it is predictable.",
+        "MATR ↔ HUST catastrophic across all 7 classical models and the compact CNN we tested.",
+        "Worst case: Sandia → MATR with PyTorch CNN reaches R² = −47.8 (deep-model over-extrapolation).",
+        "Failure structure is not noise — it is predictable from source-target diagnostics + a small probe.",
     ]), {
         x: 6.7, y: 2.85, w: 3.0, h: 2.4,
         fontSize: 11, fontFace: BODY_FONT, color: TEXT_DARK, paraSpaceAfter: 4, valign: "top"
     });
     s.addNotes("Cross-dataset transfer fails on every direction, but the failure mode varies. " +
-        "Sandia↔Luh remain positive; MATR↔HUST collapse. This is the first sign of a regime structure.");
+        "Sandia↔Luh remain positive; MATR↔HUST collapse under every tested classical model and our compact CNN. " +
+        "Worded as 'across the tested architectures' — transformer/GNN/DA models are out of scope.");
 }
 
 // =====================================================================
@@ -633,7 +634,7 @@ function next() { slideIdx += 1; return slideIdx; }
 // =====================================================================
 {
     const s = pres.addSlide();
-    addContentChrome(s, next(), TOTAL_SLIDES, "Rank-signal regime taxonomy — predict success before training");
+    addContentChrome(s, next(), TOTAL_SLIDES, "Rank-signal regime taxonomy — diagnose with a small target probe");
 
     const table = [
         [
@@ -693,15 +694,17 @@ function next() { slideIdx += 1; return slideIdx; }
     });
     s.addText(bulletsContent([
         "STRONG_RANK — naive R² > 0.4, high Pearson r; salvageable.",
-        "OFFSET_DOMINANT — rank signal preserved (r > 0.5), but absolute scale wrong → calibratable.",
-        "RANK_COLLAPSED — r near zero or negative; no architecture or k-shot fix is sufficient.",
-        "Regime label can be predicted from source/target diagnostics without training the predictor (regime classifier).",
+        "OFFSET_DOMINANT — rank signal preserved (r > 0.5), absolute scale wrong → calibratable.",
+        "RANK_COLLAPSED — r near zero, CI crosses zero; no tested model/k-shot rescues.",
+        "Pearson r is computed on source predictions against a k=20 labelled target probe — diagnostic, not pre-training oracle.",
+        "Naive-best model selected by R²; MATR↔HUST best is GP (r ≈ −0.13). Under CatBoost/RF, r ≈ 0.22–0.27 — still RANK_COLLAPSED at class level (CI crosses zero, no positive post-cal R²).",
     ]), {
         x: 6.95, y: 1.05, w: 2.85, h: 4.2,
-        fontSize: 10, fontFace: BODY_FONT, color: TEXT_DARK, paraSpaceAfter: 4, valign: "top"
+        fontSize: 9.5, fontFace: BODY_FONT, color: TEXT_DARK, paraSpaceAfter: 4, valign: "top"
     });
     s.addNotes("The regime taxonomy is the paper-defining table. " +
-        "Pearson r between source predictions and target ground truth is the deciding diagnostic.");
+        "Pearson r between source predictions and target ground truth on a small labelled probe is the deciding diagnostic. " +
+        "HUST→MATR is model-sensitive in sign (GP vs CatBoost) but converges on the RANK_COLLAPSED class label.");
 }
 
 // =====================================================================
@@ -714,9 +717,9 @@ function next() { slideIdx += 1; return slideIdx; }
     const dims = fitImage({ width: 2160, height: 1520 }, 5.6, 4.2);
     s.addImage({ path: imgPath, x: 0.4, y: 1.0, w: dims.w, h: dims.h });
     s.addText(bulletsContent([
-        "Source predictions vs target ground truth — paper-facing scatter, seed=42.",
-        "HUST → MATR keeps weak positive rank signal (r ≈ 0.22 – 0.27).",
-        "MATR → HUST is essentially uncorrelated with target lifetime (r ≈ −0.12 to −0.14).",
+        "Source predictions vs target ground truth (CatBoost + Random Forest, seed=42).",
+        "HUST → MATR keeps weak positive rank signal under CatBoost/RF (r ≈ 0.22 – 0.27); GP gives r ≈ −0.13 (slide 12).",
+        "MATR → HUST is essentially uncorrelated with target lifetime across all tested source models (r ≈ −0.12 to −0.14).",
         "Negative alpha in OLS is fitting noise — not a real mechanistic inversion.",
         "Theil-Sen and Huber estimators confirm the same picture.",
         "Constant share of squared error: 72 – 90% across configs → dominant component is a directional offset.",
@@ -742,15 +745,16 @@ function next() { slideIdx += 1; return slideIdx; }
     });
     s.addText(bulletsContent([
         "Cross-fitted logistic discriminator AUC = 0.994 – 0.996 → near-perfect dataset separability.",
-        "Raw calibration-weight ESS/n ≈ 0.55 – 0.59.",
-        "Importance-weighted CP at 90% nominal: coverage reaches 99% only by returning infinite intervals 99% of the time (finite-interval fraction ≤ 0.9%).",
-        "Re-weighting alone cannot deliver useful target intervals — covariate shift is not the binding constraint.",
-        "Target-adapted residual-mean CP at k=20 recovers 90% coverage with finite intervals (0.905 – 0.909).",
+        "Two non-exclusive readings: limited source-target support overlap, or P(Y|X) shift, or both.",
+        "IW-CP at 90% nominal: coverage reaches 99% only by emitting infinite intervals 99% of the time (finite-interval fraction ≤ 0.9%).",
+        "Falsifier, not proof: combined with R²-unchanged-after-capnorm and centred-log slope shifts, this jointly argues against a purely-covariate-shift explanation.",
+        "Target-adapted residual-mean CP at k=20 recovers 90% coverage with finite intervals (0.905 – 0.909) — the practical fix.",
     ]), {
         x: 5.3, y: 1.5, w: 4.3, h: 3.8,
         fontSize: 11, fontFace: BODY_FONT, color: TEXT_DARK, paraSpaceAfter: 5, valign: "top"
     });
-    s.addNotes("This is the falsifier. We rule out the obvious covariate-shift fix before introducing the target-adapter solution.");
+    s.addNotes("IW-CP is a falsifier of the purely-covariate-shift hypothesis. AUC-near-one collapse is consistent with poor support overlap OR with concept shift — we do not disentangle. " +
+        "Combined with capnorm-fails-to-fix-R² and slope-shift tests, the evidence is jointly inconsistent with a pure covariate-shift reading.");
 }
 
 // =====================================================================
@@ -833,7 +837,7 @@ function next() { slideIdx += 1; return slideIdx; }
     const dims = fitImage({ width: 2480, height: 1100 }, 9.0, 2.6);
     s.addImage({ path: imgPath, x: 0.5, y: 1.0, w: dims.w, h: dims.h });
     s.addText(bulletsContent([
-        "TreeSHAP attribution on the per-dataset primary model (CatBoost / RF / XGBoost / GP).",
+        "TreeSHAP attribution on SHAP-compatible tree champions: MATR CatBoost, HUST RF, Sandia XGB; for Luh/KIT we use CatBoost (R²=0.741) because the GP champion is not tree-based.",
         "MATR top: accel_mean, poly2_c, slope_last_quarter, range_Qdis — most are slope-shifted across MATR↔HUST.",
         "HUST top: Qdis_N, linearity_r2, Qdis_cycle10, poly2_a — scale-shift fragile (Qdis_cycle10 has 10.84σ shift).",
         "Sandia top: Qdis_N (55% rel. importance), mad_Qdis, slope_linear — slope-stable across Sandia↔Luh.",
@@ -893,14 +897,15 @@ function next() { slideIdx += 1; return slideIdx; }
     // Bottom take-away
     s.addText(bulletsContent([
         "CNN is competitive on Sandia/Luh, falls below classical on MATR/HUST.",
-        "Cross-dataset regime taxonomy preserved with CNN — same STRONG_RANK / RANK_COLLAPSED pairs.",
-        "But CNN over-extrapolates on Sandia source: Sandia → MATR R² = −47.8, Sandia → HUST = −36.8 — deep architecture amplifies source-specific signal under shift.",
-        "Take-away: regime taxonomy is backbone-agnostic; deep architecture does not buy cross-dataset robustness on the capacity-only contract.",
+        "Cross-dataset regime structure preserved with the compact CNN — same STRONG_RANK / RANK_COLLAPSED pairs.",
+        "But CNN over-extrapolates on Sandia source: Sandia → MATR R² = −47.8, Sandia → HUST = −36.8 — a compact deep model amplifies source-specific signal under shift on this contract.",
+        "Take-away (carefully bounded): the regime structure is robust across the 7 classical + 1 compact-CNN backbones we tested under matched protocol. We do not claim no neural architecture can solve rank-collapsed regimes — transformer/GNN/DA models are out of scope.",
     ]), {
         x: 0.5, y: 3.9, w: 9.2, h: 1.5,
         fontSize: 11, fontFace: BODY_FONT, color: TEXT_DARK, paraSpaceAfter: 3, valign: "top"
     });
-    s.addNotes("CNN serves as backbone-agnostic check. It confirms the regime taxonomy without changing the qualitative conclusion.");
+    s.addNotes("CNN is the matched-protocol backbone sanity check. It confirms the regime structure under the architectures we tested. " +
+        "Wording is carefully bounded — 'across the architectures we evaluated', not 'no architecture'.");
 }
 
 // =====================================================================
@@ -1009,22 +1014,23 @@ function next() { slideIdx += 1; return slideIdx; }
     });
     // Findings body
     s.addText([
-        { text: "1.  Cross-dataset RUL transfer separates into three deterministic regimes", options: { bold: true, color: WHITE, breakLine: true } },
-        { text: "      (strong-rank · offset-dominant · rank-collapsed). The regime is predictable from source/target diagnostics before training.", options: { color: ICE_BLUE, breakLine: true } },
+        { text: "1.  Cross-dataset RUL transfer organises into three regimes", options: { bold: true, color: WHITE, breakLine: true } },
+        { text: "      strong-rank · offset-dominant · rank-collapsed — diagnosed from source-target stats + a small labelled target probe.", options: { color: ICE_BLUE, breakLine: true } },
         { text: " ", options: { breakLine: true } },
-        { text: "2.  Covariate alignment ≠ concept alignment.", options: { bold: true, color: WHITE, breakLine: true } },
-        { text: "      Capacity normalization closes 71% of the geometric gap, but cross-dataset R² is unchanged or worse.", options: { color: ICE_BLUE, breakLine: true } },
+        { text: "2.  Geometric alignment is necessary but not sufficient.", options: { bold: true, color: WHITE, breakLine: true } },
+        { text: "      Capnorm closes 71% of the Mahalanobis gap; the IW-CP probe falsifies the purely-covariate-shift reading; slope tests confirm conditional-shift structure.", options: { color: ICE_BLUE, breakLine: true } },
         { text: " ", options: { breakLine: true } },
-        { text: "3.  Small target labelled set (k=20) + MAPIE split CP repairs the salvageable regimes with valid 90% / 95% coverage.", options: { bold: true, color: WHITE, breakLine: true } },
-        { text: "      Rank-preserving directions recover to R² ≈ 0 with finite intervals; rank-collapsed pairs remain hard.", options: { color: ICE_BLUE, breakLine: true } },
+        { text: "3.  k=20 random-target probe + linear adapter + MAPIE split CP repairs the salvageable regimes with valid 90%/95% coverage.", options: { bold: true, color: WHITE, breakLine: true } },
+        { text: "      Rank-preserving directions recover near zero R² with finite intervals; rank-collapsed pairs remain hard.", options: { color: ICE_BLUE, breakLine: true } },
         { text: " ", options: { breakLine: true } },
-        { text: "4.  The regime taxonomy is backbone-agnostic.", options: { bold: true, color: WHITE, breakLine: true } },
-        { text: "      PyTorch 1D-CNN preserves it — and over-extrapolates on Sandia source, reinforcing the Pareto positioning argument.", options: { color: ICE_BLUE } },
+        { text: "4.  Regime structure is robust across the architectures we tested.", options: { bold: true, color: WHITE, breakLine: true } },
+        { text: "      7 classical + 1 compact PyTorch 1D-CNN under matched inner-CV; transformer/GNN/DA models are out of scope.", options: { color: ICE_BLUE } },
     ], {
         x: 0.7, y: 1.4, w: 8.9, h: 3.9,
         fontSize: 13, fontFace: BODY_FONT, valign: "top", margin: 0, paraSpaceAfter: 0
     });
-    s.addNotes("Four key findings; each tied to a specific table or figure in the paper.");
+    s.addNotes("Four key findings, all carefully hedged. " +
+        "Geometric alignment is necessary but not sufficient; regime is diagnosed (not predicted) from a small probe; the 4th finding is bounded to the architectures we tested.");
 }
 
 // =====================================================================
