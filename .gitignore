@@ -26,3 +26,15 @@ logs/
 .cloud/
 .claude/
 *.log
+
+# Local manuscript/planning drafts; do not publish in the repo.
+docs/PAPER_DRAFT.md
+docs/PAPER_DRAFT.docx
+docs/SI.md
+docs/SI.docx
+docs/PAPER_OUTLINE.md
+docs/MANUSCRIPT_POSITIONING.md
+docs/CLAUDE_DESIGN_PROMPTS.md
+docs/figure_01_pipeline.svg
+outputs/paper_figures/figure_01_pipeline.png
+outputs/paper_figures/figure_01_pipeline.pdf
