@@ -1,0 +1,58 @@
+{
+  "protocol": "pytorch_simple_transformer_v1",
+  "features_path": "data/intermediate/features_sop12_four_dataset.csv",
+  "splits_dir": "splits/sop_v2_four_dataset",
+  "datasets": [
+    "matr",
+    "hust",
+    "sandia",
+    "luh"
+  ],
+  "windows": [
+    100
+  ],
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1011
+  ],
+  "device": "cpu",
+  "hp_grid": "quick",
+  "hp_configs": [
+    [
+      16,
+      0.001
+    ],
+    [
+      32,
+      0.001
+    ],
+    [
+      32,
+      0.003
+    ],
+    [
+      64,
+      0.001
+    ]
+  ],
+  "kernel_size": 5,
+  "hidden_units": 64,
+  "dropout": 0.2,
+  "epochs": 40,
+  "patience": 8,
+  "cv_epochs": 8,
+  "cv_patience": 3,
+  "cv_folds": 5,
+  "batch_size": 32,
+  "l2": 0.0001,
+  "prediction_clip_std_margin": 0.0,
+  "torch_version": "2.12.0",
+  "architecture": "SimpleTransformer",
+  "model_name": "pytorch_simple_transformer",
+  "schema_version": "pytorch_simple_transformer_v1",
+  "transformer_layers": 4,
+  "hp_grid_note": "filters is d_model for the Transformer wrapper"
+}

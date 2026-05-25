@@ -1,0 +1,6 @@
+dataset,variant,cells,mean_cycle_life,std_cycle_life,min_cycle_life,max_cycle_life,definition
+matr,full,129,777.5348837209302,362.4558172753531,133.0,2066.0,all uncensored N=100 cells
+matr,restricted,86,946.8488372093024,326.55721118221015,504.0,2066.0,MATR restricted = b1+b3; batch2 excluded as short-life experimental block
+hust,full,77,1489.5584415584415,275.90370619525237,829.0,2024.0,all uncensored N=100 cells
+hust,restricted,43,1501.0697674418604,235.80312564559094,1062.0,1870.0,HUST restricted = discharge-rate spread <= 2; exact constant-current subset has only n=3
+hust,exact_constant_current_audit_only,3,1562.3333333333333,216.63410011660983,1332.0,1762.0,HUST cells with dchg_rate_1 == dchg_rate_2 == dchg_rate_3; too small for transfer
