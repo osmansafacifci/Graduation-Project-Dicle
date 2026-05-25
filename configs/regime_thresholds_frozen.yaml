@@ -1,0 +1,70 @@
+# Frozen before any fifth-dataset external-validation run.
+# Do not tune these thresholds on the held-out validation dataset.
+freeze:
+  date: "2026-05-25"
+  purpose: "pre-register regime classifier thresholds for S1 external validation"
+  calibration_scope: "four committed datasets only: MATR, HUST, Sandia, Luh"
+  calibration_directions: 12
+  source_script: "3_analysis/conditional_shift_four_dataset.py"
+  source_commit_before_freeze: "d37ccef"
+
+rank_signal_classifier:
+  metric: "pearson_r_between_source_predictions_and_target_cycle_life"
+  classes:
+    strong_rank_signal:
+      condition: "r >= 0.50"
+      pearson_r_min_inclusive: 0.50
+    moderate_rank_signal:
+      condition: "0.25 <= r < 0.50"
+      pearson_r_min_inclusive: 0.25
+      pearson_r_max_exclusive: 0.50
+    weak_rank_signal:
+      condition: "0.10 <= r < 0.25"
+      pearson_r_min_inclusive: 0.10
+      pearson_r_max_exclusive: 0.25
+    rank_signal_collapsed:
+      condition: "-0.10 < r < 0.10"
+      pearson_r_min_exclusive: -0.10
+      pearson_r_max_exclusive: 0.10
+    negative_or_inverted_signal:
+      condition: "r <= -0.10"
+      pearson_r_max_inclusive: -0.10
+    undefined:
+      condition: "r is not finite"
+
+deployment_super_regimes:
+  salvageable_linear_recovers:
+    includes:
+      - strong_rank_signal
+      - moderate_rank_signal
+  offset_dominant_residual_only:
+    includes:
+      - weak_rank_signal
+  cp_interval_only:
+    includes:
+      - rank_signal_collapsed
+      - negative_or_inverted_signal
+      - undefined
+
+adapter_response_classifier:
+  metric: "cycle-space R2 after k-shot target calibration"
+  thresholds:
+    linear_recovers_predictive_transfer:
+      condition: "linear_R2 > 0.25 and linear_R2 - residual_R2 > 0.05"
+      linear_R2_min_exclusive: 0.25
+      linear_vs_residual_R2_gain_min_exclusive: 0.05
+    offset_dominant_repair:
+      condition: "residual_R2 >= -0.10 and linear_R2 - residual_R2 <= 0.05"
+      residual_R2_min_inclusive: -0.10
+      linear_vs_residual_R2_gain_max_inclusive: 0.05
+    center_repaired_but_low_rank:
+      condition: "linear_R2 - raw_R2 > 0.50 or residual_R2 - raw_R2 > 0.50"
+      calibrated_vs_raw_R2_gain_min_exclusive: 0.50
+    limited_repair:
+      condition: "all other finite cases"
+
+external_validation_policy:
+  use_as: "held-out validation only, not a fifth benchmark member"
+  allowed_tuning_on_validation_dataset: false
+  report_new_directions_only: true
+  new_directions_expected_for_one_heldout_dataset: 8
