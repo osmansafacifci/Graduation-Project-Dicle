@@ -17,11 +17,11 @@ model metrics remain in original cycle units so they can be compared directly
 with the main performance tables.
 
 Outputs:
-    data/intermediate/shap_feature_importance.csv
-    data/intermediate/shap_feature_importance_detailed.csv
-    data/intermediate/shap_feature_importance.json
-    data/intermediate/shap_feature_importance_report.txt
-    outputs/results_v2_shap/shap_feature_importance_top_features.png
+    data/intermediate/four_dataset_shap_feature_importance.csv
+    data/intermediate/four_dataset_shap_feature_importance_detailed.csv
+    data/intermediate/four_dataset_shap_feature_importance.json
+    data/intermediate/four_dataset_shap_feature_importance_report.txt
+    outputs/results_v2_four_dataset_shap/four_dataset_shap_feature_importance_top_features.png
 
 Usage:
     python 3_analysis/shap_feature_importance.py
@@ -29,7 +29,7 @@ Usage:
     python 3_analysis/shap_feature_importance.py \
         --features-path data/intermediate/features_sop12_four_dataset_capnorm.csv \
         --splits-dir splits/sop_v2_four_dataset \
-        --datasets sandia luh \
+        --datasets matr hust sandia luh \
         --output-prefix four_dataset_shap_feature_importance \
         --output-dir outputs/results_v2_four_dataset_shap \
         --skip-transfer-stability \
@@ -54,8 +54,8 @@ from plot_style import apply_science_style
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
-SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_shap"
+SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2_four_dataset"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_four_dataset_shap"
 
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
@@ -68,7 +68,7 @@ from run_experiments import (  # noqa: E402
     fit_xgboost,
 )
 
-FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_combined.csv"
+FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_four_dataset_capnorm.csv"
 TRANSFER_PATH = INTERMEDIATE_DIR / "feature_transfer_stability.csv"
 
 PRIMARY_MODEL_BY_DATASET = {
@@ -76,6 +76,19 @@ PRIMARY_MODEL_BY_DATASET = {
     "hust": "random_forest",
     "sandia": "xgboost",
     "luh": "catboost",
+}
+
+DATASET_PLOT_ORDER = ["matr", "hust", "sandia", "luh"]
+DATASET_LABEL = {
+    "matr": "MATR",
+    "hust": "HUST",
+    "sandia": "Sandia",
+    "luh": "Luh",
+}
+MODEL_LABEL = {
+    "catboost": "CatBoost",
+    "random_forest": "Random Forest",
+    "xgboost": "XGBoost",
 }
 
 MODEL_FITTERS = {
@@ -586,39 +599,35 @@ def make_top_feature_plot(summary: pd.DataFrame, output_dir: Path, *, top_k: int
         return
 
     apply_science_style()
-    blocks = list(summary.groupby(["dataset", "model"], sort=True))
+    grouped = dict(tuple(summary.groupby(["dataset", "model"], sort=False)))
+    blocks = []
+    for dataset in DATASET_PLOT_ORDER:
+        model = PRIMARY_MODEL_BY_DATASET[dataset]
+        key = (dataset, model)
+        if key in grouped:
+            blocks.append((key, grouped[key]))
+    for key, block in grouped.items():
+        if key not in {k for k, _ in blocks}:
+            blocks.append((key, block))
     if not blocks:
         return
 
-    fig, axes = plt.subplots(1, len(blocks), figsize=(6.2 * len(blocks), 5.5), squeeze=False)
-    for ax, ((dataset, model), block) in zip(axes[0], blocks):
+    ncols = 2 if len(blocks) > 2 else len(blocks)
+    nrows = int(np.ceil(len(blocks) / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6.0 * ncols, 4.0 * nrows), squeeze=False)
+    for ax, ((dataset, model), block) in zip(axes.ravel(), blocks, strict=False):
         top = block.sort_values("mean_abs_shap_log_cycles_mean", ascending=True).tail(top_k)
-        shift_cols = [c for c in top.columns if c.endswith("_shift_class")]
-        if shift_cols and top[shift_cols[0]].notna().any():
-            color_labels = top[shift_cols[0]]
-            palette = {
-                "slope_stable": "#2f7d32",
-                "slope_shifted": "#a142f4",
-            }
-        elif "stability_class" in top.columns and top["stability_class"].notna().any():
-            color_labels = top["stability_class"]
-            palette = {
-                "stable_candidate": "#2f7d32",
-                "weak_or_mixed": "#5f6368",
-                "scale_shift_fragile": "#b3261e",
-                "relationship_unstable": "#a142f4",
-            }
-        else:
-            color_labels = pd.Series([""] * len(top), index=top.index)
-            palette = {}
-        colors = color_labels.map(palette).fillna("#5f6368")
-        ax.barh(top["feature"], top["mean_abs_shap_log_cycles_mean"], color=colors)
-        ax.set_title(f"{dataset.upper()} {model}")
-        ax.set_xlabel("Mean |SHAP| (log-cycle units)")
+        ax.barh(top["feature"], top["mean_abs_shap_log_cycles_mean"], color="#2E7D32")
+        ax.set_title(f"{DATASET_LABEL.get(dataset, dataset.upper())} {MODEL_LABEL.get(model, model)}", fontsize=12)
+        ax.set_xlabel(r"Mean $\left|\mathrm{SHAP}\right|$ (log-cycle units)")
         ax.grid(axis="x", alpha=0.25)
+    for ax in axes.ravel()[len(blocks):]:
+        ax.axis("off")
     fig.tight_layout()
     output_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_dir / f"{make_top_feature_plot.filename}", dpi=200)
+    out = output_dir / f"{make_top_feature_plot.filename}"
+    fig.savefig(out, dpi=200)
+    fig.savefig(out.with_suffix(".pdf"))
     plt.close(fig)
 
 
@@ -632,11 +641,31 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not join the MATR/HUST feature_transfer_stability reference table.",
     )
-    parser.add_argument("--conditional-shift-path", type=Path, default=None)
-    parser.add_argument("--conditional-pairs", nargs="+", default=[])
-    parser.add_argument("--output-prefix", default="shap_feature_importance")
+    parser.add_argument(
+        "--conditional-shift-path",
+        type=Path,
+        default=INTERMEDIATE_DIR / "four_dataset_conditional_shift_feature_slopes.csv",
+    )
+    parser.add_argument(
+        "--conditional-pairs",
+        nargs="+",
+        default=[
+            "hust_vs_luh",
+            "hust_vs_sandia",
+            "matr_vs_hust",
+            "matr_vs_luh",
+            "matr_vs_sandia",
+            "sandia_vs_luh",
+        ],
+    )
+    parser.add_argument("--output-prefix", default="four_dataset_shap_feature_importance")
     parser.add_argument("--windows", type=int, nargs="+", default=[100])
-    parser.add_argument("--datasets", nargs="+", default=["matr", "hust"], choices=["matr", "hust", "sandia", "luh"])
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=["matr", "hust", "sandia", "luh"],
+        choices=["matr", "hust", "sandia", "luh"],
+    )
     parser.add_argument("--seeds", type=int, nargs="+", default=SEEDS)
     parser.add_argument(
         "--models",

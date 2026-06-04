@@ -11,19 +11,19 @@
     "train_cells": 53,
     "calibration_cells": 12,
     "test_cells": 129,
-    "MAE": 765.4984341816444,
-    "SMAPE": 71.66815717985415,
-    "R2": -4.2831874181430125,
+    "MAE": 756.0463302418997,
+    "SMAPE": 71.2026927108813,
+    "R2": -4.142846503587227,
     "y_mean_log": 7.2845354080200195,
     "y_std_log": 0.19942925870418549,
     "log_lower": 6.72022008895874,
     "log_upper": 7.612831115722656,
     "best_filters": 32,
-    "best_learning_rate": 0.001,
-    "best_epoch": 22,
-    "epochs_run": 30,
-    "best_val_loss": 0.32412388920783997,
-    "final_train_loss": 0.7931615114212036
+    "best_learning_rate": 0.003,
+    "best_epoch": 11,
+    "epochs_run": 71,
+    "best_val_loss": 0.32789164781570435,
+    "final_train_loss": 0.8148560523986816
   },
   "predictions": [
     {
@@ -37,7 +37,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c0",
       "y_true": 1717.0,
-      "y_pred": 1507.3336758452397
+      "y_pred": 1490.3773617923994
     },
     {
       "experiment": "hust_to_matr",
@@ -50,7 +50,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c1",
       "y_true": 2066.0,
-      "y_pred": 1532.1662261714969
+      "y_pred": 1505.9155255432186
     },
     {
       "experiment": "hust_to_matr",
@@ -63,7 +63,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c11",
       "y_true": 771.0,
-      "y_pred": 1525.5249519982794
+      "y_pred": 1506.6043183631864
     },
     {
       "experiment": "hust_to_matr",
@@ -76,7 +76,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c12",
       "y_true": 897.0,
-      "y_pred": 1543.0797996572408
+      "y_pred": 1534.9611016507959
     },
     {
       "experiment": "hust_to_matr",
@@ -89,7 +89,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c14",
       "y_true": 845.0,
-      "y_pred": 1583.0457508886116
+      "y_pred": 1539.4830037374863
     },
     {
       "experiment": "hust_to_matr",
@@ -102,7 +102,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c15",
       "y_true": 699.0,
-      "y_pred": 1570.682201878126
+      "y_pred": 1528.4848103674033
     },
     {
       "experiment": "hust_to_matr",
@@ -115,7 +115,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c16",
       "y_true": 824.0,
-      "y_pred": 1590.196743588435
+      "y_pred": 1557.4858581429405
     },
     {
       "experiment": "hust_to_matr",
@@ -128,7 +128,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c17",
       "y_true": 825.0,
-      "y_pred": 1585.6778515880223
+      "y_pred": 1562.4555291012473
     },
     {
       "experiment": "hust_to_matr",
@@ -141,7 +141,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c18",
       "y_true": 665.0,
-      "y_pred": 1501.0899010412575
+      "y_pred": 1488.1957900497978
     },
     {
       "experiment": "hust_to_matr",
@@ -154,7 +154,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c19",
       "y_true": 740.0,
-      "y_pred": 1600.554104479437
+      "y_pred": 1566.9672684853736
     },
     {
       "experiment": "hust_to_matr",
@@ -167,7 +167,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c2",
       "y_true": 1487.0,
-      "y_pred": 1542.9900349382995
+      "y_pred": 1510.5917040691293
     },
     {
       "experiment": "hust_to_matr",
@@ -180,7 +180,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c20",
       "y_true": 504.0,
-      "y_pred": 1534.374208834012
+      "y_pred": 1511.2977691588014
     },
     {
       "experiment": "hust_to_matr",
@@ -193,7 +193,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c21",
       "y_true": 535.0,
-      "y_pred": 1535.5628631508573
+      "y_pred": 1511.4231662312254
     },
     {
       "experiment": "hust_to_matr",
@@ -206,7 +206,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c23",
       "y_true": 974.0,
-      "y_pred": 1594.0670803547748
+      "y_pred": 1565.9454483110121
     },
     {
       "experiment": "hust_to_matr",
@@ -219,7 +219,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c24",
       "y_true": 979.0,
-      "y_pred": 1612.161580152044
+      "y_pred": 1570.2343878646593
     },
     {
       "experiment": "hust_to_matr",
@@ -232,7 +232,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c25",
       "y_true": 817.0,
-      "y_pred": 1555.6021090640843
+      "y_pred": 1545.0920458986727
     },
     {
       "experiment": "hust_to_matr",
@@ -245,7 +245,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c26",
       "y_true": 826.0,
-      "y_pred": 1591.1509269880114
+      "y_pred": 1553.6021033877687
     },
     {
       "experiment": "hust_to_matr",
@@ -258,7 +258,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c27",
       "y_true": 809.0,
-      "y_pred": 1609.2322758430776
+      "y_pred": 1569.8645508503294
     },
     {
       "experiment": "hust_to_matr",
@@ -271,7 +271,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c28",
       "y_true": 815.0,
-      "y_pred": 1503.1448661088086
+      "y_pred": 1526.482546330021
     },
     {
       "experiment": "hust_to_matr",
@@ -284,7 +284,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c29",
       "y_true": 872.0,
-      "y_pred": 1510.669499147854
+      "y_pred": 1521.6642983565073
     },
     {
       "experiment": "hust_to_matr",
@@ -297,7 +297,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c3",
       "y_true": 1344.0,
-      "y_pred": 1583.3280918476944
+      "y_pred": 1535.893126919574
     },
     {
       "experiment": "hust_to_matr",
@@ -310,7 +310,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c30",
       "y_true": 679.0,
-      "y_pred": 1597.8394042200603
+      "y_pred": 1564.8922075907808
     },
     {
       "experiment": "hust_to_matr",
@@ -323,7 +323,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c31",
       "y_true": 827.0,
-      "y_pred": 1613.4620412650881
+      "y_pred": 1569.0473254676456
     },
     {
       "experiment": "hust_to_matr",
@@ -336,7 +336,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c32",
       "y_true": 694.0,
-      "y_pred": 1485.8452346432246
+      "y_pred": 1502.5672723164296
     },
     {
       "experiment": "hust_to_matr",
@@ -349,7 +349,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c33",
       "y_true": 708.0,
-      "y_pred": 1520.6575180832908
+      "y_pred": 1534.9018167500449
     },
     {
       "experiment": "hust_to_matr",
@@ -362,7 +362,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c34",
       "y_true": 714.0,
-      "y_pred": 1605.9238344725245
+      "y_pred": 1567.2504784107487
     },
     {
       "experiment": "hust_to_matr",
@@ -375,7 +375,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c35",
       "y_true": 676.0,
-      "y_pred": 1613.2335579240244
+      "y_pred": 1567.8185470183769
     },
     {
       "experiment": "hust_to_matr",
@@ -388,7 +388,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c36",
       "y_true": 670.0,
-      "y_pred": 1610.3030736791377
+      "y_pred": 1570.73837485539
     },
     {
       "experiment": "hust_to_matr",
@@ -401,7 +401,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c37",
       "y_true": 622.0,
-      "y_pred": 1610.733896463913
+      "y_pred": 1570.786310717898
     },
     {
       "experiment": "hust_to_matr",
@@ -414,7 +414,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c38",
       "y_true": 592.0,
-      "y_pred": 1479.8619344304582
+      "y_pred": 1490.9289416647896
     },
     {
       "experiment": "hust_to_matr",
@@ -427,7 +427,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c39",
       "y_true": 592.0,
-      "y_pred": 1545.4921569094029
+      "y_pred": 1549.0837871134556
     },
     {
       "experiment": "hust_to_matr",
@@ -440,7 +440,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c4",
       "y_true": 1618.0,
-      "y_pred": 1587.7577612107962
+      "y_pred": 1540.3457925913747
     },
     {
       "experiment": "hust_to_matr",
@@ -453,7 +453,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c40",
       "y_true": 919.0,
-      "y_pred": 1537.4384740856976
+      "y_pred": 1540.851942174275
     },
     {
       "experiment": "hust_to_matr",
@@ -466,7 +466,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c41",
       "y_true": 1005.0,
-      "y_pred": 1546.2934271212425
+      "y_pred": 1545.5938590917087
     },
     {
       "experiment": "hust_to_matr",
@@ -479,7 +479,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c42",
       "y_true": 661.0,
-      "y_pred": 1554.826412270083
+      "y_pred": 1555.73340769817
     },
     {
       "experiment": "hust_to_matr",
@@ -492,7 +492,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c43",
       "y_true": 626.0,
-      "y_pred": 1465.4155073522952
+      "y_pred": 1494.7964335993984
     },
     {
       "experiment": "hust_to_matr",
@@ -505,7 +505,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c44",
       "y_true": 575.0,
-      "y_pred": 1472.370692876421
+      "y_pred": 1511.6487630196555
     },
     {
       "experiment": "hust_to_matr",
@@ -518,7 +518,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c45",
       "y_true": 563.0,
-      "y_pred": 1518.1217636369379
+      "y_pred": 1532.6331467342734
     },
     {
       "experiment": "hust_to_matr",
@@ -531,7 +531,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c5",
       "y_true": 909.0,
-      "y_pred": 1574.54558550768
+      "y_pred": 1528.7034775133232
     },
     {
       "experiment": "hust_to_matr",
@@ -544,7 +544,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c6",
       "y_true": 613.0,
-      "y_pred": 1597.0990000735367
+      "y_pred": 1562.6716047284233
     },
     {
       "experiment": "hust_to_matr",
@@ -557,7 +557,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c7",
       "y_true": 818.0,
-      "y_pred": 1576.8439641953757
+      "y_pred": 1530.3795057631048
     },
     {
       "experiment": "hust_to_matr",
@@ -570,7 +570,7 @@
       "dataset": "matr",
       "cell_id": "matr_b1c9",
       "y_true": 1012.0,
-      "y_pred": 1542.96060501963
+      "y_pred": 1518.4222105633364
     },
     {
       "experiment": "hust_to_matr",
@@ -583,7 +583,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c0",
       "y_true": 278.0,
-      "y_pred": 1538.3463294715314
+      "y_pred": 1511.4498324673755
     },
     {
       "experiment": "hust_to_matr",
@@ -596,7 +596,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c1",
       "y_true": 133.0,
-      "y_pred": 1130.2221519153054
+      "y_pred": 1169.5016092470232
     },
     {
       "experiment": "hust_to_matr",
@@ -609,7 +609,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c10",
       "y_true": 251.0,
-      "y_pred": 1541.907383606001
+      "y_pred": 1555.0785083677195
     },
     {
       "experiment": "hust_to_matr",
@@ -622,7 +622,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c11",
       "y_true": 250.0,
-      "y_pred": 1533.1915922057137
+      "y_pred": 1536.812527487868
     },
     {
       "experiment": "hust_to_matr",
@@ -635,7 +635,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c12",
       "y_true": 435.0,
-      "y_pred": 1380.8400051153403
+      "y_pred": 1442.638560655132
     },
     {
       "experiment": "hust_to_matr",
@@ -648,7 +648,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c13",
       "y_true": 454.0,
-      "y_pred": 1358.3065597296013
+      "y_pred": 1464.8663813143326
     },
     {
       "experiment": "hust_to_matr",
@@ -661,7 +661,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c14",
       "y_true": 466.0,
-      "y_pred": 1591.9219731504465
+      "y_pred": 1565.737879197335
     },
     {
       "experiment": "hust_to_matr",
@@ -674,7 +674,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c17",
       "y_true": 476.0,
-      "y_pred": 1534.5527409992806
+      "y_pred": 1509.9723676869055
     },
     {
       "experiment": "hust_to_matr",
@@ -687,7 +687,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c18",
       "y_true": 468.0,
-      "y_pred": 1603.72453562057
+      "y_pred": 1566.5235015326332
     },
     {
       "experiment": "hust_to_matr",
@@ -700,7 +700,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c19",
       "y_true": 455.0,
-      "y_pred": 1250.6714813252058
+      "y_pred": 1309.190851301678
     },
     {
       "experiment": "hust_to_matr",
@@ -713,7 +713,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c2",
       "y_true": 422.0,
-      "y_pred": 1588.1212117142288
+      "y_pred": 1555.892167738588
     },
     {
       "experiment": "hust_to_matr",
@@ -726,7 +726,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c20",
       "y_true": 475.0,
-      "y_pred": 1601.450356429447
+      "y_pred": 1567.8686366259224
     },
     {
       "experiment": "hust_to_matr",
@@ -739,7 +739,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c21",
       "y_true": 468.0,
-      "y_pred": 1596.618530430291
+      "y_pred": 1564.7190990553952
     },
     {
       "experiment": "hust_to_matr",
@@ -752,7 +752,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c22",
       "y_true": 490.0,
-      "y_pred": 1583.0963269840017
+      "y_pred": 1565.31461308398
     },
     {
       "experiment": "hust_to_matr",
@@ -765,7 +765,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c23",
       "y_true": 502.0,
-      "y_pred": 1583.7154489225065
+      "y_pred": 1567.2968131380508
     },
     {
       "experiment": "hust_to_matr",
@@ -778,7 +778,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c24",
       "y_true": 478.0,
-      "y_pred": 1606.0478930575964
+      "y_pred": 1566.897034366812
     },
     {
       "experiment": "hust_to_matr",
@@ -791,7 +791,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c25",
       "y_true": 446.0,
-      "y_pred": 1573.95031219961
+      "y_pred": 1563.4057399098174
     },
     {
       "experiment": "hust_to_matr",
@@ -804,7 +804,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c26",
       "y_true": 450.0,
-      "y_pred": 1594.2001052278295
+      "y_pred": 1549.9327408138827
     },
     {
       "experiment": "hust_to_matr",
@@ -817,7 +817,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c27",
       "y_true": 453.0,
-      "y_pred": 1601.4663927615138
+      "y_pred": 1565.2272866998696
     },
     {
       "experiment": "hust_to_matr",
@@ -830,7 +830,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c28",
       "y_true": 491.0,
-      "y_pred": 1520.4247768669238
+      "y_pred": 1499.951534176474
     },
     {
       "experiment": "hust_to_matr",
@@ -843,7 +843,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c29",
       "y_true": 481.0,
-      "y_pred": 1598.2699409119828
+      "y_pred": 1568.5266785410645
     },
     {
       "experiment": "hust_to_matr",
@@ -856,7 +856,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c3",
       "y_true": 314.0,
-      "y_pred": 1267.2297154265916
+      "y_pred": 1313.1672403951995
     },
     {
       "experiment": "hust_to_matr",
@@ -869,7 +869,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c30",
       "y_true": 466.0,
-      "y_pred": 1605.6504799356396
+      "y_pred": 1568.4638535277468
     },
     {
       "experiment": "hust_to_matr",
@@ -882,7 +882,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c31",
       "y_true": 474.0,
-      "y_pred": 1604.3310696401973
+      "y_pred": 1566.418928297118
     },
     {
       "experiment": "hust_to_matr",
@@ -895,7 +895,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c32",
       "y_true": 500.0,
-      "y_pred": 1557.8520360772957
+      "y_pred": 1529.6674434594343
     },
     {
       "experiment": "hust_to_matr",
@@ -908,7 +908,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c33",
       "y_true": 499.0,
-      "y_pred": 1587.8009166054992
+      "y_pred": 1549.8063657616856
     },
     {
       "experiment": "hust_to_matr",
@@ -921,7 +921,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c34",
       "y_true": 483.0,
-      "y_pred": 1569.1535706342038
+      "y_pred": 1537.7097478987505
     },
     {
       "experiment": "hust_to_matr",
@@ -934,7 +934,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c35",
       "y_true": 449.0,
-      "y_pred": 1595.0943203696554
+      "y_pred": 1554.227477259253
     },
     {
       "experiment": "hust_to_matr",
@@ -947,7 +947,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c36",
       "y_true": 513.0,
-      "y_pred": 1598.58929878804
+      "y_pred": 1560.3790024058283
     },
     {
       "experiment": "hust_to_matr",
@@ -960,7 +960,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c37",
       "y_true": 461.0,
-      "y_pred": 1581.184618404925
+      "y_pred": 1561.4165482864873
     },
     {
       "experiment": "hust_to_matr",
@@ -973,7 +973,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c38",
       "y_true": 451.0,
-      "y_pred": 1599.9169562659508
+      "y_pred": 1557.68564841425
     },
     {
       "experiment": "hust_to_matr",
@@ -986,7 +986,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c39",
       "y_true": 442.0,
-      "y_pred": 1582.0285332553333
+      "y_pred": 1543.327783435542
     },
     {
       "experiment": "hust_to_matr",
@@ -999,7 +999,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c4",
       "y_true": 247.0,
-      "y_pred": 1354.1637814534638
+      "y_pred": 1443.6570174189383
     },
     {
       "experiment": "hust_to_matr",
@@ -1012,7 +1012,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c40",
       "y_true": 476.0,
-      "y_pred": 1527.362811312038
+      "y_pred": 1506.034730956636
     },
     {
       "experiment": "hust_to_matr",
@@ -1025,7 +1025,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c41",
       "y_true": 416.0,
-      "y_pred": 1581.311290032049
+      "y_pred": 1547.9208332484513
     },
     {
       "experiment": "hust_to_matr",
@@ -1038,7 +1038,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c42",
       "y_true": 444.0,
-      "y_pred": 1599.310565825581
+      "y_pred": 1567.8813461838627
     },
     {
       "experiment": "hust_to_matr",
@@ -1051,7 +1051,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c43",
       "y_true": 443.0,
-      "y_pred": 1599.0939990495351
+      "y_pred": 1566.4107121244124
     },
     {
       "experiment": "hust_to_matr",
@@ -1064,7 +1064,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c44",
       "y_true": 442.0,
-      "y_pred": 1594.097485061399
+      "y_pred": 1565.8446469235328
     },
     {
       "experiment": "hust_to_matr",
@@ -1077,7 +1077,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c45",
       "y_true": 470.0,
-      "y_pred": 1577.562190109688
+      "y_pred": 1555.5724385914857
     },
     {
       "experiment": "hust_to_matr",
@@ -1090,7 +1090,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c46",
       "y_true": 417.0,
-      "y_pred": 1594.9505734012632
+      "y_pred": 1566.1747022908185
     },
     {
       "experiment": "hust_to_matr",
@@ -1103,7 +1103,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c47",
       "y_true": 705.0,
-      "y_pred": 1600.1397385328946
+      "y_pred": 1562.532269781756
     },
     {
       "experiment": "hust_to_matr",
@@ -1116,7 +1116,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c5",
       "y_true": 464.0,
-      "y_pred": 1559.5607656575653
+      "y_pred": 1541.4743887987556
     },
     {
       "experiment": "hust_to_matr",
@@ -1129,7 +1129,7 @@
       "dataset": "matr",
       "cell_id": "matr_b2c6",
       "y_true": 475.0,
-      "y_pred": 1392.131345932147
+      "y_pred": 1508.247487419506
     },
     {
       "experiment": "hust_to_matr",
@@ -1142,7 +1142,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c0",
       "y_true": 985.0,
-      "y_pred": 1475.9338462464978
+      "y_pred": 1468.747505324308
     },
     {
       "experiment": "hust_to_matr",
@@ -1155,7 +1155,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c1",
       "y_true": 1033.0,
-      "y_pred": 1485.3614036867555
+      "y_pred": 1500.3335170295738
     },
     {
       "experiment": "hust_to_matr",
@@ -1168,7 +1168,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c10",
       "y_true": 1046.0,
-      "y_pred": 1608.9813746538505
+      "y_pred": 1566.5601038143598
     },
     {
       "experiment": "hust_to_matr",
@@ -1181,7 +1181,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c11",
       "y_true": 792.0,
-      "y_pred": 1500.1575353177018
+      "y_pred": 1531.3379567711843
     },
     {
       "experiment": "hust_to_matr",
@@ -1194,7 +1194,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c12",
       "y_true": 903.0,
-      "y_pred": 1503.7327203963187
+      "y_pred": 1528.0745294488095
     },
     {
       "experiment": "hust_to_matr",
@@ -1207,7 +1207,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c13",
       "y_true": 794.0,
-      "y_pred": 1539.841277778328
+      "y_pred": 1536.9766855419966
     },
     {
       "experiment": "hust_to_matr",
@@ -1220,7 +1220,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c14",
       "y_true": 834.0,
-      "y_pred": 1590.765543963953
+      "y_pred": 1566.9635325487307
     },
     {
       "experiment": "hust_to_matr",
@@ -1233,7 +1233,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c15",
       "y_true": 850.0,
-      "y_pred": 1557.9775813894778
+      "y_pred": 1547.0744569463616
     },
     {
       "experiment": "hust_to_matr",
@@ -1246,7 +1246,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c16",
       "y_true": 1589.0,
-      "y_pred": 1584.416405818627
+      "y_pred": 1552.8836787921757
     },
     {
       "experiment": "hust_to_matr",
@@ -1259,7 +1259,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c17",
       "y_true": 1269.0,
-      "y_pred": 1552.3535908768777
+      "y_pred": 1519.4021529378642
     },
     {
       "experiment": "hust_to_matr",
@@ -1272,7 +1272,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c18",
       "y_true": 1100.0,
-      "y_pred": 1435.970347258479
+      "y_pred": 1435.8751737738492
     },
     {
       "experiment": "hust_to_matr",
@@ -1285,7 +1285,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c19",
       "y_true": 1105.0,
-      "y_pred": 1328.5875216285333
+      "y_pred": 1348.3287884052359
     },
     {
       "experiment": "hust_to_matr",
@@ -1298,7 +1298,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c2",
       "y_true": 1224.0,
-      "y_pred": 1390.6299315949943
+      "y_pred": 1370.9634032694294
     },
     {
       "experiment": "hust_to_matr",
@@ -1311,7 +1311,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c20",
       "y_true": 793.0,
-      "y_pred": 1426.680066765203
+      "y_pred": 1423.54667676297
     },
     {
       "experiment": "hust_to_matr",
@@ -1324,7 +1324,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c21",
       "y_true": 745.0,
-      "y_pred": 1157.792836341707
+      "y_pred": 1199.8799481548426
     },
     {
       "experiment": "hust_to_matr",
@@ -1337,7 +1337,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c22",
       "y_true": 991.0,
-      "y_pred": 1388.4824712523603
+      "y_pred": 1394.6760993760818
     },
     {
       "experiment": "hust_to_matr",
@@ -1350,7 +1350,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c24",
       "y_true": 817.0,
-      "y_pred": 1577.7585370384568
+      "y_pred": 1552.9651329188223
     },
     {
       "experiment": "hust_to_matr",
@@ -1363,7 +1363,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c25",
       "y_true": 970.0,
-      "y_pred": 1594.890492528685
+      "y_pred": 1560.845589425868
     },
     {
       "experiment": "hust_to_matr",
@@ -1376,7 +1376,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c26",
       "y_true": 989.0,
-      "y_pred": 1527.437100059563
+      "y_pred": 1508.0382181011878
     },
     {
       "experiment": "hust_to_matr",
@@ -1389,7 +1389,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c27",
       "y_true": 828.0,
-      "y_pred": 1500.3714344915466
+      "y_pred": 1496.9305768796721
     },
     {
       "experiment": "hust_to_matr",
@@ -1402,7 +1402,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c28",
       "y_true": 524.0,
-      "y_pred": 1125.4578241051117
+      "y_pred": 1144.9356286814382
     },
     {
       "experiment": "hust_to_matr",
@@ -1415,7 +1415,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c29",
       "y_true": 833.0,
-      "y_pred": 1528.5657135656638
+      "y_pred": 1516.3167149063331
     },
     {
       "experiment": "hust_to_matr",
@@ -1428,7 +1428,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c3",
       "y_true": 1084.0,
-      "y_pred": 1414.0589446053407
+      "y_pred": 1405.8466049876877
     },
     {
       "experiment": "hust_to_matr",
@@ -1441,7 +1441,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c30",
       "y_true": 913.0,
-      "y_pred": 1464.7874526331602
+      "y_pred": 1471.3684623868583
     },
     {
       "experiment": "hust_to_matr",
@@ -1454,7 +1454,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c31",
       "y_true": 713.0,
-      "y_pred": 1523.5338300345754
+      "y_pred": 1518.7190960374794
     },
     {
       "experiment": "hust_to_matr",
@@ -1467,7 +1467,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c33",
       "y_true": 1257.0,
-      "y_pred": 1383.8127460283176
+      "y_pred": 1379.457324173811
     },
     {
       "experiment": "hust_to_matr",
@@ -1480,7 +1480,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c34",
       "y_true": 1125.0,
-      "y_pred": 1391.4431348063656
+      "y_pred": 1385.291607160326
     },
     {
       "experiment": "hust_to_matr",
@@ -1493,7 +1493,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c35",
       "y_true": 1056.0,
-      "y_pred": 1337.8238899147746
+      "y_pred": 1332.8471546275443
     },
     {
       "experiment": "hust_to_matr",
@@ -1506,7 +1506,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c36",
       "y_true": 910.0,
-      "y_pred": 1394.5949676626717
+      "y_pred": 1389.674726904236
     },
     {
       "experiment": "hust_to_matr",
@@ -1519,7 +1519,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c37",
       "y_true": 1376.0,
-      "y_pred": 1523.150298175369
+      "y_pred": 1502.583034957087
     },
     {
       "experiment": "hust_to_matr",
@@ -1532,7 +1532,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c38",
       "y_true": 1873.0,
-      "y_pred": 1387.705406813604
+      "y_pred": 1391.4869259535965
     },
     {
       "experiment": "hust_to_matr",
@@ -1545,7 +1545,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c39",
       "y_true": 1146.0,
-      "y_pred": 1472.4240520036055
+      "y_pred": 1455.5543299647957
     },
     {
       "experiment": "hust_to_matr",
@@ -1558,7 +1558,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c4",
       "y_true": 1006.0,
-      "y_pred": 1399.554651573923
+      "y_pred": 1389.0586003783517
     },
     {
       "experiment": "hust_to_matr",
@@ -1571,7 +1571,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c40",
       "y_true": 779.0,
-      "y_pred": 1522.6499633495398
+      "y_pred": 1511.8743934809256
     },
     {
       "experiment": "hust_to_matr",
@@ -1584,7 +1584,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c41",
       "y_true": 773.0,
-      "y_pred": 1512.0020013323272
+      "y_pred": 1508.5179265180075
     },
     {
       "experiment": "hust_to_matr",
@@ -1597,7 +1597,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c42",
       "y_true": 1587.0,
-      "y_pred": 1430.6339623435288
+      "y_pred": 1434.0085847547177
     },
     {
       "experiment": "hust_to_matr",
@@ -1610,7 +1610,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c43",
       "y_true": 1018.0,
-      "y_pred": 1440.7748586699574
+      "y_pred": 1429.706499076393
     },
     {
       "experiment": "hust_to_matr",
@@ -1623,7 +1623,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c44",
       "y_true": 921.0,
-      "y_pred": 1489.0781179304852
+      "y_pred": 1469.7339339930797
     },
     {
       "experiment": "hust_to_matr",
@@ -1636,7 +1636,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c45",
       "y_true": 1735.0,
-      "y_pred": 1598.3575864821555
+      "y_pred": 1564.3833827812712
     },
     {
       "experiment": "hust_to_matr",
@@ -1649,7 +1649,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c5",
       "y_true": 815.0,
-      "y_pred": 1403.8690946842128
+      "y_pred": 1403.1135263461513
     },
     {
       "experiment": "hust_to_matr",
@@ -1662,7 +1662,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c6",
       "y_true": 630.0,
-      "y_pred": 1116.228293099274
+      "y_pred": 1137.7761630928635
     },
     {
       "experiment": "hust_to_matr",
@@ -1675,7 +1675,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c7",
       "y_true": 1774.0,
-      "y_pred": 1586.291175478921
+      "y_pred": 1545.4383606352753
     },
     {
       "experiment": "hust_to_matr",
@@ -1688,7 +1688,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c8",
       "y_true": 810.0,
-      "y_pred": 1486.4015161316709
+      "y_pred": 1486.1421284069995
     },
     {
       "experiment": "hust_to_matr",
@@ -1701,7 +1701,7 @@
       "dataset": "matr",
       "cell_id": "matr_b3c9",
       "y_true": 1010.0,
-      "y_pred": 1493.078209826034
+      "y_pred": 1485.7750941830914
     }
   ]
 }

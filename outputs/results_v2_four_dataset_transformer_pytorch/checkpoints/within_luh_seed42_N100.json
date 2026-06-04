@@ -11,19 +11,19 @@
     "train_cells": 74,
     "calibration_cells": 16,
     "test_cells": 16,
-    "MAE": 115.12530910414942,
-    "SMAPE": 20.044932053816822,
-    "R2": 0.8389286392700455,
+    "MAE": 119.27701387302908,
+    "SMAPE": 18.74149403405686,
+    "R2": 0.8401556473463037,
     "y_mean_log": 6.007865905761719,
     "y_std_log": 0.9053627848625183,
     "log_lower": 4.127134323120117,
     "log_upper": 7.38709020614624,
-    "best_filters": 32,
+    "best_filters": 64,
     "best_learning_rate": 0.003,
-    "best_epoch": 7,
-    "epochs_run": 15,
-    "best_val_loss": 0.0901440978050232,
-    "final_train_loss": 0.12393368780612946
+    "best_epoch": 5,
+    "epochs_run": 65,
+    "best_val_loss": 0.08526292443275452,
+    "final_train_loss": 0.12026023864746094
   },
   "predictions": [
     {
@@ -37,7 +37,7 @@
       "dataset": "luh",
       "cell_id": "luh_P017_2_S04_C07",
       "y_true": 127.0,
-      "y_pred": 144.96459553969606
+      "y_pred": 134.3371222246836
     },
     {
       "experiment": "luh_to_luh",
@@ -50,7 +50,7 @@
       "dataset": "luh",
       "cell_id": "luh_P019_3_S05_C02",
       "y_true": 60.0,
-      "y_pred": 88.02489286823723
+      "y_pred": 64.78375257729564
     },
     {
       "experiment": "luh_to_luh",
@@ -63,7 +63,7 @@
       "dataset": "luh",
       "cell_id": "luh_P022_1_S03_C06",
       "y_true": 341.0,
-      "y_pred": 406.33282286542914
+      "y_pred": 435.13835736546446
     },
     {
       "experiment": "luh_to_luh",
@@ -76,7 +76,7 @@
       "dataset": "luh",
       "cell_id": "luh_P022_2_S04_C06",
       "y_true": 344.0,
-      "y_pred": 393.6296377188785
+      "y_pred": 415.6495081748999
     },
     {
       "experiment": "luh_to_luh",
@@ -89,7 +89,7 @@
       "dataset": "luh",
       "cell_id": "luh_P025_2_S02_C09",
       "y_true": 690.0,
-      "y_pred": 869.6204651461869
+      "y_pred": 903.2249373635051
     },
     {
       "experiment": "luh_to_luh",
@@ -102,7 +102,7 @@
       "dataset": "luh",
       "cell_id": "luh_P025_3_S03_C09",
       "y_true": 702.0,
-      "y_pred": 902.4427103454713
+      "y_pred": 926.4263880396976
     },
     {
       "experiment": "luh_to_luh",
@@ -115,7 +115,7 @@
       "dataset": "luh",
       "cell_id": "luh_P029_2_S08_C07",
       "y_true": 135.0,
-      "y_pred": 155.46499196077872
+      "y_pred": 148.17302237138372
     },
     {
       "experiment": "luh_to_luh",
@@ -128,7 +128,7 @@
       "dataset": "luh",
       "cell_id": "luh_P033_3_S09_C08",
       "y_true": 523.0,
-      "y_pred": 519.8154052758423
+      "y_pred": 558.8001164551087
     },
     {
       "experiment": "luh_to_luh",
@@ -141,7 +141,7 @@
       "dataset": "luh",
       "cell_id": "luh_P037_3_S10_C04",
       "y_true": 783.0,
-      "y_pred": 897.7567045577141
+      "y_pred": 936.5846023949666
     },
     {
       "experiment": "luh_to_luh",
@@ -154,7 +154,7 @@
       "dataset": "luh",
       "cell_id": "luh_P038_2_S07_C07",
       "y_true": 816.0,
-      "y_pred": 990.6522754268068
+      "y_pred": 987.7669381338374
     },
     {
       "experiment": "luh_to_luh",
@@ -167,7 +167,7 @@
       "dataset": "luh",
       "cell_id": "luh_P041_2_S13_C07",
       "y_true": 220.0,
-      "y_pred": 263.43050539557703
+      "y_pred": 264.1901783012743
     },
     {
       "experiment": "luh_to_luh",
@@ -180,7 +180,7 @@
       "dataset": "luh",
       "cell_id": "luh_P043_1_S11_C04",
       "y_true": 160.0,
-      "y_pred": 191.24690918117793
+      "y_pred": 185.24348677173302
     },
     {
       "experiment": "luh_to_luh",
@@ -193,7 +193,7 @@
       "dataset": "luh",
       "cell_id": "luh_P051_3_S12_C05",
       "y_true": 1238.0,
-      "y_pred": 1011.1419755313415
+      "y_pred": 1006.5397512757747
     },
     {
       "experiment": "luh_to_luh",
@@ -206,7 +206,7 @@
       "dataset": "luh",
       "cell_id": "luh_P055_2_S16_C04",
       "y_true": 350.0,
-      "y_pred": 271.88523803891735
+      "y_pred": 257.55917617489115
     },
     {
       "experiment": "luh_to_luh",
@@ -219,7 +219,7 @@
       "dataset": "luh",
       "cell_id": "luh_P062_1_S16_C07",
       "y_true": 1120.0,
-      "y_pred": 838.9471338986068
+      "y_pred": 879.4107248412301
     },
     {
       "experiment": "luh_to_luh",
@@ -232,7 +232,7 @@
       "dataset": "luh",
       "cell_id": "luh_P062_2_S17_C07",
       "y_true": 1148.0,
-      "y_pred": 820.771812594855
+      "y_pred": 863.3765359134887
     }
   ]
 }

@@ -1,0 +1,2 @@
+n_cells,n_eligible_N100,n_censored,n_capacity_sanity_flags,cycle_life_min,cycle_life_median,cycle_life_max
+40,40,0,0,198.0,327.0,417.0

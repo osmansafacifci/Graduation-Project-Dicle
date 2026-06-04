@@ -11,19 +11,19 @@
     "train_cells": 89,
     "calibration_cells": 20,
     "test_cells": 50,
-    "MAE": 694.7637729201862,
-    "SMAPE": 89.86238108889829,
-    "R2": -0.05478978881447727,
+    "MAE": 864.0910829079131,
+    "SMAPE": 108.22683327419418,
+    "R2": 0.019406975369022472,
     "y_mean_log": 6.5606160163879395,
     "y_std_log": 0.4517723619937897,
     "log_lower": 5.509388446807861,
     "log_upper": 7.633369445800781,
-    "best_filters": 64,
+    "best_filters": 16,
     "best_learning_rate": 0.001,
-    "best_epoch": 2,
-    "epochs_run": 10,
-    "best_val_loss": 0.8013262748718262,
-    "final_train_loss": 0.8872995972633362
+    "best_epoch": 371,
+    "epochs_run": 400,
+    "best_val_loss": 0.19194312393665314,
+    "final_train_loss": 0.18894609808921814
   },
   "predictions": [
     {
@@ -37,7 +37,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_25C_0_100_0_5_3C_a",
       "y_true": 3183.0,
-      "y_pred": 539.6625837890142
+      "y_pred": 938.7745974896525
     },
     {
       "experiment": "matr_to_sandia",
@@ -50,7 +50,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_25C_0_100_0_5_3C_b",
       "y_true": 1610.0,
-      "y_pred": 510.4980656400306
+      "y_pred": 894.1466746055216
     },
     {
       "experiment": "matr_to_sandia",
@@ -63,7 +63,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_25C_0_100_0_5_3C_c",
       "y_true": 2305.0,
-      "y_pred": 506.01934397993887
+      "y_pred": 881.7722339316701
     },
     {
       "experiment": "matr_to_sandia",
@@ -76,7 +76,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_25C_0_100_0_5_3C_d",
       "y_true": 2788.0,
-      "y_pred": 507.35591583706184
+      "y_pred": 895.8934798028394
     },
     {
       "experiment": "matr_to_sandia",
@@ -89,7 +89,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_35C_0_100_0_5_1C_a",
       "y_true": 3089.0,
-      "y_pred": 510.5165662332193
+      "y_pred": 906.3455051707957
     },
     {
       "experiment": "matr_to_sandia",
@@ -102,7 +102,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_35C_0_100_0_5_1C_b",
       "y_true": 3126.0,
-      "y_pred": 514.1956210952105
+      "y_pred": 905.4534943314101
     },
     {
       "experiment": "matr_to_sandia",
@@ -115,7 +115,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_35C_0_100_0_5_1C_c",
       "y_true": 3246.0,
-      "y_pred": 505.08280463420107
+      "y_pred": 839.3360640379557
     },
     {
       "experiment": "matr_to_sandia",
@@ -128,7 +128,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_35C_0_100_0_5_1C_d",
       "y_true": 3374.0,
-      "y_pred": 520.9215729980763
+      "y_pred": 910.8495949015255
     },
     {
       "experiment": "matr_to_sandia",
@@ -141,7 +141,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_35C_0_100_0_5_2C_a",
       "y_true": 3442.0,
-      "y_pred": 512.5080731982578
+      "y_pred": 895.3271978787166
     },
     {
       "experiment": "matr_to_sandia",
@@ -154,7 +154,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_LFP_35C_0_100_0_5_2C_b",
       "y_true": 2465.0,
-      "y_pred": 510.0090169018165
+      "y_pred": 885.1077430025668
     },
     {
       "experiment": "matr_to_sandia",
@@ -167,7 +167,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_15C_0_100_0_5_1C_a",
       "y_true": 176.0,
-      "y_pred": 506.6446680999643
+      "y_pred": 579.4835742344027
     },
     {
       "experiment": "matr_to_sandia",
@@ -180,7 +180,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_15C_0_100_0_5_1C_b",
       "y_true": 325.0,
-      "y_pred": 501.4854511960628
+      "y_pred": 671.3926347733587
     },
     {
       "experiment": "matr_to_sandia",
@@ -193,7 +193,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_15C_0_100_0_5_2C_a",
       "y_true": 158.0,
-      "y_pred": 506.4869363446225
+      "y_pred": 453.73947665234806
     },
     {
       "experiment": "matr_to_sandia",
@@ -206,7 +206,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_15C_0_100_0_5_2C_b",
       "y_true": 157.0,
-      "y_pred": 511.8227933561804
+      "y_pred": 586.6986071647221
     },
     {
       "experiment": "matr_to_sandia",
@@ -219,7 +219,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_0_5C_a",
       "y_true": 249.0,
-      "y_pred": 515.7254108553963
+      "y_pred": 855.4306564444199
     },
     {
       "experiment": "matr_to_sandia",
@@ -232,7 +232,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_0_5C_b",
       "y_true": 135.0,
-      "y_pred": 507.5180322548127
+      "y_pred": 519.4702407737657
     },
     {
       "experiment": "matr_to_sandia",
@@ -245,7 +245,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_1C_a",
       "y_true": 337.0,
-      "y_pred": 505.64379670494577
+      "y_pred": 771.3769363622526
     },
     {
       "experiment": "matr_to_sandia",
@@ -258,7 +258,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_1C_b",
       "y_true": 228.0,
-      "y_pred": 509.225327852558
+      "y_pred": 886.1677283785543
     },
     {
       "experiment": "matr_to_sandia",
@@ -271,7 +271,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_1C_c",
       "y_true": 228.0,
-      "y_pred": 499.25530565348856
+      "y_pred": 614.2737488547756
     },
     {
       "experiment": "matr_to_sandia",
@@ -284,7 +284,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_1C_d",
       "y_true": 251.0,
-      "y_pred": 504.69808531388924
+      "y_pred": 595.5670455367455
     },
     {
       "experiment": "matr_to_sandia",
@@ -297,7 +297,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_2C_a",
       "y_true": 225.0,
-      "y_pred": 506.51084657632975
+      "y_pred": 475.0543698155733
     },
     {
       "experiment": "matr_to_sandia",
@@ -310,7 +310,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_25C_0_100_0_5_2C_b",
       "y_true": 304.0,
-      "y_pred": 515.058178090886
+      "y_pred": 1002.5118857275307
     },
     {
       "experiment": "matr_to_sandia",
@@ -323,7 +323,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_35C_0_100_0_5_1C_a",
       "y_true": 171.0,
-      "y_pred": 491.0446745277174
+      "y_pred": 619.3519839059962
     },
     {
       "experiment": "matr_to_sandia",
@@ -336,7 +336,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_35C_0_100_0_5_1C_b",
       "y_true": 320.0,
-      "y_pred": 489.57011931110844
+      "y_pred": 526.7703266863972
     },
     {
       "experiment": "matr_to_sandia",
@@ -349,7 +349,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_35C_0_100_0_5_1C_c",
       "y_true": 346.0,
-      "y_pred": 494.3014254074959
+      "y_pred": 654.8913956746928
     },
     {
       "experiment": "matr_to_sandia",
@@ -362,7 +362,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_35C_0_100_0_5_1C_d",
       "y_true": 320.0,
-      "y_pred": 624.0239180323802
+      "y_pred": 912.6429566487944
     },
     {
       "experiment": "matr_to_sandia",
@@ -375,7 +375,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_35C_0_100_0_5_2C_a",
       "y_true": 210.0,
-      "y_pred": 568.1642585046029
+      "y_pred": 1147.7457896208616
     },
     {
       "experiment": "matr_to_sandia",
@@ -388,7 +388,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NCA_35C_0_100_0_5_2C_b",
       "y_true": 216.0,
-      "y_pred": 513.1761623341866
+      "y_pred": 605.6899706773161
     },
     {
       "experiment": "matr_to_sandia",
@@ -401,7 +401,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_15C_0_100_0_5_1C_a",
       "y_true": 105.0,
-      "y_pred": 517.7305717193985
+      "y_pred": 909.3693098970273
     },
     {
       "experiment": "matr_to_sandia",
@@ -414,7 +414,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_15C_0_100_0_5_1C_b",
       "y_true": 142.0,
-      "y_pred": 504.41322571369795
+      "y_pred": 392.64452348892013
     },
     {
       "experiment": "matr_to_sandia",
@@ -427,7 +427,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_15C_0_100_0_5_2C_a",
       "y_true": 102.0,
-      "y_pred": 518.8491262858277
+      "y_pred": 1015.4480399075964
     },
     {
       "experiment": "matr_to_sandia",
@@ -440,7 +440,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_15C_0_100_0_5_2C_b",
       "y_true": 103.0,
-      "y_pred": 526.4998713311503
+      "y_pred": 780.2605594114723
     },
     {
       "experiment": "matr_to_sandia",
@@ -453,7 +453,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_0_5C_a",
       "y_true": 49.0,
-      "y_pred": 578.0438080088453
+      "y_pred": 1077.5217570987409
     },
     {
       "experiment": "matr_to_sandia",
@@ -466,7 +466,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_0_5C_b",
       "y_true": 327.0,
-      "y_pred": 515.4330983681218
+      "y_pred": 962.1626780239474
     },
     {
       "experiment": "matr_to_sandia",
@@ -479,7 +479,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_1C_a",
       "y_true": 271.0,
-      "y_pred": 515.8407588443768
+      "y_pred": 1005.9706849148938
     },
     {
       "experiment": "matr_to_sandia",
@@ -492,7 +492,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_1C_b",
       "y_true": 340.0,
-      "y_pred": 515.0574412947792
+      "y_pred": 989.7244838200908
     },
     {
       "experiment": "matr_to_sandia",
@@ -505,7 +505,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_1C_c",
       "y_true": 282.0,
-      "y_pred": 515.0716862063048
+      "y_pred": 969.9985148417466
     },
     {
       "experiment": "matr_to_sandia",
@@ -518,7 +518,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_1C_d",
       "y_true": 285.0,
-      "y_pred": 516.3597748103183
+      "y_pred": 1031.8099250498235
     },
     {
       "experiment": "matr_to_sandia",
@@ -531,7 +531,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_2C_a",
       "y_true": 233.0,
-      "y_pred": 515.5454309949545
+      "y_pred": 1020.5785023107672
     },
     {
       "experiment": "matr_to_sandia",
@@ -544,7 +544,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_2C_b",
       "y_true": 135.0,
-      "y_pred": 489.1624603246008
+      "y_pred": 486.9806141629238
     },
     {
       "experiment": "matr_to_sandia",
@@ -557,7 +557,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_3C_a",
       "y_true": 261.0,
-      "y_pred": 518.6334326264417
+      "y_pred": 996.3622621845045
     },
     {
       "experiment": "matr_to_sandia",
@@ -570,7 +570,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_3C_b",
       "y_true": 287.0,
-      "y_pred": 517.1157291428221
+      "y_pred": 1071.3154968673202
     },
     {
       "experiment": "matr_to_sandia",
@@ -583,7 +583,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_3C_c",
       "y_true": 305.0,
-      "y_pred": 517.5301495050974
+      "y_pred": 1063.568104059493
     },
     {
       "experiment": "matr_to_sandia",
@@ -596,7 +596,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_25C_0_100_0_5_3C_d",
       "y_true": 304.0,
-      "y_pred": 517.5109012098029
+      "y_pred": 1076.3447652598418
     },
     {
       "experiment": "matr_to_sandia",
@@ -609,7 +609,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_35C_0_100_0_5_1C_a",
       "y_true": 280.0,
-      "y_pred": 515.094528007449
+      "y_pred": 1021.2132909223207
     },
     {
       "experiment": "matr_to_sandia",
@@ -622,7 +622,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_35C_0_100_0_5_1C_b",
       "y_true": 90.0,
-      "y_pred": 582.9990286188176
+      "y_pred": 853.5449714782728
     },
     {
       "experiment": "matr_to_sandia",
@@ -635,7 +635,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_35C_0_100_0_5_1C_c",
       "y_true": 256.0,
-      "y_pred": 515.7893532492532
+      "y_pred": 1050.0214346899068
     },
     {
       "experiment": "matr_to_sandia",
@@ -648,7 +648,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_35C_0_100_0_5_1C_d",
       "y_true": 390.0,
-      "y_pred": 509.3967859074636
+      "y_pred": 864.2563537648738
     },
     {
       "experiment": "matr_to_sandia",
@@ -661,7 +661,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_35C_0_100_0_5_2C_a",
       "y_true": 170.0,
-      "y_pred": 514.2912531428152
+      "y_pred": 971.1245066109374
     },
     {
       "experiment": "matr_to_sandia",
@@ -674,7 +674,7 @@
       "dataset": "sandia",
       "cell_id": "sandia_SNL_18650_NMC_35C_0_100_0_5_2C_b",
       "y_true": 400.0,
-      "y_pred": 513.234404587172
+      "y_pred": 914.0806238503685
     }
   ]
 }

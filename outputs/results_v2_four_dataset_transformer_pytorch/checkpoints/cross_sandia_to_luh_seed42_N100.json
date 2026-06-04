@@ -21,7 +21,7 @@
     "best_filters": 32,
     "best_learning_rate": 0.003,
     "best_epoch": 10,
-    "epochs_run": 18,
+    "epochs_run": 70,
     "best_val_loss": 0.15272074937820435,
     "final_train_loss": 0.15741881728172302
   },

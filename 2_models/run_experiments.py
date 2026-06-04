@@ -65,7 +65,7 @@ RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2_34feat_log"
 
 SEEDS = [42, 123, 456, 789, 1011]
 DEFAULT_WINDOWS = [50, 100]
-ALL_DATASETS = ["matr", "hust", "sandia", "luh"]
+ALL_DATASETS = ["matr", "hust", "sandia", "luh", "umich"]
 ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
 DEFAULT_MODELS = ALL_MODELS  # full lineup (stacking included)
 

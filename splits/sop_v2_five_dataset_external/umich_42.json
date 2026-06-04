@@ -1,0 +1,60 @@
+{
+  "dataset": "umich",
+  "seed": 42,
+  "ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "stratified_by": "cycle_life_quartiles",
+  "censored_excluded": true,
+  "num_total_cells": 40,
+  "num_modeling_cells": 40,
+  "num_censored_excluded": 0,
+  "train": [
+    "um_internal_0620_bl_form_cycling_cell_12_002",
+    "um_internal_0620_bl_form_cycling_cell_14_004",
+    "um_internal_0620_bl_form_cycling_cell_15_005",
+    "um_internal_0620_bl_form_cycling_cell_17_007",
+    "um_internal_0620_bl_form_cycling_cell_18_008",
+    "um_internal_0620_bl_form_cycling_cell_19_010",
+    "um_internal_0620_bl_form_cycling_cell_20_011",
+    "um_internal_0620_bl_form_ht_cycling_cell_10_031",
+    "um_internal_0620_bl_form_ht_cycling_cell_2_023",
+    "um_internal_0620_bl_form_ht_cycling_cell_5_026",
+    "um_internal_0620_bl_form_ht_cycling_cell_6_027",
+    "um_internal_0620_bl_form_ht_cycling_cell_7_028",
+    "um_internal_0620_bl_form_ht_cycling_cell_8_029",
+    "um_internal_0620_micro_form_cycling_cell_21_012",
+    "um_internal_0620_micro_form_cycling_cell_22_013",
+    "um_internal_0620_micro_form_cycling_cell_24_015",
+    "um_internal_0620_micro_form_cycling_cell_25_016",
+    "um_internal_0620_micro_form_cycling_cell_26_017",
+    "um_internal_0620_micro_form_cycling_cell_29_020",
+    "um_internal_0620_micro_form_cycling_cell_30_021",
+    "um_internal_0620_micro_form_ht_cycling_cell_33_034",
+    "um_internal_0620_micro_form_ht_cycling_cell_34_035",
+    "um_internal_0620_micro_form_ht_cycling_cell_35_036",
+    "um_internal_0620_micro_form_ht_cycling_cell_36_037",
+    "um_internal_0620_micro_form_ht_cycling_cell_37_038",
+    "um_internal_0620_micro_form_ht_cycling_cell_38_039",
+    "um_internal_0620_micro_form_ht_cycling_cell_39_040",
+    "um_internal_0620_micro_form_ht_cycling_cell_40_041"
+  ],
+  "calibration": [
+    "um_internal_0620_bl_form_cycling_cell_11_001",
+    "um_internal_0620_bl_form_cycling_cell_13_003",
+    "um_internal_0620_bl_form_ht_cycling_cell_1_022",
+    "um_internal_0620_bl_form_ht_cycling_cell_9_030",
+    "um_internal_0620_micro_form_cycling_cell_23_014",
+    "um_internal_0620_micro_form_cycling_cell_28_019",
+    "um_internal_0620_micro_form_ht_cycling_cell_31_032",
+    "um_internal_0620_micro_form_ht_cycling_cell_32_033"
+  ],
+  "test": [
+    "um_internal_0620_bl_form_cycling_cell_16_006",
+    "um_internal_0620_bl_form_ht_cycling_cell_3_024",
+    "um_internal_0620_bl_form_ht_cycling_cell_4_025",
+    "um_internal_0620_micro_form_cycling_cell_27_018"
+  ]
+}

@@ -525,6 +525,7 @@ def markdown_table(df: pd.DataFrame, float_digits: int | None = None) -> str:
 def write_heatmaps(direction_summary: pd.DataFrame, pair_summary: pd.DataFrame, output_dir: Path) -> Path | None:
     try:
         import matplotlib.pyplot as plt
+        from matplotlib.colors import TwoSlopeNorm
     except Exception:
         return None
     apply_science_style()
@@ -538,14 +539,24 @@ def write_heatmaps(direction_summary: pd.DataFrame, pair_summary: pd.DataFrame, 
         return out
 
     mats = [
-        ("Naive cross R2", matrix("raw_R2"), "coolwarm", (-2.0, 1.0)),
-        ("Pearson rank signal", matrix("pearson_r"), "coolwarm", (-0.5, 0.8)),
-        ("Linear calibrated R2", matrix("linear_R2"), "coolwarm", (-0.5, 1.0)),
-        ("Slope-shifted feature share", matrix("slope_shifted_share"), "viridis", (0.0, 1.0)),
+        ("Naive cross R2", matrix("raw_R2"), "coolwarm", (-2.0, 1.0), None),
+        ("Pearson rank signal", matrix("pearson_r"), "coolwarm", (-0.5, 0.8), None),
+        ("Linear calibrated R2", matrix("linear_R2"), "coolwarm", (-0.5, 1.0), None),
+        ("Slope-shifted feature share", matrix("slope_shifted_share"), "viridis", (0.0, 1.0), None),
+        (
+            "Life-ratio (target / source)",
+            matrix("life_ratio_target_over_source"),
+            "RdBu_r",
+            None,
+            TwoSlopeNorm(vmin=0.25, vcenter=1.0, vmax=4.0),
+        ),
     ]
-    fig, axes = plt.subplots(2, 2, figsize=(11.5, 9.2), squeeze=False)
-    for ax, (title, arr, cmap, limits) in zip(axes.ravel(), mats, strict=False):
-        im = ax.imshow(arr, cmap=cmap, vmin=limits[0], vmax=limits[1])
+    fig, axes = plt.subplots(2, 3, figsize=(15.5, 9.2), squeeze=False)
+    for ax, (title, arr, cmap, limits, norm) in zip(axes.ravel(), mats, strict=False):
+        if norm is None:
+            im = ax.imshow(arr, cmap=cmap, vmin=limits[0], vmax=limits[1])
+        else:
+            im = ax.imshow(arr, cmap=cmap, norm=norm)
         ax.set_title(title)
         ax.set_xticks(range(len(DATASETS)), [d.upper() for d in DATASETS], rotation=35, ha="right")
         ax.set_yticks(range(len(DATASETS)), [d.upper() for d in DATASETS])
@@ -558,11 +569,14 @@ def write_heatmaps(direction_summary: pd.DataFrame, pair_summary: pd.DataFrame, 
                 elif np.isfinite(arr[i, j]):
                     ax.text(j, i, f"{arr[i, j]:.2f}", ha="center", va="center", color="black", fontsize=9)
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    for ax in axes.ravel()[len(mats):]:
+        ax.axis("off")
     fig.suptitle("Four-Dataset Conditional-Shift Diagnostics", fontsize=14)
     fig.tight_layout(rect=(0, 0, 1, 0.965))
     output_dir.mkdir(parents=True, exist_ok=True)
     out = output_dir / "four_dataset_conditional_shift_heatmaps.png"
     fig.savefig(out, dpi=200)
+    fig.savefig(out.with_suffix(".pdf"))
     plt.close(fig)
     return out
 

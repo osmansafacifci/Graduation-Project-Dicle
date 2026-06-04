@@ -11,19 +11,19 @@
     "train_cells": 89,
     "calibration_cells": 20,
     "test_cells": 106,
-    "MAE": 368.043032195387,
-    "SMAPE": 68.32374598464946,
-    "R2": -0.10227283708173562,
+    "MAE": 326.68781004030785,
+    "SMAPE": 65.398979737645,
+    "R2": -0.00033627823069282137,
     "y_mean_log": 6.567969799041748,
     "y_std_log": 0.44667568802833557,
     "log_lower": 5.509388446807861,
     "log_upper": 7.633369445800781,
     "best_filters": 32,
-    "best_learning_rate": 0.003,
-    "best_epoch": 4,
-    "epochs_run": 12,
-    "best_val_loss": 0.9793149828910828,
-    "final_train_loss": 0.9927587509155273
+    "best_learning_rate": 0.001,
+    "best_epoch": 314,
+    "epochs_run": 374,
+    "best_val_loss": 0.2531808316707611,
+    "final_train_loss": 0.2781684398651123
   },
   "predictions": [
     {
@@ -37,7 +37,7 @@
       "dataset": "luh",
       "cell_id": "luh_P017_1_S01_C08",
       "y_true": 139.0,
-      "y_pred": 691.0975347127235
+      "y_pred": 492.48421719192714
     },
     {
       "experiment": "matr_to_luh",
@@ -50,7 +50,7 @@
       "dataset": "luh",
       "cell_id": "luh_P017_2_S04_C07",
       "y_true": 127.0,
-      "y_pred": 690.8507525872063
+      "y_pred": 491.38946188443407
     },
     {
       "experiment": "matr_to_luh",
@@ -63,7 +63,7 @@
       "dataset": "luh",
       "cell_id": "luh_P017_3_S05_C05",
       "y_true": 126.0,
-      "y_pred": 690.8935789448193
+      "y_pred": 490.60677833648197
     },
     {
       "experiment": "matr_to_luh",
@@ -76,7 +76,7 @@
       "dataset": "luh",
       "cell_id": "luh_P018_1_S01_C06",
       "y_true": 109.0,
-      "y_pred": 690.5306273227438
+      "y_pred": 492.4731800812004
     },
     {
       "experiment": "matr_to_luh",
@@ -89,7 +89,7 @@
       "dataset": "luh",
       "cell_id": "luh_P018_2_S02_C06",
       "y_true": 107.0,
-      "y_pred": 690.5161395655996
+      "y_pred": 491.9852114388815
     },
     {
       "experiment": "matr_to_luh",
@@ -102,7 +102,7 @@
       "dataset": "luh",
       "cell_id": "luh_P018_3_S04_C05",
       "y_true": 107.0,
-      "y_pred": 690.4591792856519
+      "y_pred": 492.3722137425991
     },
     {
       "experiment": "matr_to_luh",
@@ -115,7 +115,7 @@
       "dataset": "luh",
       "cell_id": "luh_P019_1_S01_C04",
       "y_true": 63.0,
-      "y_pred": 692.0871951345573
+      "y_pred": 458.53297457654077
     },
     {
       "experiment": "matr_to_luh",
@@ -128,7 +128,7 @@
       "dataset": "luh",
       "cell_id": "luh_P019_2_S02_C04",
       "y_true": 62.0,
-      "y_pred": 692.3192330864858
+      "y_pred": 456.75185776390083
     },
     {
       "experiment": "matr_to_luh",
@@ -141,7 +141,7 @@
       "dataset": "luh",
       "cell_id": "luh_P019_3_S05_C02",
       "y_true": 60.0,
-      "y_pred": 692.7194584510328
+      "y_pred": 454.3170920561323
     },
     {
       "experiment": "matr_to_luh",
@@ -154,7 +154,7 @@
       "dataset": "luh",
       "cell_id": "luh_P021_1_S02_C08",
       "y_true": 451.0,
-      "y_pred": 694.4422046774202
+      "y_pred": 496.9082963522382
     },
     {
       "experiment": "matr_to_luh",
@@ -167,7 +167,7 @@
       "dataset": "luh",
       "cell_id": "luh_P021_2_S03_C08",
       "y_true": 428.0,
-      "y_pred": 693.9162291053736
+      "y_pred": 499.72427276827506
     },
     {
       "experiment": "matr_to_luh",
@@ -180,7 +180,7 @@
       "dataset": "luh",
       "cell_id": "luh_P021_3_S04_C08",
       "y_true": 430.0,
-      "y_pred": 694.1886009364242
+      "y_pred": 499.72999169144964
     },
     {
       "experiment": "matr_to_luh",
@@ -193,7 +193,7 @@
       "dataset": "luh",
       "cell_id": "luh_P022_1_S03_C06",
       "y_true": 341.0,
-      "y_pred": 693.9602382115546
+      "y_pred": 494.2620648597656
     },
     {
       "experiment": "matr_to_luh",
@@ -206,7 +206,7 @@
       "dataset": "luh",
       "cell_id": "luh_P022_2_S04_C06",
       "y_true": 344.0,
-      "y_pred": 693.6102279304587
+      "y_pred": 498.9832732334676
     },
     {
       "experiment": "matr_to_luh",
@@ -219,7 +219,7 @@
       "dataset": "luh",
       "cell_id": "luh_P022_3_S05_C04",
       "y_true": 314.0,
-      "y_pred": 693.4164418760339
+      "y_pred": 498.4997882726178
     },
     {
       "experiment": "matr_to_luh",
@@ -232,7 +232,7 @@
       "dataset": "luh",
       "cell_id": "luh_P023_1_S03_C04",
       "y_true": 82.0,
-      "y_pred": 694.0039191819171
+      "y_pred": 436.6952370482229
     },
     {
       "experiment": "matr_to_luh",
@@ -245,7 +245,7 @@
       "dataset": "luh",
       "cell_id": "luh_P023_2_S04_C04",
       "y_true": 72.0,
-      "y_pred": 695.212522448769
+      "y_pred": 430.0352113229254
     },
     {
       "experiment": "matr_to_luh",
@@ -258,7 +258,7 @@
       "dataset": "luh",
       "cell_id": "luh_P023_3_S05_C03",
       "y_true": 79.0,
-      "y_pred": 694.115450493566
+      "y_pred": 436.0614212080504
     },
     {
       "experiment": "matr_to_luh",
@@ -271,7 +271,7 @@
       "dataset": "luh",
       "cell_id": "luh_P025_1_S01_C09",
       "y_true": 718.0,
-      "y_pred": 696.7653573882432
+      "y_pred": 500.77956760345455
     },
     {
       "experiment": "matr_to_luh",
@@ -284,7 +284,7 @@
       "dataset": "luh",
       "cell_id": "luh_P025_2_S02_C09",
       "y_true": 690.0,
-      "y_pred": 696.5417933107769
+      "y_pred": 499.0903549163748
     },
     {
       "experiment": "matr_to_luh",
@@ -297,7 +297,7 @@
       "dataset": "luh",
       "cell_id": "luh_P025_3_S03_C09",
       "y_true": 702.0,
-      "y_pred": 696.7985825416814
+      "y_pred": 497.6094349545555
     },
     {
       "experiment": "matr_to_luh",
@@ -310,7 +310,7 @@
       "dataset": "luh",
       "cell_id": "luh_P026_1_S01_C07",
       "y_true": 581.0,
-      "y_pred": 695.9790485267973
+      "y_pred": 496.3726172005527
     },
     {
       "experiment": "matr_to_luh",
@@ -323,7 +323,7 @@
       "dataset": "luh",
       "cell_id": "luh_P026_2_S02_C07",
       "y_true": 613.0,
-      "y_pred": 696.0135637244665
+      "y_pred": 497.7888499648289
     },
     {
       "experiment": "matr_to_luh",
@@ -336,7 +336,7 @@
       "dataset": "luh",
       "cell_id": "luh_P026_3_S03_C07",
       "y_true": 563.0,
-      "y_pred": 696.1469943347956
+      "y_pred": 494.1769907930767
     },
     {
       "experiment": "matr_to_luh",
@@ -349,7 +349,7 @@
       "dataset": "luh",
       "cell_id": "luh_P027_1_S01_C05",
       "y_true": 269.0,
-      "y_pred": 695.1747321152641
+      "y_pred": 491.6393027735452
     },
     {
       "experiment": "matr_to_luh",
@@ -362,7 +362,7 @@
       "dataset": "luh",
       "cell_id": "luh_P027_2_S02_C05",
       "y_true": 285.0,
-      "y_pred": 695.5772715795798
+      "y_pred": 490.3410949819036
     },
     {
       "experiment": "matr_to_luh",
@@ -375,7 +375,7 @@
       "dataset": "luh",
       "cell_id": "luh_P027_3_S03_C05",
       "y_true": 298.0,
-      "y_pred": 695.4207376093274
+      "y_pred": 490.03209179329394
     },
     {
       "experiment": "matr_to_luh",
@@ -388,7 +388,7 @@
       "dataset": "luh",
       "cell_id": "luh_P029_1_S06_C08",
       "y_true": 132.0,
-      "y_pred": 690.631391496492
+      "y_pred": 496.42989922129027
     },
     {
       "experiment": "matr_to_luh",
@@ -401,7 +401,7 @@
       "dataset": "luh",
       "cell_id": "luh_P029_2_S08_C07",
       "y_true": 135.0,
-      "y_pred": 690.9538697780436
+      "y_pred": 493.76526027595435
     },
     {
       "experiment": "matr_to_luh",
@@ -414,7 +414,7 @@
       "dataset": "luh",
       "cell_id": "luh_P029_3_S09_C07",
       "y_true": 135.0,
-      "y_pred": 691.2369446083271
+      "y_pred": 490.58689387838666
     },
     {
       "experiment": "matr_to_luh",
@@ -427,7 +427,7 @@
       "dataset": "luh",
       "cell_id": "luh_P030_1_S06_C06",
       "y_true": 118.0,
-      "y_pred": 690.9479392988595
+      "y_pred": 491.2552190163317
     },
     {
       "experiment": "matr_to_luh",
@@ -440,7 +440,7 @@
       "dataset": "luh",
       "cell_id": "luh_P030_2_S08_C05",
       "y_true": 123.0,
-      "y_pred": 691.0408559877031
+      "y_pred": 490.6100535010017
     },
     {
       "experiment": "matr_to_luh",
@@ -453,7 +453,7 @@
       "dataset": "luh",
       "cell_id": "luh_P030_3_S09_C05",
       "y_true": 123.0,
-      "y_pred": 691.1084096507734
+      "y_pred": 489.92625274863923
     },
     {
       "experiment": "matr_to_luh",
@@ -466,7 +466,7 @@
       "dataset": "luh",
       "cell_id": "luh_P031_1_S06_C04",
       "y_true": 97.0,
-      "y_pred": 691.1021483019058
+      "y_pred": 481.97406268735614
     },
     {
       "experiment": "matr_to_luh",
@@ -479,7 +479,7 @@
       "dataset": "luh",
       "cell_id": "luh_P031_2_S07_C04",
       "y_true": 94.0,
-      "y_pred": 691.0794101962445
+      "y_pred": 481.6618342132017
     },
     {
       "experiment": "matr_to_luh",
@@ -492,7 +492,7 @@
       "dataset": "luh",
       "cell_id": "luh_P031_3_S09_C03",
       "y_true": 90.0,
-      "y_pred": 691.169378381371
+      "y_pred": 478.93028415986333
     },
     {
       "experiment": "matr_to_luh",
@@ -505,7 +505,7 @@
       "dataset": "luh",
       "cell_id": "luh_P033_1_S07_C08",
       "y_true": 524.0,
-      "y_pred": 694.6621136920486
+      "y_pred": 497.78077964674844
     },
     {
       "experiment": "matr_to_luh",
@@ -518,7 +518,7 @@
       "dataset": "luh",
       "cell_id": "luh_P033_2_S08_C08",
       "y_true": 508.0,
-      "y_pred": 694.6641011391408
+      "y_pred": 495.29307128662845
     },
     {
       "experiment": "matr_to_luh",
@@ -531,7 +531,7 @@
       "dataset": "luh",
       "cell_id": "luh_P033_3_S09_C08",
       "y_true": 523.0,
-      "y_pred": 694.6293216359478
+      "y_pred": 495.8670706237189
     },
     {
       "experiment": "matr_to_luh",
@@ -544,7 +544,7 @@
       "dataset": "luh",
       "cell_id": "luh_P034_1_S07_C06",
       "y_true": 446.0,
-      "y_pred": 694.4852536718488
+      "y_pred": 496.52222713270584
     },
     {
       "experiment": "matr_to_luh",
@@ -557,7 +557,7 @@
       "dataset": "luh",
       "cell_id": "luh_P034_2_S08_C06",
       "y_true": 448.0,
-      "y_pred": 694.4657157205727
+      "y_pred": 495.72380393017494
     },
     {
       "experiment": "matr_to_luh",
@@ -570,7 +570,7 @@
       "dataset": "luh",
       "cell_id": "luh_P034_3_S09_C06",
       "y_true": 440.0,
-      "y_pred": 694.2597727923722
+      "y_pred": 497.5064666671442
     },
     {
       "experiment": "matr_to_luh",
@@ -583,7 +583,7 @@
       "dataset": "luh",
       "cell_id": "luh_P035_1_S08_C04",
       "y_true": 279.0,
-      "y_pred": 694.064150483349
+      "y_pred": 490.8225180150224
     },
     {
       "experiment": "matr_to_luh",
@@ -596,7 +596,7 @@
       "dataset": "luh",
       "cell_id": "luh_P035_2_S09_C04",
       "y_true": 360.0,
-      "y_pred": 694.3773050841348
+      "y_pred": 490.71346636620547
     },
     {
       "experiment": "matr_to_luh",
@@ -609,7 +609,7 @@
       "dataset": "luh",
       "cell_id": "luh_P035_3_S10_C02",
       "y_true": 342.0,
-      "y_pred": 693.833181929548
+      "y_pred": 493.0808237643961
     },
     {
       "experiment": "matr_to_luh",
@@ -622,7 +622,7 @@
       "dataset": "luh",
       "cell_id": "luh_P037_1_S05_C11",
       "y_true": 741.0,
-      "y_pred": 696.1396915005023
+      "y_pred": 503.49142291777235
     },
     {
       "experiment": "matr_to_luh",
@@ -635,7 +635,7 @@
       "dataset": "luh",
       "cell_id": "luh_P037_3_S10_C04",
       "y_true": 783.0,
-      "y_pred": 696.6414415407913
+      "y_pred": 506.5424871027839
     },
     {
       "experiment": "matr_to_luh",
@@ -648,7 +648,7 @@
       "dataset": "luh",
       "cell_id": "luh_P038_1_S06_C07",
       "y_true": 734.0,
-      "y_pred": 696.65041058071
+      "y_pred": 497.51334637223414
     },
     {
       "experiment": "matr_to_luh",
@@ -661,7 +661,7 @@
       "dataset": "luh",
       "cell_id": "luh_P038_2_S07_C07",
       "y_true": 816.0,
-      "y_pred": 697.131918481536
+      "y_pred": 498.7998600170982
     },
     {
       "experiment": "matr_to_luh",
@@ -674,7 +674,7 @@
       "dataset": "luh",
       "cell_id": "luh_P038_3_S10_C03",
       "y_true": 697.0,
-      "y_pred": 696.331250273623
+      "y_pred": 499.0568001838575
     },
     {
       "experiment": "matr_to_luh",
@@ -687,7 +687,7 @@
       "dataset": "luh",
       "cell_id": "luh_P039_1_S05_C10",
       "y_true": 552.0,
-      "y_pred": 696.3548252723247
+      "y_pred": 490.56022657632553
     },
     {
       "experiment": "matr_to_luh",
@@ -700,7 +700,7 @@
       "dataset": "luh",
       "cell_id": "luh_P039_2_S06_C05",
       "y_true": 588.0,
-      "y_pred": 695.9720793195858
+      "y_pred": 492.33230252784824
     },
     {
       "experiment": "matr_to_luh",
@@ -713,7 +713,7 @@
       "dataset": "luh",
       "cell_id": "luh_P039_3_S07_C05",
       "y_true": 547.0,
-      "y_pred": 695.722229570179
+      "y_pred": 492.26328723879976
     },
     {
       "experiment": "matr_to_luh",
@@ -726,7 +726,7 @@
       "dataset": "luh",
       "cell_id": "luh_P041_1_S11_C08",
       "y_true": 236.0,
-      "y_pred": 691.6022461667592
+      "y_pred": 508.79596470678814
     },
     {
       "experiment": "matr_to_luh",
@@ -739,7 +739,7 @@
       "dataset": "luh",
       "cell_id": "luh_P041_2_S13_C07",
       "y_true": 220.0,
-      "y_pred": 691.9198988219347
+      "y_pred": 503.1772517817747
     },
     {
       "experiment": "matr_to_luh",
@@ -752,7 +752,7 @@
       "dataset": "luh",
       "cell_id": "luh_P041_3_S14_C07",
       "y_true": 237.0,
-      "y_pred": 691.6576517031051
+      "y_pred": 509.04033448389333
     },
     {
       "experiment": "matr_to_luh",
@@ -765,7 +765,7 @@
       "dataset": "luh",
       "cell_id": "luh_P042_1_S11_C06",
       "y_true": 180.0,
-      "y_pred": 691.7150406878659
+      "y_pred": 502.85104785388705
     },
     {
       "experiment": "matr_to_luh",
@@ -778,7 +778,7 @@
       "dataset": "luh",
       "cell_id": "luh_P042_2_S13_C05",
       "y_true": 204.0,
-      "y_pred": 692.1664027606931
+      "y_pred": 503.83389829693084
     },
     {
       "experiment": "matr_to_luh",
@@ -791,7 +791,7 @@
       "dataset": "luh",
       "cell_id": "luh_P042_3_S14_C05",
       "y_true": 197.0,
-      "y_pred": 691.444298795239
+      "y_pred": 507.6821371239027
     },
     {
       "experiment": "matr_to_luh",
@@ -804,7 +804,7 @@
       "dataset": "luh",
       "cell_id": "luh_P043_1_S11_C04",
       "y_true": 160.0,
-      "y_pred": 691.6167567115658
+      "y_pred": 491.19010218195507
     },
     {
       "experiment": "matr_to_luh",
@@ -817,7 +817,7 @@
       "dataset": "luh",
       "cell_id": "luh_P043_2_S12_C04",
       "y_true": 156.0,
-      "y_pred": 691.703496543998
+      "y_pred": 489.2532033160637
     },
     {
       "experiment": "matr_to_luh",
@@ -830,7 +830,7 @@
       "dataset": "luh",
       "cell_id": "luh_P043_3_S14_C03",
       "y_true": 153.0,
-      "y_pred": 691.4970538211769
+      "y_pred": 489.78750506410086
     },
     {
       "experiment": "matr_to_luh",
@@ -843,7 +843,7 @@
       "dataset": "luh",
       "cell_id": "luh_P045_1_S12_C08",
       "y_true": 975.0,
-      "y_pred": 695.6694839221909
+      "y_pred": 496.76425507458265
     },
     {
       "experiment": "matr_to_luh",
@@ -856,7 +856,7 @@
       "dataset": "luh",
       "cell_id": "luh_P045_2_S13_C08",
       "y_true": 980.0,
-      "y_pred": 695.6900509319153
+      "y_pred": 497.7912236126941
     },
     {
       "experiment": "matr_to_luh",
@@ -869,7 +869,7 @@
       "dataset": "luh",
       "cell_id": "luh_P045_3_S14_C08",
       "y_true": 845.0,
-      "y_pred": 694.6177288551751
+      "y_pred": 500.39693299892275
     },
     {
       "experiment": "matr_to_luh",
@@ -882,7 +882,7 @@
       "dataset": "luh",
       "cell_id": "luh_P046_1_S12_C06",
       "y_true": 1095.0,
-      "y_pred": 695.5407880565626
+      "y_pred": 498.7239928151881
     },
     {
       "experiment": "matr_to_luh",
@@ -895,7 +895,7 @@
       "dataset": "luh",
       "cell_id": "luh_P046_2_S13_C06",
       "y_true": 937.0,
-      "y_pred": 695.1889861225754
+      "y_pred": 500.84929922725723
     },
     {
       "experiment": "matr_to_luh",
@@ -908,7 +908,7 @@
       "dataset": "luh",
       "cell_id": "luh_P046_3_S14_C06",
       "y_true": 1044.0,
-      "y_pred": 695.7457839498688
+      "y_pred": 496.31770841108323
     },
     {
       "experiment": "matr_to_luh",
@@ -921,7 +921,7 @@
       "dataset": "luh",
       "cell_id": "luh_P047_1_S13_C04",
       "y_true": 1015.0,
-      "y_pred": 695.1850082306696
+      "y_pred": 492.6187959022427
     },
     {
       "experiment": "matr_to_luh",
@@ -934,7 +934,7 @@
       "dataset": "luh",
       "cell_id": "luh_P047_2_S14_C04",
       "y_true": 923.0,
-      "y_pred": 694.8512778875123
+      "y_pred": 491.39813153283234
     },
     {
       "experiment": "matr_to_luh",
@@ -947,7 +947,7 @@
       "dataset": "luh",
       "cell_id": "luh_P047_3_S15_C01",
       "y_true": 866.0,
-      "y_pred": 695.3106543103693
+      "y_pred": 490.10616935853324
     },
     {
       "experiment": "matr_to_luh",
@@ -960,7 +960,7 @@
       "dataset": "luh",
       "cell_id": "luh_P049_1_S10_C10",
       "y_true": 1466.0,
-      "y_pred": 696.7580480670972
+      "y_pred": 505.95878410877856
     },
     {
       "experiment": "matr_to_luh",
@@ -973,7 +973,7 @@
       "dataset": "luh",
       "cell_id": "luh_P049_3_S15_C02",
       "y_true": 1380.0,
-      "y_pred": 696.0155550380939
+      "y_pred": 506.7531522774611
     },
     {
       "experiment": "matr_to_luh",
@@ -986,7 +986,7 @@
       "dataset": "luh",
       "cell_id": "luh_P050_1_S10_C09",
       "y_true": 1615.0,
-      "y_pred": 696.809547189995
+      "y_pred": 503.17869138549895
     },
     {
       "experiment": "matr_to_luh",
@@ -999,7 +999,7 @@
       "dataset": "luh",
       "cell_id": "luh_P050_2_S11_C07",
       "y_true": 1575.0,
-      "y_pred": 696.4919745410624
+      "y_pred": 504.04439838825914
     },
     {
       "experiment": "matr_to_luh",
@@ -1012,7 +1012,7 @@
       "dataset": "luh",
       "cell_id": "luh_P050_3_S12_C07",
       "y_true": 1555.0,
-      "y_pred": 696.6583831575783
+      "y_pred": 502.42729888105146
     },
     {
       "experiment": "matr_to_luh",
@@ -1025,7 +1025,7 @@
       "dataset": "luh",
       "cell_id": "luh_P051_1_S10_C08",
       "y_true": 1234.0,
-      "y_pred": 696.5175477310846
+      "y_pred": 494.7702217291894
     },
     {
       "experiment": "matr_to_luh",
@@ -1038,7 +1038,7 @@
       "dataset": "luh",
       "cell_id": "luh_P051_2_S11_C05",
       "y_true": 1318.0,
-      "y_pred": 697.319095165908
+      "y_pred": 496.7957605358062
     },
     {
       "experiment": "matr_to_luh",
@@ -1051,7 +1051,7 @@
       "dataset": "luh",
       "cell_id": "luh_P051_3_S12_C05",
       "y_true": 1238.0,
-      "y_pred": 696.8809877590982
+      "y_pred": 493.0775321057604
     },
     {
       "experiment": "matr_to_luh",
@@ -1064,7 +1064,7 @@
       "dataset": "luh",
       "cell_id": "luh_P053_1_S15_C08",
       "y_true": 323.0,
-      "y_pred": 691.0738081691353
+      "y_pred": 508.88428343842867
     },
     {
       "experiment": "matr_to_luh",
@@ -1077,7 +1077,7 @@
       "dataset": "luh",
       "cell_id": "luh_P053_2_S16_C08",
       "y_true": 332.0,
-      "y_pred": 691.1762994961102
+      "y_pred": 507.8777768296378
     },
     {
       "experiment": "matr_to_luh",
@@ -1090,7 +1090,7 @@
       "dataset": "luh",
       "cell_id": "luh_P053_3_S19_C07",
       "y_true": 377.0,
-      "y_pred": 691.8341215285315
+      "y_pred": 505.82007865432314
     },
     {
       "experiment": "matr_to_luh",
@@ -1103,7 +1103,7 @@
       "dataset": "luh",
       "cell_id": "luh_P054_1_S16_C06",
       "y_true": 359.0,
-      "y_pred": 691.5560782768423
+      "y_pred": 509.4222909741088
     },
     {
       "experiment": "matr_to_luh",
@@ -1116,7 +1116,7 @@
       "dataset": "luh",
       "cell_id": "luh_P054_2_S17_C06",
       "y_true": 376.0,
-      "y_pred": 691.8291731629813
+      "y_pred": 506.9629381093642
     },
     {
       "experiment": "matr_to_luh",
@@ -1129,7 +1129,7 @@
       "dataset": "luh",
       "cell_id": "luh_P054_3_S19_C05",
       "y_true": 384.0,
-      "y_pred": 691.7605594754297
+      "y_pred": 510.42504352903705
     },
     {
       "experiment": "matr_to_luh",
@@ -1142,7 +1142,7 @@
       "dataset": "luh",
       "cell_id": "luh_P055_1_S15_C05",
       "y_true": 354.0,
-      "y_pred": 691.6193950251487
+      "y_pred": 496.76591320693973
     },
     {
       "experiment": "matr_to_luh",
@@ -1155,7 +1155,7 @@
       "dataset": "luh",
       "cell_id": "luh_P055_2_S16_C04",
       "y_true": 350.0,
-      "y_pred": 691.5240923319692
+      "y_pred": 497.2505617994861
     },
     {
       "experiment": "matr_to_luh",
@@ -1168,7 +1168,7 @@
       "dataset": "luh",
       "cell_id": "luh_P055_3_S17_C04",
       "y_true": 351.0,
-      "y_pred": 691.5999376990642
+      "y_pred": 496.99952829713664
     },
     {
       "experiment": "matr_to_luh",
@@ -1181,7 +1181,7 @@
       "dataset": "luh",
       "cell_id": "luh_P057_1_S17_C08",
       "y_true": 555.0,
-      "y_pred": 694.3259857210231
+      "y_pred": 503.05993792385294
     },
     {
       "experiment": "matr_to_luh",
@@ -1194,7 +1194,7 @@
       "dataset": "luh",
       "cell_id": "luh_P057_2_S18_C08",
       "y_true": 556.0,
-      "y_pred": 694.443198085673
+      "y_pred": 503.12159026293483
     },
     {
       "experiment": "matr_to_luh",
@@ -1207,7 +1207,7 @@
       "dataset": "luh",
       "cell_id": "luh_P057_3_S19_C08",
       "y_true": 539.0,
-      "y_pred": 695.1004834084509
+      "y_pred": 501.3001620893476
     },
     {
       "experiment": "matr_to_luh",
@@ -1220,7 +1220,7 @@
       "dataset": "luh",
       "cell_id": "luh_P058_1_S15_C07",
       "y_true": 707.0,
-      "y_pred": 695.2045664183687
+      "y_pred": 498.59464088130625
     },
     {
       "experiment": "matr_to_luh",
@@ -1233,7 +1233,7 @@
       "dataset": "luh",
       "cell_id": "luh_P058_2_S18_C06",
       "y_true": 672.0,
-      "y_pred": 695.2781631737972
+      "y_pred": 497.2545926440852
     },
     {
       "experiment": "matr_to_luh",
@@ -1246,7 +1246,7 @@
       "dataset": "luh",
       "cell_id": "luh_P058_3_S19_C06",
       "y_true": 712.0,
-      "y_pred": 695.4018365266398
+      "y_pred": 502.25914467077297
     },
     {
       "experiment": "matr_to_luh",
@@ -1259,7 +1259,7 @@
       "dataset": "luh",
       "cell_id": "luh_P059_1_S15_C06",
       "y_true": 605.0,
-      "y_pred": 695.4943572493845
+      "y_pred": 489.34816323192456
     },
     {
       "experiment": "matr_to_luh",
@@ -1272,7 +1272,7 @@
       "dataset": "luh",
       "cell_id": "luh_P059_2_S18_C04",
       "y_true": 660.0,
-      "y_pred": 695.5188988612805
+      "y_pred": 489.90616226695755
     },
     {
       "experiment": "matr_to_luh",
@@ -1285,7 +1285,7 @@
       "dataset": "luh",
       "cell_id": "luh_P059_3_S19_C04",
       "y_true": 664.0,
-      "y_pred": 695.3202693255863
+      "y_pred": 491.1961918797083
     },
     {
       "experiment": "matr_to_luh",
@@ -1298,7 +1298,7 @@
       "dataset": "luh",
       "cell_id": "luh_P061_1_S16_C09",
       "y_true": 947.0,
-      "y_pred": 695.2204785702195
+      "y_pred": 506.6567475941503
     },
     {
       "experiment": "matr_to_luh",
@@ -1311,7 +1311,7 @@
       "dataset": "luh",
       "cell_id": "luh_P061_2_S17_C09",
       "y_true": 942.0,
-      "y_pred": 695.3978574167977
+      "y_pred": 505.18589563623976
     },
     {
       "experiment": "matr_to_luh",
@@ -1324,7 +1324,7 @@
       "dataset": "luh",
       "cell_id": "luh_P061_3_S18_C09",
       "y_true": 1033.0,
-      "y_pred": 696.0258435825953
+      "y_pred": 501.01722033089067
     },
     {
       "experiment": "matr_to_luh",
@@ -1337,7 +1337,7 @@
       "dataset": "luh",
       "cell_id": "luh_P062_1_S16_C07",
       "y_true": 1120.0,
-      "y_pred": 696.0915610999527
+      "y_pred": 502.0661481268814
     },
     {
       "experiment": "matr_to_luh",
@@ -1350,7 +1350,7 @@
       "dataset": "luh",
       "cell_id": "luh_P062_2_S17_C07",
       "y_true": 1148.0,
-      "y_pred": 696.0221927913317
+      "y_pred": 502.0651905126134
     },
     {
       "experiment": "matr_to_luh",
@@ -1363,7 +1363,7 @@
       "dataset": "luh",
       "cell_id": "luh_P062_3_S18_C07",
       "y_true": 1128.0,
-      "y_pred": 696.0869142029576
+      "y_pred": 502.5459030005005
     },
     {
       "experiment": "matr_to_luh",
@@ -1376,7 +1376,7 @@
       "dataset": "luh",
       "cell_id": "luh_P063_1_S16_C05",
       "y_true": 1149.0,
-      "y_pred": 697.0464921864717
+      "y_pred": 495.52363089410426
     },
     {
       "experiment": "matr_to_luh",
@@ -1389,7 +1389,7 @@
       "dataset": "luh",
       "cell_id": "luh_P063_2_S17_C05",
       "y_true": 1236.0,
-      "y_pred": 696.4205738515458
+      "y_pred": 493.1226767686107
     },
     {
       "experiment": "matr_to_luh",
@@ -1402,7 +1402,7 @@
       "dataset": "luh",
       "cell_id": "luh_P063_3_S18_C05",
       "y_true": 1335.0,
-      "y_pred": 696.5424575851122
+      "y_pred": 493.93127734397433
     }
   ]
 }

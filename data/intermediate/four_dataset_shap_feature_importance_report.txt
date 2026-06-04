@@ -5,29 +5,77 @@ Feature table: data/intermediate/features_sop12_four_dataset_capnorm.csv
 Model-check metrics use the canonical benchmark evaluate_split() helper on the same feature table as the SHAP run.
 
 Model check across explained splits:
+  N=100 HUST random_forest: MAE=208.6, sMAPE=14.2, R2=+0.146 (5 seeds)
   N=100 LUH catboost: MAE=104.2, sMAPE=16.7, R2=+0.770 (5 seeds)
+  N=100 MATR catboost: MAE=175.2, sMAPE=24.3, R2=+0.528 (5 seeds)
   N=100 SANDIA xgboost: MAE=135.7, sMAPE=25.4, R2=+0.926 (5 seeds)
 
+N=100 HUST random_forest top SHAP features:
+  linearity_r2             rank=1.8 rel=23.5% shift_z=0.79 class=stable_candidate hust_vs_luh=slope_stable hust_vs_sandia=slope_stable matr_vs_hust=slope_shifted matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  slope_ratio              rank=1.8 rel=20.7% shift_z=0.23 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_stable matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  kurtosis_Qdis            rank=5.0 rel=6.1% shift_z=0.49 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_stable matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  variance_Qdis            rank=8.8 rel=4.7% shift_z=0.12 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  Qdis_cycle10             rank=7.0 rel=4.2% shift_z=10.84 class=scale_shift_fragile hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  sample_entropy           rank=7.6 rel=4.0% shift_z=0.35 class=relationship_unstable hust_vs_luh=slope_stable hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_shifted sandia_vs_luh=slope_shifted
+  max_drop                 rank=8.6 rel=4.0% shift_z=0.13 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  knee_cycle               rank=7.8 rel=3.8% shift_z=0.83 class=weak_or_mixed hust_vs_luh=slope_stable hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  range_Qdis               rank=8.6 rel=3.6% shift_z=0.06 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  accel_max_abs            rank=13.6 rel=3.0% shift_z=0.13 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+
+N=100 HUST random_forest important but transfer-fragile:
+  Qdis_cycle10             rank=7.0 shift_z=10.84 rho(M,H)=(-0.18,+0.65) class=scale_shift_fragile
+  sample_entropy           rank=7.6 shift_z=0.35 rho(M,H)=(-0.02,+0.25) class=relationship_unstable
+  max_drop                 rank=8.6 shift_z=0.13 rho(M,H)=(-0.07,+0.15) class=relationship_unstable
+  range_Qdis               rank=8.6 shift_z=0.06 rho(M,H)=(-0.53,+0.17) class=relationship_unstable
+
 N=100 LUH catboost top SHAP features:
-  slope_last_quarter       rank=3.4 rel=7.6% sandia_vs_luh=slope_stable
-  slope_linear             rank=5.0 rel=6.3% sandia_vs_luh=slope_stable
-  poly2_b                  rank=5.2 rel=5.8% sandia_vs_luh=slope_stable
-  mad_Qdis                 rank=5.0 rel=5.6% sandia_vs_luh=slope_stable
-  cycle_to_95pct           rank=7.8 rel=5.3% sandia_vs_luh=slope_stable
-  retention_ratio          rank=6.2 rel=5.2% sandia_vs_luh=slope_stable
-  exp_decay_k              rank=9.8 rel=4.6% sandia_vs_luh=slope_stable
-  Qdis_N                   rank=9.6 rel=4.3% sandia_vs_luh=slope_stable
-  range_Qdis               rank=11.0 rel=4.2% sandia_vs_luh=slope_stable
-  poly2_a                  rank=10.6 rel=4.0% sandia_vs_luh=slope_stable
+  slope_last_quarter       rank=3.4 rel=7.6% shift_z=0.37 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_stable matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  slope_linear             rank=5.0 rel=6.3% shift_z=0.25 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  poly2_b                  rank=5.2 rel=5.8% shift_z=0.13 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  mad_Qdis                 rank=5.0 rel=5.6% shift_z=0.71 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  cycle_to_95pct           rank=7.8 rel=5.3% shift_z=0.11 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  retention_ratio          rank=6.2 rel=5.2% shift_z=0.19 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  exp_decay_k              rank=9.8 rel=4.6% shift_z=0.19 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  Qdis_N                   rank=9.6 rel=4.3% shift_z=8.21 class=scale_shift_fragile hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  range_Qdis               rank=11.0 rel=4.2% shift_z=0.06 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  poly2_a                  rank=10.6 rel=4.0% shift_z=10.67 class=scale_shift_fragile hust_vs_luh=slope_shifted hust_vs_sandia=slope_stable matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+
+N=100 LUH catboost important but transfer-fragile:
+  slope_last_quarter       rank=3.4 shift_z=0.37 rho(M,H)=(+0.48,-0.07) class=relationship_unstable
+  poly2_b                  rank=5.2 shift_z=0.13 rho(M,H)=(-0.22,+0.03) class=relationship_unstable
+  retention_ratio          rank=6.2 shift_z=0.19 rho(M,H)=(-0.02,+0.08) class=relationship_unstable
+  cycle_to_95pct           rank=7.8 shift_z=0.11 rho(M,H)=(+0.15,+nan) class=relationship_unstable
+  Qdis_N                   rank=9.6 shift_z=8.21 rho(M,H)=(-0.04,+0.62) class=scale_shift_fragile
+
+N=100 MATR catboost top SHAP features:
+  accel_mean               rank=2.6 rel=11.8% shift_z=1.23 class=relationship_unstable hust_vs_luh=slope_stable hust_vs_sandia=slope_stable matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  poly2_c                  rank=2.6 rel=10.4% shift_z=0.26 class=weak_or_mixed hust_vs_luh=slope_stable hust_vs_sandia=slope_stable matr_vs_hust=slope_shifted matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  range_Qdis               rank=3.6 rel=9.4% shift_z=0.06 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  slope_last_quarter       rank=3.6 rel=8.8% shift_z=0.37 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_stable matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  variance_Qdis            rank=4.4 rel=7.1% shift_z=0.12 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  mad_Qdis                 rank=6.4 rel=5.7% shift_z=0.71 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  sample_entropy           rank=9.6 rel=3.6% shift_z=0.35 class=relationship_unstable hust_vs_luh=slope_stable hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_shifted sandia_vs_luh=slope_shifted
+  knee_cycle               rank=11.0 rel=3.4% shift_z=0.83 class=weak_or_mixed hust_vs_luh=slope_stable hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  accel_max_abs            rank=12.4 rel=2.9% shift_z=0.13 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  linearity_r2             rank=13.0 rel=2.7% shift_z=0.79 class=stable_candidate hust_vs_luh=slope_stable hust_vs_sandia=slope_stable matr_vs_hust=slope_shifted matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+
+N=100 MATR catboost important but transfer-fragile:
+  accel_mean               rank=2.6 shift_z=1.23 rho(M,H)=(+0.49,-0.16) class=relationship_unstable
+  range_Qdis               rank=3.6 shift_z=0.06 rho(M,H)=(-0.53,+0.17) class=relationship_unstable
+  slope_last_quarter       rank=3.6 shift_z=0.37 rho(M,H)=(+0.48,-0.07) class=relationship_unstable
+  sample_entropy           rank=9.6 shift_z=0.35 rho(M,H)=(-0.02,+0.25) class=relationship_unstable
 
 N=100 SANDIA xgboost top SHAP features:
-  Qdis_N                   rank=1.0 rel=54.8% sandia_vs_luh=slope_stable
-  mad_Qdis                 rank=11.0 rel=8.8% sandia_vs_luh=slope_stable
-  slope_linear             rank=3.6 rel=7.3% sandia_vs_luh=slope_stable
-  range_Qdis               rank=11.0 rel=3.1% sandia_vs_luh=slope_stable
-  spectral_entropy         rank=12.0 rel=3.0% sandia_vs_luh=slope_stable
-  slope_ratio              rank=7.0 rel=3.0% sandia_vs_luh=slope_stable
-  variance_Qdis            rank=8.6 rel=2.8% sandia_vs_luh=slope_stable
-  autocorr_lag1            rank=15.2 rel=2.1% sandia_vs_luh=slope_stable
-  slope_first_quarter      rank=12.8 rel=1.5% sandia_vs_luh=slope_stable
-  skewness_Qdis            rank=14.2 rel=1.4% sandia_vs_luh=slope_stable
+  Qdis_N                   rank=1.0 rel=54.8% shift_z=8.21 class=scale_shift_fragile hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  mad_Qdis                 rank=11.0 rel=8.8% shift_z=0.71 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  slope_linear             rank=3.6 rel=7.3% shift_z=0.25 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  range_Qdis               rank=11.0 rel=3.1% shift_z=0.06 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  spectral_entropy         rank=12.0 rel=3.0% shift_z=0.33 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_shifted matr_vs_luh=slope_stable matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  slope_ratio              rank=7.0 rel=3.0% shift_z=0.23 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_stable matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  variance_Qdis            rank=8.6 rel=2.8% shift_z=0.12 class=weak_or_mixed hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  autocorr_lag1            rank=15.2 rel=2.1% shift_z=0.69 class=weak_or_mixed hust_vs_luh=slope_stable hust_vs_sandia=slope_stable matr_vs_hust=slope_stable matr_vs_luh=slope_stable matr_vs_sandia=slope_stable sandia_vs_luh=slope_stable
+  slope_first_quarter      rank=12.8 rel=1.5% shift_z=0.32 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+  skewness_Qdis            rank=14.2 rel=1.4% shift_z=0.58 class=relationship_unstable hust_vs_luh=slope_shifted hust_vs_sandia=slope_shifted matr_vs_hust=slope_stable matr_vs_luh=slope_shifted matr_vs_sandia=slope_shifted sandia_vs_luh=slope_stable
+
+N=100 SANDIA xgboost important but transfer-fragile:
+  Qdis_N                   rank=1.0 shift_z=8.21 rho(M,H)=(-0.04,+0.62) class=scale_shift_fragile

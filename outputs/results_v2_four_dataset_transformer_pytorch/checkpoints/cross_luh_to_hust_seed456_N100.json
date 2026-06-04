@@ -20,10 +20,10 @@
     "log_upper": 7.38709020614624,
     "best_filters": 64,
     "best_learning_rate": 0.001,
-    "best_epoch": 35,
-    "epochs_run": 40,
-    "best_val_loss": 0.0546172596514225,
-    "final_train_loss": 0.07084011286497116
+    "best_epoch": 96,
+    "epochs_run": 156,
+    "best_val_loss": 0.041143737733364105,
+    "final_train_loss": 0.04643541947007179
   },
   "predictions": [
     {

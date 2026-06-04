@@ -66,6 +66,7 @@ REGIME_LABEL = {
 }
 LEGEND_ORDER = ["Strong rank signal", "Moderate / weak rank signal", "Rank collapsed"]
 LEGEND_COLOR = {"Strong rank signal": GREEN, "Moderate / weak rank signal": ORANGE, "Rank collapsed": RED}
+LEGEND_MARKER = {"Strong rank signal": "o", "Moderate / weak rank signal": "s", "Rank collapsed": "^"}
 
 
 def load_data():
@@ -160,9 +161,10 @@ def plot_figure(df: pd.DataFrame, out_path: Path):
     for _, row in df.iterrows():
         regime_label = REGIME_LABEL.get(row["regime"], "Rank collapsed")
         c = LEGEND_COLOR[regime_label]
+        marker = LEGEND_MARKER[regime_label]
         ax.scatter(row["pct_mahalanobis_reduction"], row["delta_R2"],
                    s=170, c=c, edgecolor="white", linewidth=1.2,
-                   alpha=0.95, zorder=3)
+                   marker=marker, alpha=0.95, zorder=3)
 
     # Highlight the MATR↔HUST pair — the original key-finding directions
     matr_hust = df[df["pair"] == "matr_vs_hust"]
@@ -207,7 +209,7 @@ def plot_figure(df: pd.DataFrame, out_path: Path):
     legend_handles = []
     for lbl in LEGEND_ORDER:
         legend_handles.append(plt.Line2D(
-            [0], [0], marker="o", color="w", markerfacecolor=LEGEND_COLOR[lbl],
+            [0], [0], marker=LEGEND_MARKER[lbl], color="w", markerfacecolor=LEGEND_COLOR[lbl],
             markeredgecolor="white", markersize=11, label=lbl,
         ))
     legend_handles.append(plt.Line2D(
