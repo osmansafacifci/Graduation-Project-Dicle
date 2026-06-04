@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
-"""Library-backed Mamba/S4 sequence backbone for the four-dataset benchmark.
+"""Library-backed Mamba sequence backbone for the four-dataset benchmark.
 
 This runner intentionally reuses the PyTorch CNN baseline harness for sequence
 construction, official splits, source-range clipping, checkpointing, cluster
-bootstrap, and aggregation. The model backend is selected through the
-``LIBRARY_BACKBONE`` environment variable:
-
-    LIBRARY_BACKBONE=mamba   -> official ``mamba-ssm`` Mamba block
-    LIBRARY_BACKBONE=s4torch -> ``s4torch`` S4Model block
-
-The default is ``mamba``. This script is meant primarily for Colab/GPU runs
-because the Mamba package requires Linux + NVIDIA CUDA for normal installation.
+bootstrap, and aggregation. The model block is the official ``mamba-ssm``
+Mamba implementation. This script is meant primarily for Colab/GPU runs because
+the Mamba package requires Linux + NVIDIA CUDA for normal installation.
 
 Usage:
-    LIBRARY_BACKBONE=mamba python 2_models/run_mamba_s4_library_pytorch.py --hp-grid quick
-    LIBRARY_BACKBONE=s4torch python 2_models/run_mamba_s4_library_pytorch.py --hp-grid quick
-    LIBRARY_BACKBONE=mamba python 2_models/run_mamba_s4_library_pytorch.py --aggregate-only
+    python 2_models/run_mamba_library_pytorch.py --hp-grid quick
+    python 2_models/run_mamba_library_pytorch.py --aggregate-only
 """
 
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -39,7 +32,6 @@ import run_cnn_pytorch as base  # noqa: E402
 
 
 MAMBA_OUTPUT_DIR = PROJECT_ROOT / "outputs/results_v2_four_dataset_mamba_library_pytorch"
-S4_OUTPUT_DIR = PROJECT_ROOT / "outputs/results_v2_four_dataset_s4torch_library_pytorch"
 
 LIBRARY_HP_GRIDS = {
     "full": [(d, lr) for d in (16, 32, 64) for lr in (1e-3, 3e-3, 1e-2)],
@@ -107,65 +99,18 @@ class LibraryMambaRegressor(nn.Module):
         return self.fc2(h).squeeze(-1)
 
 
-class LibraryS4TorchRegressor(nn.Module):
-    """Regression head around the S4Torch high-level S4Model."""
-
-    def __init__(
-        self,
-        *,
-        channels: int = 2,
-        filters: int = 32,
-        kernel: int = 5,
-        hidden: int = 64,
-        dropout: float = 0.2,
-        layers: int = 2,
-        max_len: int = 128,
-    ) -> None:
-        super().__init__()
-        del kernel
-        try:
-            from s4torch import S4Model
-        except Exception as exc:  # pragma: no cover - depends on optional install
-            raise RuntimeError(
-                "Could not import s4torch.S4Model. Install with "
-                "`pip install git+https://github.com/TariqAHassan/s4torch`."
-            ) from exc
-
-        self.s4 = S4Model(
-            channels,
-            d_model=int(filters),
-            d_output=int(hidden),
-            n_blocks=int(layers),
-            n=16,
-            l_max=int(max_len),
-            collapse=True,
-        )
-        self.dropout = nn.Dropout(dropout)
-        self.fc2 = nn.Linear(int(hidden), 1)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Input is (batch, channels, time); S4Torch expects batch-first time.
-        h = x.transpose(1, 2)
-        h = self.s4(h)
-        h = F.gelu(h)
-        h = self.dropout(h)
-        return self.fc2(h).squeeze(-1)
-
-
 def dataframe_to_markdown(df: pd.DataFrame, *, floatfmt: str = ".3f") -> str:
     return base.dataframe_to_markdown(df, floatfmt=floatfmt)
 
 
 def build_report(summary: pd.DataFrame) -> str:
-    family = os.environ.get("LIBRARY_BACKBONE", "mamba").lower()
-    label = "Mamba" if family == "mamba" else "S4Torch"
     within = summary[summary["scenario"].eq("within_split")].copy()
     cross = summary[summary["scenario"].eq("naive_cross")].copy()
     lines = [
-        f"# Four-Dataset {label} Library Backbone (PyTorch)",
+        "# Four-Dataset Mamba Library Backbone (PyTorch)",
         "",
         "Input: cycles 2..N, channels `[Q_discharge/q0, diff(Q_discharge/q0)]`.",
-        "Purpose: library-backed deep sequence backbone sensitivity check using the same splits, metrics, clipping, and checkpointing as the CNN/Transformer runners.",
+        "Purpose: official mamba-ssm deep sequence backbone sensitivity check using the same splits, metrics, clipping, and checkpointing as the CNN/Transformer runners.",
         "Run details: hyperparameter grid, epoch caps, and clipping policy are recorded in the output `results_config.json`.",
         "",
         "## Within-Dataset N=100",
@@ -200,7 +145,6 @@ def write_outputs(
     if not detailed:
         print("[warn] no completed checkpoints found; skipping summary write")
         return
-    family = os.environ.get("LIBRARY_BACKBONE", "mamba").lower()
     detailed_df = pd.DataFrame(detailed)
     predictions_df = pd.DataFrame(predictions)
     summary = base.aggregate_summary(detailed_df, predictions_df)
@@ -209,15 +153,14 @@ def write_outputs(
     pred_path = out_dir / "results_predictions.csv"
     summary_path = out_dir / "results_summary.csv"
     config_path = out_dir / "results_config.json"
-    default_dir = MAMBA_OUTPUT_DIR if family == "mamba" else S4_OUTPUT_DIR
-    paper_dir = INTERMEDIATE_DIR if out_dir == base.resolve_path(default_dir) else out_dir
-    report_path = paper_dir / f"four_dataset_{family}_library_pytorch_report.md"
+    paper_dir = INTERMEDIATE_DIR if out_dir == base.resolve_path(MAMBA_OUTPUT_DIR) else out_dir
+    report_path = paper_dir / "four_dataset_mamba_library_pytorch_report.md"
 
     config = dict(config)
     config.update(
         {
-            "architecture": "LibraryMambaRegressor" if family == "mamba" else "LibraryS4TorchRegressor",
-            "library_backbone": family,
+            "architecture": "LibraryMambaRegressor",
+            "library_backbone": "mamba-ssm",
             "model_name": base.MODEL_NAME,
             "schema_version": base.SCHEMA_VERSION,
             "hp_grid_note": "filters is d_model for the library-backed sequence wrapper",
@@ -238,20 +181,10 @@ def write_outputs(
 
 
 def install_library_backend() -> None:
-    family = os.environ.get("LIBRARY_BACKBONE", "mamba").lower()
-    if family == "mamba":
-        base.CNN1D = LibraryMambaRegressor
-        base.MODEL_NAME = "pytorch_mamba_library"
-        base.SCHEMA_VERSION = "pytorch_mamba_library_v1"
-        base.OUTPUT_DIR = MAMBA_OUTPUT_DIR
-    elif family in {"s4", "s4torch"}:
-        os.environ["LIBRARY_BACKBONE"] = "s4torch"
-        base.CNN1D = LibraryS4TorchRegressor
-        base.MODEL_NAME = "pytorch_s4torch_library"
-        base.SCHEMA_VERSION = "pytorch_s4torch_library_v1"
-        base.OUTPUT_DIR = S4_OUTPUT_DIR
-    else:
-        raise SystemExit("LIBRARY_BACKBONE must be one of: mamba, s4torch")
+    base.CNN1D = LibraryMambaRegressor
+    base.MODEL_NAME = "pytorch_mamba_library"
+    base.SCHEMA_VERSION = "pytorch_mamba_library_v1"
+    base.OUTPUT_DIR = MAMBA_OUTPUT_DIR
     base.HP_GRIDS = LIBRARY_HP_GRIDS
     base.build_report = build_report
     base.write_outputs = write_outputs
