@@ -63,10 +63,12 @@ from plot_style import apply_science_style
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import safe_pred  # noqa: E402
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
-    META_COLS,
-    SEEDS,
+    FITTERS,
     fit_catboost,
     fit_elastic_net,
     fit_gaussian_process,
@@ -95,15 +97,7 @@ ALL_MODELS = [
 DEFAULT_MODELS = ["catboost", "random_forest"]
 DEFAULT_DATASETS = ["matr", "hust"]
 
-FITTERS = {
-    "elastic_net": fit_elastic_net,
-    "pls": fit_pls,
-    "random_forest": fit_random_forest,
-    "gaussian_process": fit_gaussian_process,
-    "xgboost": fit_xgboost,
-    "catboost": fit_catboost,
-    "stacking": fit_stacking,
-}
+# FITTERS imported from run_experiments
 
 
 def bh_fdr(p_values: np.ndarray) -> np.ndarray:
@@ -357,29 +351,13 @@ def feature_slope_table(
     )
 
 
-def safe_pred(model: object, x: np.ndarray) -> np.ndarray:
-    """Predict and sanitize: ravel, replace NaN/inf, clip to ``[-1e9, 1e9]``.
-
-    Linear models trained on log-life can produce extreme out-of-distribution
-    predictions in cross-dataset transfer; this helper keeps downstream
-    metrics finite without silently masking the failure mode (clipped
-    predictions still register as large errors in MAE / R²).
-    """
-    raw = model.predict(x)
-    if hasattr(raw, "ravel"):
-        raw = raw.ravel()
-    raw = np.nan_to_num(raw, nan=0.0, posinf=1e9, neginf=-1e9)
-    return np.clip(raw, -1e9, 1e9)
+# safe_pred imported from shared.battery_utils
 
 
 def load_split(dataset: str, seed: int) -> dict:
-    """Load the JSON split file produced by ``2_models/generate_splits.py``.
-
-    Returns a dict with ``train``, ``calibration``, ``test`` lists of cell
-    IDs plus split metadata (ratios, seed, stratification scheme).
-    """
-    with (SPLITS_DIR / f"{dataset}_{seed}.json").open() as f:
-        return json.load(f)
+    """Load the JSON split file produced by ``2_models/generate_splits.py``."""
+    from shared.battery_utils import load_split as _load_split  # noqa: E402
+    return _load_split(SPLITS_DIR, dataset, seed)
 
 
 def fit_source_predict_target(

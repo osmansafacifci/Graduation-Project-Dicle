@@ -24,9 +24,10 @@ HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
 sys.path.insert(0, str(PROJECT_ROOT / "3_analysis"))
-
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import display_path as _display_path  # noqa: E402
 from metrics_utils import compute_metrics  # noqa: E402
-from run_experiments import META_COLS, SEEDS  # noqa: E402
 from conditional_shift_four_dataset import (  # noqa: E402
     classify_adapter,
     classify_rank_signal,
@@ -51,10 +52,7 @@ RANDOM_SEED = 20260525
 
 
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def bootstrap_ci(values: list[float] | np.ndarray, *, q=(2.5, 97.5)) -> tuple[float, float]:

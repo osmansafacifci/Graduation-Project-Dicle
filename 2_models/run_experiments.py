@@ -55,38 +55,28 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from metrics_utils import bootstrap_metric_ci, compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 
+PROJECT_ROOT = HERE.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import (  # noqa: E402
+    ALL_DATASETS as _ALL_DATASETS,
+    ALL_MODELS as _ALL_MODELS,
+    EXTENDED_FEATURE_COLS,
+    META_COLS,
+    SEEDS,
+    SOP12_FEATURE_COLS,
+)
+
 # Quiet ElasticNetCV's convergence warnings on small folds (~6-8 cells).
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-PROJECT_ROOT = HERE.parent
 FEATURES_PATH = PROJECT_ROOT / "data" / "intermediate" / "features_sop12_combined.csv"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 RESULTS_DIR = PROJECT_ROOT / "outputs" / "results_v2_34feat_log"
 
-SEEDS = [42, 123, 456, 789, 1011]
 DEFAULT_WINDOWS = [50, 100]
-ALL_DATASETS = ["matr", "hust", "sandia", "luh", "umich"]
-ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
+ALL_DATASETS = _ALL_DATASETS + ["umich"]
+ALL_MODELS = _ALL_MODELS
 DEFAULT_MODELS = ALL_MODELS  # full lineup (stacking included)
-
-SOP12_FEATURE_COLS = [
-    "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
-    "variance_Qdis", "range_Qdis", "max_drop", "std_diff",
-    "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
-]
-
-EXTENDED_FEATURE_COLS = [
-    "poly2_a", "poly2_b", "poly2_c", "exp_decay_k",
-    "cycle_to_99pct", "cycle_to_98pct", "cycle_to_95pct",
-    "slope_first_quarter", "slope_last_quarter",
-    "autocorr_lag1", "knee_cycle", "n_capacity_jumps",
-]
-
-# Reserved (non-feature) CSV columns
-META_COLS = {
-    "dataset", "cell_id", "n_cycles", "q0", "cycle_life",
-    "is_censored", "capacity_normalized",
-}
 
 
 # ---------- model helpers ----------
@@ -454,6 +444,17 @@ def fit_stacking(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
     return model, info
 
 
+FITTERS: dict[str, callable] = {
+    "elastic_net": fit_elastic_net,
+    "pls": fit_pls,
+    "random_forest": fit_random_forest,
+    "gaussian_process": fit_gaussian_process,
+    "xgboost": fit_xgboost,
+    "catboost": fit_catboost,
+    "stacking": fit_stacking,
+}
+
+
 # ---------- per-seed evaluation ----------
 
 def prediction_rows(test_df: pd.DataFrame, y_true: np.ndarray, y_pred: np.ndarray, *, seed: int) -> list[dict]:
@@ -704,18 +705,8 @@ def evaluate_cross_dataset(
     if pca_info is not None:
         out["pca"] = pca_info
 
-    fitters = {
-        "elastic_net": fit_elastic_net,
-        "pls": fit_pls,
-        "random_forest": fit_random_forest,
-        "gaussian_process": fit_gaussian_process,
-        "xgboost": fit_xgboost,
-        "catboost": fit_catboost,
-        "stacking": fit_stacking,
-    }
-
     for name in models:
-        fit_fn = fitters.get(name)
+        fit_fn = FITTERS.get(name)
         if fit_fn is None:
             continue
         result = fit_with_threaded_joblib(fit_fn, X_train_s, y_train_fit, seed=seed)

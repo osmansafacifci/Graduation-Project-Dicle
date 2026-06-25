@@ -54,35 +54,16 @@ PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import CAPACITY_RAW_FEATURES, CAPACITY_VARIANCE_FEATURES, META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import dataset_window, load_split as _load_split, stable_seed  # noqa: E402
 from metrics_utils import compute_metrics, to_cycles  # noqa: E402
-from run_experiments import META_COLS, SEEDS  # noqa: E402
 
 FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_combined.csv"
 
-CAPACITY_RAW_FEATURES = {
-    "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
-    "mean_diff", "std_diff", "range_Qdis",
-    "poly2_a", "poly2_b", "poly2_c",
-    "slope_first_quarter", "slope_last_quarter",
-    "accel_mean", "accel_std", "accel_max_abs",
-    "mad_Qdis",
-}
-CAPACITY_VARIANCE_FEATURES = {"variance_Qdis"}
-
 
 def load_split(dataset: str, seed: int) -> dict:
-    path = SPLITS_DIR / f"{dataset}_{seed}.json"
-    with path.open() as f:
-        return json.load(f)
-
-
-def stable_seed(*parts: object) -> int:
-    text = "|".join(str(p) for p in parts)
-    return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
-
-
-def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
-    return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
+    return _load_split(SPLITS_DIR, dataset, seed)
 
 
 def split_source_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataFrame]:

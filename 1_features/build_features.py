@@ -60,97 +60,23 @@ from scipy.stats import kurtosis, skew
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.battery_utils import compute_cycle_life, compute_q0  # noqa: E402
+from shared.constants import (  # noqa: E402
+    BATCH1_CONTINUATION_FROM_BATCH2,
+    CAPACITY_RAW_FEATURES,
+    CAPACITY_VARIANCE_FEATURES,
+    EXTENDED2_FEATURE_COLS,
+    EXTENDED_FEATURE_COLS,
+    SOP12_FEATURE_COLS,
+)
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 
 DEFAULT_N_WINDOWS = (50, 100)
 DEFAULT_EOL_FRACTION = 0.85
 
-# Original SOP12 features (12)
-SOP12_FEATURE_COLS = [
-    "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
-    "variance_Qdis", "range_Qdis", "max_drop", "std_diff",
-    "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
-]
-
-# Extended feature set — additional shape/decay descriptors of the QD curve
-# (12 more). All derived purely from the per-cycle Q_discharge series.
-EXTENDED_FEATURE_COLS = [
-    "poly2_a", "poly2_b", "poly2_c",        # quadratic fit of Q(c) over cycles 2..N
-    "exp_decay_k",                            # exponential fade rate constant
-    "cycle_to_99pct", "cycle_to_98pct", "cycle_to_95pct",  # cycles to reach retention thresholds
-    "slope_first_quarter", "slope_last_quarter",            # multi-scale fade rate
-    "autocorr_lag1",                          # cycle-to-cycle ΔQ memory
-    "knee_cycle",                             # decay knee location
-    "n_capacity_jumps",                       # count of large single-cycle drops
-]
-
-# Second extended feature set — frequency-domain, second-derivative,
-# information-theoretic and robust-statistic descriptors of the QD curve.
-# Still pure functions of Q_dis(2..N); no voltage, no temperature.
-EXTENDED2_FEATURE_COLS = [
-    "accel_mean", "accel_std", "accel_max_abs",   # second-derivative statistics (fade acceleration)
-    "linearity_r2",                                 # R² of straight-line fit (how non-linear is decay?)
-    "kurtosis_Qdis",                                # tail heaviness of Q_dis distribution
-    "fft_top3_energy_ratio",                        # share of FFT energy in top-3 non-DC bins
-    "spectral_entropy",                             # Shannon entropy of FFT power distribution
-    "sample_entropy",                               # complexity / regularity of QD time series
-    "pos_neg_diff_ratio",                           # ratio of cycles with capacity gain vs loss
-    "mad_Qdis",                                     # median absolute deviation (outlier-robust spread)
-]
-
 ALL_FEATURE_COLS = SOP12_FEATURE_COLS + EXTENDED_FEATURE_COLS + EXTENDED2_FEATURE_COLS  # 34 total
-
-# Per SOP §2.3: raw-capacity features that should be divided by Q0 when a
-# dataset has a different nominal capacity (so the same model can score across
-# datasets with mismatched cell chemistries / sizes).
-# retention_ratio, slope_ratio, autocorr_lag1, fft_top3_energy_ratio,
-# spectral_entropy, sample_entropy, pos_neg_diff_ratio, linearity_r2,
-# kurtosis_Qdis, cycle_to_*pct, knee_cycle, n_capacity_jumps are scale-invariant.
-CAPACITY_RAW_FEATURES = [
-    # 12 SOP capacity-unit features
-    "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
-    "mean_diff", "std_diff", "range_Qdis",
-    # 12 extended capacity-unit features
-    "poly2_a", "poly2_b", "poly2_c",
-    "slope_first_quarter", "slope_last_quarter",
-    # 10 extended² capacity-unit features
-    "accel_mean", "accel_std", "accel_max_abs",
-    "mad_Qdis",
-]
-CAPACITY_VARIANCE_FEATURES = ["variance_Qdis"]
-
-# Same merge metadata as build_matr_audit.py (kept in sync intentionally)
-BATCH1_CONTINUATION_FROM_BATCH2 = {
-    "b1c0": {"source_cell": "b2c7", "add_len": 662},
-    "b1c1": {"source_cell": "b2c8", "add_len": 981},
-    "b1c2": {"source_cell": "b2c9", "add_len": 1060},
-    "b1c3": {"source_cell": "b2c15", "add_len": 208},
-    "b1c4": {"source_cell": "b2c16", "add_len": 482},
-}
-
-
-# ---------- shared label utilities ----------
-
-def compute_q0(qd) -> float:
-    qd = np.asarray(qd, dtype=float).ravel()
-    if len(qd) < 5:
-        return float("nan")
-    vals = qd[1:5]
-    vals = vals[np.isfinite(vals) & (vals > 0)]
-    return float(np.median(vals)) if len(vals) else float("nan")
-
-
-def compute_cycle_life(qd, q0: float, fraction: float) -> float:
-    """Single-cycle EOL: first cycle (>=2, 1-indexed) where Q <= fraction * Q0."""
-    if not np.isfinite(q0) or q0 <= 0:
-        return float("nan")
-    qd = np.asarray(qd, dtype=float).ravel()
-    threshold = fraction * q0
-    for i in range(1, len(qd)):  # start at index 1 (cycle 2)
-        if np.isfinite(qd[i]) and qd[i] > 0 and qd[i] <= threshold:
-            return float(i + 1)
-    return float("nan")
 
 
 # ---------- 12 SOP features ----------

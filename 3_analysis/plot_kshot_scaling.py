@@ -19,10 +19,13 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
+import sys
+
 from plot_style import apply_science_style
 
-
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from shared.battery_utils import display_path as _display_path  # noqa: E402
 DEFAULT_CP_PATH = ROOT / "outputs/results_v2_four_dataset_conformal/paper_cp_k_sweep.csv"
 DEFAULT_LODO_PATH = ROOT / "data/intermediate/four_dataset_lodo_source_expert_k_sweep.csv"
 DEFAULT_OUTPUT_DIR = ROOT / "outputs/results_v2_four_dataset_kshot_scaling"
@@ -57,10 +60,7 @@ COLORS = {
 
 
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, ROOT)
 
 
 def _quantile(values: Iterable[float], q: float) -> float:

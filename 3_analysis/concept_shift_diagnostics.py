@@ -50,8 +50,11 @@ from sklearn.preprocessing import StandardScaler
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS  # noqa: E402
+from shared.battery_utils import safe_pred  # noqa: E402
 from run_experiments import (  # noqa: E402
-    META_COLS,
+    FITTERS,
     fit_catboost, fit_elastic_net, fit_gaussian_process,
     fit_pls, fit_random_forest, fit_stacking, fit_xgboost,
 )
@@ -63,17 +66,6 @@ PROJECT_ROOT = HERE.parent
 FEATURES_PATH = PROJECT_ROOT / "data" / "intermediate" / "features_sop12_combined.csv"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
-
-FITTERS = {
-    "elastic_net": fit_elastic_net,
-    "pls": fit_pls,
-    "random_forest": fit_random_forest,
-    "gaussian_process": fit_gaussian_process,
-    "xgboost": fit_xgboost,
-    "catboost": fit_catboost,
-    "stacking": fit_stacking,
-}
-
 
 # ---------- (a) target distribution + KS ----------
 
@@ -115,14 +107,6 @@ def target_distribution_summary(df: pd.DataFrame) -> dict:
 
 
 # ---------- (c) per-cell residual ----------
-
-def safe_pred(model, X: np.ndarray) -> np.ndarray:
-    raw = model.predict(X)
-    if hasattr(raw, "ravel"):
-        raw = raw.ravel()
-    raw = np.nan_to_num(raw, nan=0.0, posinf=1e9, neginf=-1e9)
-    return np.clip(raw, -1e9, 1e9)
-
 
 def residual_analysis(
     df: pd.DataFrame,

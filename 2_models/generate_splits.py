@@ -30,10 +30,11 @@ import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import SEEDS  # noqa: E402
+
 FEATURES_PATH = PROJECT_ROOT / "data" / "intermediate" / "features_sop12_combined.csv"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
-
-SEEDS = [42, 123, 456, 789, 1011]
 RATIOS = (0.70, 0.15, 0.15)
 
 

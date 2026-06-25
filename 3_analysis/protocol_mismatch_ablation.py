@@ -59,20 +59,19 @@ HUST_CYCLES_PATH = INTERMEDIATE_DIR / "hust_cycles_tidy.csv"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2_four_dataset"
 
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import display_path as _display_path, load_split as _load_split  # noqa: E402
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
-from run_experiments import META_COLS, SEEDS, fit_gaussian_process  # noqa: E402
+from run_experiments import fit_gaussian_process  # noqa: E402
 
 
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def load_split(dataset: str, seed: int) -> dict:
-    with (SPLITS_DIR / f"{dataset}_{seed}.json").open() as f:
-        return json.load(f)
+    return _load_split(SPLITS_DIR, dataset, seed)
 
 
 def pearson_r(y_true: np.ndarray, y_pred: np.ndarray) -> float:

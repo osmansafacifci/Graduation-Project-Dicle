@@ -61,11 +61,16 @@ SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2_four_dataset"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_four_dataset_shap"
 
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import (  # noqa: E402
+    dataset_window,
+    display_path as _display_path,
+    load_split as _load_split,
+)
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 import run_experiments as experiments  # noqa: E402
 from run_experiments import (  # noqa: E402
-    META_COLS,
-    SEEDS,
     fit_catboost,
     fit_random_forest,
     fit_xgboost,
@@ -102,23 +107,11 @@ MODEL_FITTERS = {
 
 
 def display_path(path: Path) -> str:
-    """Return ``path`` relative to the project root, or absolute if outside."""
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
-    """Load the canonical ``{train, calibration, test}`` cell-ID split JSON."""
-    path = splits_dir / f"{dataset}_{seed}.json"
-    with path.open() as f:
-        return json.load(f)
-
-
-def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
-    """Slice ``df`` to one dataset, one prediction window, uncensored cells only."""
-    return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
+    return _load_split(splits_dir, dataset, seed)
 
 
 def model_list_for_dataset(requested: list[str], dataset: str) -> list[str]:

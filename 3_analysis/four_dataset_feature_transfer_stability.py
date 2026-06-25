@@ -45,8 +45,10 @@ PROJECT_ROOT = HERE.parent
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2_four_dataset"
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import dataset_window, load_split, stable_seed  # noqa: E402
 from metrics_utils import compute_metrics, to_cycles  # noqa: E402
-from run_experiments import META_COLS, SEEDS  # noqa: E402
 
 DEFAULT_FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_four_dataset_capnorm.csv"
 DEFAULT_RAW_FEATURES_PATH = INTERMEDIATE_DIR / "features_sop12_four_dataset.csv"
@@ -55,21 +57,6 @@ ALL_DATASETS = ["matr", "hust", "sandia", "luh"]
 
 def resolve_path(path: Path) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
-
-
-def stable_seed(*parts: object) -> int:
-    text = "|".join(str(part) for part in parts)
-    return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
-
-
-def load_split(splits_dir: Path, dataset: str, seed: int) -> dict:
-    path = splits_dir / f"{dataset}_{seed}.json"
-    with path.open() as f:
-        return json.load(f)
-
-
-def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
-    return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
 
 
 def split_source_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
