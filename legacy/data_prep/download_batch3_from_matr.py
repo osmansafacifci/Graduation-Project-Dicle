@@ -28,6 +28,7 @@ After it finishes, re-run:
 
 from __future__ import annotations
 
+import hashlib
 import pickle
 import shutil
 import sys
@@ -51,6 +52,9 @@ MAT_PATH = RAW_DIR / MAT_FILENAME
 PKL_PATH = RAW_DIR / "batch3_varcharge.pkl"
 CELL_PREFIX = "b3"
 EXPECTED_MAT_BYTES = 3_236_690_412
+# SHA-256 of the canonical .mat file. Set to None to skip verification (first
+# download), then record the hash for future integrity checks.
+EXPECTED_MAT_SHA256: str | None = None
 
 
 def _decode_string(dataset) -> str:
@@ -87,6 +91,23 @@ def download_mat() -> None:
             f"[warn] downloaded size {actual:,} != expected {EXPECTED_MAT_BYTES:,}. "
             "Conversion may fail; consider re-running."
         )
+    # Verify SHA-256 integrity if a reference hash is available.
+    if EXPECTED_MAT_SHA256 is not None:
+        print("[verify] computing SHA-256 (this may take a moment for ~3 GiB)...")
+        h = hashlib.sha256()
+        with MAT_PATH.open("rb") as fh:
+            while chunk := fh.read(1 << 20):
+                h.update(chunk)
+        digest = h.hexdigest()
+        if digest != EXPECTED_MAT_SHA256:
+            print(
+                f"[SECURITY WARNING] SHA-256 mismatch!\n"
+                f"  expected: {EXPECTED_MAT_SHA256}\n"
+                f"  actual:   {digest}\n"
+                "  The file may be corrupted or tampered with."
+            )
+            sys.exit(1)
+        print(f"[verify] SHA-256 OK: {digest}")
 
 
 def convert_to_pkl() -> None:
