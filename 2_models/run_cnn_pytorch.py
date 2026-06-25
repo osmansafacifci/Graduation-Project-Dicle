@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import time
 from dataclasses import dataclass
@@ -62,6 +63,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 try:
     import torch
@@ -1028,7 +1031,8 @@ def load_checkpoint(path: Path) -> tuple[dict, list[dict]] | None:
         return None
     try:
         data = json.loads(path.read_text())
-    except Exception:
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+        logger.warning("Corrupt checkpoint %s, will recompute: %s", path, exc)
         return None
     if data.get("schema") != SCHEMA_VERSION:
         return None

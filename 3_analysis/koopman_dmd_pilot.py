@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 import os
 import sys
@@ -50,6 +51,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp, mannwhitneyu, pearsonr
+
+logger = logging.getLogger(__name__)
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import make_pipeline
@@ -404,7 +407,8 @@ def safe_test(name: str, dataset_a: str, values_a: np.ndarray, dataset_b: str, v
     try:
         mw = mannwhitneyu(values_a, values_b, alternative="two-sided")
         mw_p = float(mw.pvalue)
-    except Exception:
+    except ValueError as exc:
+        logger.debug("Mann-Whitney U test failed for %s (%s vs %s): %s", name, dataset_a, dataset_b, exc)
         mw_p = float("nan")
     return {
         "metric": name,
@@ -600,7 +604,8 @@ def write_plots(
     os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "matplotlib-cache"))
     try:
         import matplotlib.pyplot as plt
-    except Exception:
+    except ImportError:
+        logger.info("matplotlib not available; skipping Koopman/DMD plots")
         return []
     apply_science_style()
 

@@ -38,7 +38,7 @@ def fit_with_threaded_joblib(fitter, X_train: np.ndarray, y_train: np.ndarray, *
     """Fit a project model while avoiding loky process spawning in analysis scripts."""
     try:
         from joblib import parallel_backend
-    except Exception:
+    except ImportError:
         return fitter(X_train, y_train, seed=seed)
 
     with parallel_backend("threading"):

@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import warnings
 from pathlib import Path
@@ -54,6 +55,8 @@ import pandas as pd
 from scipy.stats import pearsonr
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import HuberRegressor, TheilSenRegressor
+
+logger = logging.getLogger(__name__)
 
 from plot_style import apply_science_style
 
@@ -479,7 +482,8 @@ def pearson_summary(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, floa
     try:
         res = pearsonr(y_pred, y_true)
         return float(res.statistic), float(res.pvalue)
-    except Exception:
+    except (ValueError, RuntimeWarning) as exc:
+        logger.debug("pearsonr failed: %s", exc)
         return float("nan"), float("nan")
 
 
@@ -534,7 +538,8 @@ def fit_robust_alpha_beta(
         beta = float(reg.intercept_)
         pred = np.clip(alpha * y_pred + beta, 1.0, 1e9)
         return alpha, beta, compute_metrics(y_true, pred)["R2"]
-    except Exception:
+    except (ValueError, ConvergenceWarning, np.linalg.LinAlgError) as exc:
+        logger.debug("Robust %s fit failed, falling back to OLS: %s", method, exc)
         alpha, beta = fit_alpha_beta(y_true, y_pred)
         pred = np.clip(alpha * y_pred + beta, 1.0, 1e9)
         return alpha, beta, compute_metrics(y_true, pred)["R2"]
@@ -717,7 +722,8 @@ def alpha_beta_table(
 def write_alpha_beta_scatter(pred_rows: pd.DataFrame, alpha_rows: pd.DataFrame, output_dir: Path, *, seed: int) -> Path | None:
     try:
         import matplotlib.pyplot as plt
-    except Exception:
+    except ImportError:
+        logger.info("matplotlib not available; skipping alpha-beta scatter plot")
         return None
     apply_science_style()
 
@@ -792,7 +798,8 @@ def write_directional_asymmetry_scatter(
 ) -> Path | None:
     try:
         import matplotlib.pyplot as plt
-    except Exception:
+    except ImportError:
+        logger.info("matplotlib not available; skipping directional asymmetry scatter plot")
         return None
     apply_science_style()
 

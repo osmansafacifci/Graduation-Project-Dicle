@@ -48,6 +48,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import logging
 import pickle
 import sys
 from pathlib import Path
@@ -55,6 +56,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import kurtosis, skew
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
@@ -173,7 +176,8 @@ def compute_extended(qd: np.ndarray, n: int, q0: float) -> dict:
     # Quadratic polynomial fit: Q(c) = a + b*c + c2*c²
     try:
         c2, b, a = np.polyfit(cycles, window, 2)
-    except Exception:
+    except (np.linalg.LinAlgError, ValueError) as exc:
+        logger.debug("polyfit(deg=2) failed for window of length %d: %s", len(window), exc)
         a, b, c2 = float("nan"), 0.0, 0.0
 
     # Exponential fade: Q(c) = q0_fit * exp(-k*c)
@@ -191,7 +195,8 @@ def compute_extended(qd: np.ndarray, n: int, q0: float) -> dict:
         exp_decay_k = float(popt[1])
         if not np.isfinite(exp_decay_k):
             exp_decay_k = 0.0
-    except Exception:
+    except (RuntimeError, ValueError, TypeError) as exc:
+        logger.debug("Exponential curve_fit failed for window of length %d: %s", len(window), exc)
         exp_decay_k = 0.0
 
     # Cycle-to-retention-threshold landmarks (1-indexed cycle number; saturates at N if never crossed)
@@ -313,7 +318,8 @@ def compute_extended2(qd: np.ndarray, n: int, q0: float) -> dict:
         ss_res = float(np.sum((window - pred) ** 2))
         ss_tot = float(np.sum((window - np.mean(window)) ** 2))
         linearity_r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 1e-12 else 0.0
-    except Exception:
+    except (np.linalg.LinAlgError, ValueError) as exc:
+        logger.debug("Linear R² fit failed: %s", exc)
         linearity_r2 = 0.0
 
     # Higher-order shape
@@ -321,7 +327,8 @@ def compute_extended2(qd: np.ndarray, n: int, q0: float) -> dict:
         kurt = float(kurtosis(window, fisher=True, bias=False))
         if not np.isfinite(kurt):
             kurt = 0.0
-    except Exception:
+    except (ValueError, FloatingPointError) as exc:
+        logger.debug("Kurtosis computation failed: %s", exc)
         kurt = 0.0
 
     # Frequency-domain — FFT magnitudes, drop the DC bin (mean component
@@ -340,14 +347,16 @@ def compute_extended2(qd: np.ndarray, n: int, q0: float) -> dict:
         else:
             fft_top3_energy_ratio = 0.0
             spectral_entropy = 0.0
-    except Exception:
+    except (ValueError, FloatingPointError) as exc:
+        logger.debug("FFT feature extraction failed: %s", exc)
         fft_top3_energy_ratio = 0.0
         spectral_entropy = 0.0
 
     # Complexity / regularity of the QD trajectory
     try:
         samp_ent = _sample_entropy(window, m=2, r_factor=0.2)
-    except Exception:
+    except (ValueError, FloatingPointError) as exc:
+        logger.debug("Sample entropy computation failed: %s", exc)
         samp_ent = 0.0
 
     # Direction balance of cycle-to-cycle deltas
@@ -362,7 +371,8 @@ def compute_extended2(qd: np.ndarray, n: int, q0: float) -> dict:
     try:
         med = float(np.median(window))
         mad = float(np.median(np.abs(window - med)))
-    except Exception:
+    except (ValueError, TypeError) as exc:
+        logger.debug("MAD computation failed: %s", exc)
         mad = 0.0
 
     return {
