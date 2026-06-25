@@ -26,6 +26,7 @@ Notes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -39,11 +40,43 @@ HUST_DIR = RAW_DIR / "HUST_data"
 MATR_FOLDER_URL = "https://drive.google.com/drive/folders/19wCEj4hr54QtARns1HVOX0alsFlkjt2P"
 HUST_FOLDER_URL = "https://drive.google.com/drive/folders/1RVASMPuhWPbgJQE1G4z1856Na4jpxqPf"
 
+# Pinned gdown version for supply-chain safety (avoid auto-installing untested releases).
+_GDOWN_VERSION_PIN = "gdown==6.0.0"
+
 
 def _ensure_gdown() -> None:
     if shutil.which("gdown") is None:
         print("[setup] gdown not found, installing into the current interpreter...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", "gdown>=5.2.0"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", _GDOWN_VERSION_PIN])
+
+
+def _sha256(path: Path) -> str:
+    """Compute SHA-256 hex digest of a file (streamed, memory-safe for large files)."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while chunk := f.read(1 << 20):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_file_hash(path: Path, expected_hash: str | None) -> bool:
+    """Return True if file matches expected SHA-256, or if no hash is registered.
+
+    Prints a warning on mismatch (potential tampering or corrupted download).
+    """
+    if expected_hash is None:
+        return True
+    actual = _sha256(path)
+    if actual != expected_hash:
+        print(
+            f"[SECURITY WARNING] SHA-256 mismatch for {path.name}!\n"
+            f"  expected: {expected_hash}\n"
+            f"  actual:   {actual}\n"
+            "  The file may be corrupted or tampered with. "
+            "Delete it and re-download, or verify the source manually."
+        )
+        return False
+    return True
 
 
 def _gdown_folder(url: str, dest: Path) -> None:
