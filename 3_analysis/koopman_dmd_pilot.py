@@ -59,6 +59,8 @@ from plot_style import apply_science_style
 
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.battery_utils import compute_q0, display_path as _display_path  # noqa: E402
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_koopman_dmd"
 
@@ -77,13 +79,7 @@ DATASET_COLORS = {
 }
 
 
-def compute_q0(qd: np.ndarray) -> float:
-    qd = np.asarray(qd, dtype=float).ravel()
-    if len(qd) < 5:
-        return float("nan")
-    vals = qd[1:5]
-    vals = vals[np.isfinite(vals) & (vals > 0)]
-    return float(np.median(vals)) if len(vals) else float("nan")
+# compute_q0 imported from shared.battery_utils
 
 
 def load_cycle_table(path: Path, dataset: str) -> dict[str, np.ndarray]:
@@ -101,10 +97,7 @@ def load_cycle_table(path: Path, dataset: str) -> dict[str, np.ndarray]:
 
 
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def load_label_metadata(n_cycles: int, features_path: Path) -> pd.DataFrame:

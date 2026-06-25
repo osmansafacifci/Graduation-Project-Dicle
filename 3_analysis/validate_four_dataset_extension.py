@@ -21,12 +21,19 @@ Usage:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import (  # noqa: E402
+    CAPACITY_RAW_FEATURES as _CAPACITY_RAW_FEATURES,
+    CAPACITY_VARIANCE_FEATURES as _CAPACITY_VARIANCE_FEATURES,
+    SEEDS,
+)
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2_four_dataset"
 WITHIN_SUMMARY = PROJECT_ROOT / "outputs" / "results_v2_four_dataset_within_34feat_log" / "results_summary.csv"
@@ -39,29 +46,10 @@ SANDIA_AUDIT = INTERMEDIATE_DIR / "sandia_cell_audit.csv"
 LUH_AUDIT = INTERMEDIATE_DIR / "luh_cell_audit.csv"
 
 DATASETS = ["matr", "hust", "sandia", "luh"]
-SEEDS = [42, 123, 456, 789, 1011]
 MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
 WINDOWS = [50, 100]
-CAPACITY_RAW_FEATURES = [
-    "Qdis_N",
-    "delta_Qdis",
-    "slope_linear",
-    "Qdis_cycle10",
-    "max_drop",
-    "mean_diff",
-    "std_diff",
-    "range_Qdis",
-    "poly2_a",
-    "poly2_b",
-    "poly2_c",
-    "slope_first_quarter",
-    "slope_last_quarter",
-    "accel_mean",
-    "accel_std",
-    "accel_max_abs",
-    "mad_Qdis",
-]
-CAPACITY_VARIANCE_FEATURES = ["variance_Qdis"]
+CAPACITY_RAW_FEATURES = sorted(_CAPACITY_RAW_FEATURES)
+CAPACITY_VARIANCE_FEATURES = sorted(_CAPACITY_VARIANCE_FEATURES)
 
 
 def check(condition: bool, name: str, details: str) -> dict:

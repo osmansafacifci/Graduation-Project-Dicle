@@ -56,8 +56,10 @@ from plot_style import apply_science_style
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import dataset_window, load_split as _load_split  # noqa: E402
 from metrics_utils import compute_metrics  # noqa: E402
-from run_experiments import META_COLS, SEEDS  # noqa: E402
 sys.path.insert(0, str(HERE))
 from conformal_prediction import (  # noqa: E402
     DEFAULT_MODELS,
@@ -116,12 +118,7 @@ def coverage_row(covered: np.ndarray) -> dict[str, float | int]:
 
 
 def load_split(dataset: str, seed: int) -> dict:
-    with (SPLITS_DIR / f"{dataset}_{seed}.json").open() as f:
-        return json.load(f)
-
-
-def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
-    return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
+    return _load_split(SPLITS_DIR, dataset, seed)
 
 
 def split_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

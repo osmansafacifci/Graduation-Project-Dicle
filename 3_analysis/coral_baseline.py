@@ -43,8 +43,9 @@ ROOT = HERE.parent
 MODELS_DIR = ROOT / "2_models"
 sys.path.insert(0, str(MODELS_DIR))
 
+sys.path.insert(0, str(ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
 from metrics_utils import compute_metrics, to_cycles  # noqa: E402
-from run_experiments import META_COLS, SEEDS  # noqa: E402
 
 
 FEATURES_PATH = ROOT / "data" / "intermediate" / "features_sop12_four_dataset_capnorm.csv"

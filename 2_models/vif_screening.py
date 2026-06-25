@@ -47,14 +47,11 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS  # noqa: E402
+
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
 SPLITS_DIR = PROJECT_ROOT / "splits" / "sop_v2"
-
-# Reserved (non-feature) CSV columns; everything else gets a VIF.
-META_COLS = {
-    "dataset", "cell_id", "n_cycles", "q0", "cycle_life",
-    "is_censored", "capacity_normalized",
-}
 
 
 def compute_vif(X: np.ndarray, feature_names: list[str]) -> dict[str, float]:

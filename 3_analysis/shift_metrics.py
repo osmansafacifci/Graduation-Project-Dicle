@@ -38,50 +38,23 @@ import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import (  # noqa: E402
+    CAPACITY_RAW_FEATURES,
+    CAPACITY_VARIANCE_FEATURES,
+    EXTENDED2_FEATURE_COLS as EXTENDED2_FEATURES,
+    EXTENDED_FEATURE_COLS as EXTENDED_FEATURES,
+    META_COLS,
+    SOP12_FEATURE_COLS as SOP12_FEATURES,
+)
+
 INTERMEDIATE_DIR = PROJECT_ROOT / "data" / "intermediate"
-
-META_COLS = {
-    "dataset", "cell_id", "n_cycles", "q0", "cycle_life",
-    "is_censored", "capacity_normalized",
-}
-
-SOP12_FEATURES = [
-    "Qdis_N", "delta_Qdis", "retention_ratio", "slope_linear",
-    "variance_Qdis", "range_Qdis", "max_drop", "std_diff",
-    "skewness_Qdis", "slope_ratio", "Qdis_cycle10", "mean_diff",
-]
-
-EXTENDED_FEATURES = [
-    "poly2_a", "poly2_b", "poly2_c", "exp_decay_k",
-    "cycle_to_99pct", "cycle_to_98pct", "cycle_to_95pct",
-    "slope_first_quarter", "slope_last_quarter",
-    "autocorr_lag1", "knee_cycle", "n_capacity_jumps",
-]
-
-EXTENDED2_FEATURES = [
-    "accel_mean", "accel_std", "accel_max_abs",
-    "linearity_r2", "kurtosis_Qdis",
-    "fft_top3_energy_ratio", "spectral_entropy", "sample_entropy",
-    "pos_neg_diff_ratio", "mad_Qdis",
-]
 
 FEATURE_SETS = {
     "12": SOP12_FEATURES,
     "24": SOP12_FEATURES + EXTENDED_FEATURES,
     "34": SOP12_FEATURES + EXTENDED_FEATURES + EXTENDED2_FEATURES,
 }
-
-# Capacity-unit features that the SOP §2.3 normalize-by-Q0 step would scale.
-# Mirrors CAPACITY_RAW_FEATURES in build_features.py; keep in sync.
-CAPACITY_RAW_FEATURES = {
-    "Qdis_N", "delta_Qdis", "slope_linear", "Qdis_cycle10", "max_drop",
-    "mean_diff", "std_diff", "range_Qdis",
-    "poly2_a", "poly2_b", "poly2_c",
-    "slope_first_quarter", "slope_last_quarter",
-    "accel_mean", "accel_std", "accel_max_abs",
-    "mad_Qdis",
-}
-CAPACITY_VARIANCE_FEATURES = {"variance_Qdis"}
 
 
 # ---------- helpers ----------

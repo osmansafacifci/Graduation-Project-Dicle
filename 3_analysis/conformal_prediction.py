@@ -82,10 +82,18 @@ from sklearn.preprocessing import StandardScaler
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import (  # noqa: E402
+    dataset_window,
+    display_path as _display_path,
+    load_split as _load_split,
+    safe_pred,
+    stable_seed,
+)
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
-    META_COLS,
-    SEEDS,
+    FITTERS,
     fit_catboost,
     fit_elastic_net,
     fit_gaussian_process,
@@ -305,19 +313,7 @@ class MapieCycleRegressor(RegressorMixin, BaseEstimator):
         return pred
 
 
-def safe_pred(model: object, X: np.ndarray) -> np.ndarray:
-    """Predict and sanitize: ravel, replace NaN/inf, clip to ``[-1e9, 1e9]``.
-
-    Identical contract to the helper of the same name in other analysis
-    scripts; defends downstream metrics against linear-model overflow on
-    cross-dataset transfer without hiding the failure (clipped values still
-    register as large absolute errors).
-    """
-    raw = model.predict(X)
-    if hasattr(raw, "ravel"):
-        raw = raw.ravel()
-    raw = np.nan_to_num(raw, nan=0.0, posinf=1e9, neginf=-1e9)
-    return np.clip(raw, -1e9, 1e9)
+# safe_pred imported from shared.battery_utils
 
 
 def fit_predictor(
@@ -726,29 +722,15 @@ def evaluate_interval(
 
 
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def load_split(dataset: str, seed: int, splits_dir: Path) -> dict:
-    """Load the JSON split file produced by ``2_models/generate_splits.py``.
-
-    Returns ``{"train": [cell_ids], "calibration": [...], "test": [...], ...}``.
-    Raises ``FileNotFoundError`` if the seed × dataset combination has not
-    been generated yet.
-    """
-    split_path = splits_dir / f"{dataset}_{seed}.json"
-    if not split_path.exists():
-        raise FileNotFoundError(f"Missing split file: {split_path}")
-    with split_path.open() as f:
-        return json.load(f)
+    """Load the JSON split file produced by ``2_models/generate_splits.py``."""
+    return _load_split(splits_dir, dataset, seed)
 
 
-def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
-    """Return uncensored rows of ``df`` for one dataset and one prediction window."""
-    return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
+# dataset_window imported from shared.battery_utils
 
 
 def split_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -759,16 +741,7 @@ def split_frames(sub: pd.DataFrame, split: dict) -> tuple[pd.DataFrame, pd.DataF
     return train, cal, test
 
 
-def stable_seed(*parts: object) -> int:
-    """Cheap deterministic hash that turns arbitrary identifiers into an int seed.
-
-    Used for per-(direction, model, seed, repeat) RNGs in the target-side
-    sampling loop. Does *not* aim for cryptographic strength — just for a
-    reproducible mapping from a tuple of strings/ints into ``[0, 2**32-1]``
-    that survives across Python versions.
-    """
-    text = "|".join(str(p) for p in parts)
-    return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
+# stable_seed imported from shared.battery_utils
 
 
 def model_list_for_source(models: list[str], dataset: str) -> list[str]:

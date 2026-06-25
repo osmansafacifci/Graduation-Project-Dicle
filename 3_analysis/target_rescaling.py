@@ -56,8 +56,11 @@ from sklearn.metrics import mean_absolute_error, r2_score
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import display_path as _display_path, fit_point_adapter, safe_pred  # noqa: E402
 from run_experiments import (  # noqa: E402
-    META_COLS, SEEDS,
+    FITTERS,
     fit_catboost, fit_elastic_net, fit_gaussian_process,
     fit_pls, fit_random_forest, fit_stacking, fit_xgboost,
 )
@@ -78,45 +81,8 @@ DEFAULT_KS = [5, 10, 15, 20]
 DEFAULT_N_REPEATS = 20
 ADAPTER_TYPES = ["residual_mean", "linear"]
 
-FITTERS = {
-    "elastic_net": fit_elastic_net,
-    "pls": fit_pls,
-    "random_forest": fit_random_forest,
-    "gaussian_process": fit_gaussian_process,
-    "xgboost": fit_xgboost,
-    "catboost": fit_catboost,
-    "stacking": fit_stacking,
-}
-
-
-def safe_pred(model, X):
-    raw = model.predict(X)
-    if hasattr(raw, "ravel"):
-        raw = raw.ravel()
-    raw = np.nan_to_num(raw, nan=0.0, posinf=1e9, neginf=-1e9)
-    return np.clip(raw, -1e9, 1e9)
-
-
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
-
-
-def fit_point_adapter(y_pred: np.ndarray, y_true: np.ndarray, adapter_type: str) -> tuple[float, float]:
-    """Return (slope, intercept) for the requested target-side point adapter."""
-    if adapter_type == "residual_mean":
-        return 1.0, float(np.mean(y_true - y_pred))
-    if adapter_type != "linear":
-        raise ValueError(f"unknown adapter_type={adapter_type}")
-    if np.std(y_pred) < 1e-12:
-        return 1.0, float(np.mean(y_true) - np.mean(y_pred))
-    rank_warning = getattr(getattr(np, "exceptions", np), "RankWarning", Warning)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=rank_warning)
-        a, b = np.polyfit(y_pred, y_true, 1)
-    return float(a), float(b)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def rescale_block(

@@ -64,11 +64,18 @@ from sklearn.preprocessing import StandardScaler
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import (  # noqa: E402
+    dataset_window,
+    display_path as _display_path,
+    load_split,
+    stable_seed,
+)
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
     ALL_MODELS,
-    META_COLS,
-    SEEDS,
+    FITTERS,
     fit_catboost,
     fit_elastic_net,
     fit_gaussian_process,
@@ -93,40 +100,12 @@ SOURCE_PRIMARY_MODEL = {
     "sandia": "xgboost",
     "luh": "gaussian_process",
 }
-FITTERS = {
-    "elastic_net": fit_elastic_net,
-    "pls": fit_pls,
-    "random_forest": fit_random_forest,
-    "gaussian_process": fit_gaussian_process,
-    "xgboost": fit_xgboost,
-    "catboost": fit_catboost,
-    "stacking": fit_stacking,
-}
-
-
 def resolve_path(path: Path) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
-
-
-def stable_seed(*parts: object) -> int:
-    text = "|".join(str(part) for part in parts)
-    return sum((i + 1) * ord(ch) for i, ch in enumerate(text)) % (2**32 - 1)
-
-
-def load_split(splits_dir: Path, dataset: str, seed: int) -> dict:
-    with (splits_dir / f"{dataset}_{seed}.json").open() as f:
-        return json.load(f)
-
-
-def dataset_window(df: pd.DataFrame, dataset: str, n_cycles: int) -> pd.DataFrame:
-    return df[(df["dataset"] == dataset) & (df["n_cycles"] == n_cycles) & (df["is_censored"] == 0)].copy()
+    return _display_path(path, PROJECT_ROOT)
 
 
 def train_rows_for_dataset(

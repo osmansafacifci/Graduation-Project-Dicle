@@ -43,6 +43,8 @@ import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.battery_utils import compute_cycle_life, compute_q0  # noqa: E402
 HUST_DIR = PROJECT_ROOT / "data" / "raw" / "HUST_data"
 OUT_DIR = PROJECT_ROOT / "data" / "intermediate"
 
@@ -140,24 +142,9 @@ def load_hust_cell(pkl_path: Path) -> pd.DataFrame:
 
 # ---------- audit / EOL recomputation ----------
 
-def compute_q0_from_series(q) -> float:
-    q = np.asarray(q, dtype=float).ravel()
-    if len(q) < 5:
-        return float("nan")
-    vals = q[1:5]
-    vals = vals[np.isfinite(vals) & (vals > 0)]
-    return float(np.median(vals)) if len(vals) else float("nan")
-
-
-def first_eol_cycle(q, q0: float, threshold_fraction: float) -> float:
-    if not np.isfinite(q0) or q0 <= 0:
-        return float("nan")
-    q = np.asarray(q, dtype=float).ravel()
-    thr = threshold_fraction * q0
-    for i in range(1, len(q)):  # start at cycle 2 (index 1)
-        if np.isfinite(q[i]) and q[i] > 0 and q[i] <= thr:
-            return float(i + 1)
-    return float("nan")
+# Aliases for backward-compatible local usage.
+compute_q0_from_series = compute_q0
+first_eol_cycle = compute_cycle_life
 
 
 def audit_thresholds_hust(hust_cycles: pd.DataFrame) -> pd.DataFrame:

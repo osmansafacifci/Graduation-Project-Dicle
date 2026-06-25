@@ -42,6 +42,9 @@ import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.battery_utils import compute_eol, compute_q0  # noqa: E402
+from shared.constants import BATCH1_CONTINUATION_FROM_BATCH2  # noqa: E402
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 OUT_DIR = PROJECT_ROOT / "data" / "intermediate"
 
@@ -49,14 +52,7 @@ BATCH1_PATH = RAW_DIR / "batch1.pkl"
 BATCH2_PATH = RAW_DIR / "batch2.pkl"
 BATCH3_PATH = RAW_DIR / "batch3.pkl"
 
-# Batch1 cells whose cycling continues into batch2 (per the Severson 2019 paper)
-BATCH1_CONTINUATION_FROM_BATCH2 = {
-    "b1c0": {"source_cell": "b2c7", "add_len": 662},
-    "b1c1": {"source_cell": "b2c8", "add_len": 981},
-    "b1c2": {"source_cell": "b2c9", "add_len": 1060},
-    "b1c3": {"source_cell": "b2c15", "add_len": 208},
-    "b1c4": {"source_cell": "b2c16", "add_len": 482},
-}
+
 
 # Replication-style (notebook-era) exclusions
 REPL_EXCLUDE_BATCH1_NOT_FINISHED = {"b1c8", "b1c10", "b1c12", "b1c13", "b1c22"}
@@ -71,30 +67,6 @@ def load_pickle(path: Path) -> dict:
     with path.open("rb") as f:
         return pickle.load(f)
 
-
-def compute_q0(qd) -> float:
-    """Q0 = median of valid Q_discharge over cycles 2-5 (0-indexed: indices 1..4)."""
-    qd = np.asarray(qd, dtype=float).ravel()
-    if len(qd) < 5:
-        return float("nan")
-    vals = qd[1:5]
-    vals = vals[np.isfinite(vals) & (vals > 0)]
-    if len(vals) == 0:
-        return float("nan")
-    return float(np.median(vals))
-
-
-def compute_eol(qd, q0: float, threshold_fraction: float = 0.80, k_consecutive: int = 3) -> float:
-    """EOL = first cycle where QD stays <= threshold for k_consecutive cycles. 1-indexed."""
-    if not np.isfinite(q0) or q0 <= 0:
-        return float("nan")
-    qd = np.asarray(qd, dtype=float).ravel()
-    threshold = threshold_fraction * q0
-    for i in range(len(qd) - k_consecutive + 1):
-        window = qd[i:i + k_consecutive]
-        if np.all(np.isfinite(window)) and np.all(window <= threshold):
-            return float(i + 1)
-    return float("nan")
 
 
 def safe_scalar(x) -> float:

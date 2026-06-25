@@ -35,10 +35,16 @@ from plot_style import apply_science_style
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT / "2_models"))
+sys.path.insert(0, str(PROJECT_ROOT))
+from shared.constants import META_COLS, SEEDS  # noqa: E402
+from shared.battery_utils import (  # noqa: E402
+    display_path as _display_path,
+    load_split,
+    safe_pred,
+)
 from metrics_utils import compute_metrics, fit_with_threaded_joblib, to_cycles  # noqa: E402
 from run_experiments import (  # noqa: E402
-    META_COLS,
-    SEEDS,
+    FITTERS,
     fit_catboost,
     fit_elastic_net,
     fit_gaussian_process,
@@ -58,22 +64,8 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "results_v2_four_dataset_conditi
 
 DATASETS = ["matr", "hust", "sandia", "luh"]
 ALL_MODELS = ["elastic_net", "pls", "random_forest", "xgboost", "catboost", "gaussian_process", "stacking"]
-FITTERS = {
-    "elastic_net": fit_elastic_net,
-    "pls": fit_pls,
-    "random_forest": fit_random_forest,
-    "gaussian_process": fit_gaussian_process,
-    "xgboost": fit_xgboost,
-    "catboost": fit_catboost,
-    "stacking": fit_stacking,
-}
-
-
 def display_path(path: Path) -> str:
-    try:
-        return str(path.relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return _display_path(path, PROJECT_ROOT)
 
 
 def bh_fdr(p_values: np.ndarray) -> np.ndarray:
@@ -223,17 +215,7 @@ def selected_models(cross_summary_path: Path, *, n_cycles: int) -> dict[str, str
     return dict(zip(best["experiment"], best["model"], strict=False))
 
 
-def safe_pred(model: object, x: np.ndarray) -> np.ndarray:
-    raw = model.predict(x)
-    if hasattr(raw, "ravel"):
-        raw = raw.ravel()
-    raw = np.nan_to_num(raw, nan=0.0, posinf=1e9, neginf=-1e9)
-    return np.clip(raw, -1e9, 1e9)
-
-
-def load_split(splits_dir: Path, dataset: str, seed: int) -> dict:
-    with (splits_dir / f"{dataset}_{seed}.json").open() as f:
-        return json.load(f)
+# safe_pred and load_split imported from shared.battery_utils
 
 
 def fit_source_predict_target(
