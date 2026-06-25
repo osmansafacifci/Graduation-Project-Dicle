@@ -18,12 +18,15 @@ CSVs.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "graduation_dicle_mpl"))
 
@@ -36,7 +39,8 @@ try:
     import scienceplots  # noqa: F401
 
     plt.style.use(["science", "no-latex"])
-except Exception:
+except ImportError:
+    logger.debug("scienceplots not available; using default matplotlib style")
     plt.style.use("default")
 
 

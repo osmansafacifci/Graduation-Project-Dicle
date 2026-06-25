@@ -34,11 +34,14 @@ from __future__ import annotations
 
 import copy
 import gc
+import logging
 import pickle
 import sys
 from pathlib import Path
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -103,7 +106,8 @@ def safe_scalar(x) -> float:
         if arr.size == 0:
             return float("nan")
         return float(arr[0])
-    except Exception:
+    except (TypeError, ValueError) as exc:
+        logger.debug("safe_scalar conversion failed for %r: %s", type(x).__name__, exc)
         return float("nan")
 
 

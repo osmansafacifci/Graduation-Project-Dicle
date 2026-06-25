@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import warnings
 from itertools import combinations
@@ -28,6 +29,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 from sklearn.exceptions import ConvergenceWarning
+
+logger = logging.getLogger(__name__)
 from sklearn.linear_model import HuberRegressor, TheilSenRegressor
 
 from plot_style import apply_science_style
@@ -287,7 +290,8 @@ def pearson_summary(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, floa
     try:
         res = pearsonr(y_pred, y_true)
         return float(res.statistic), float(res.pvalue)
-    except Exception:
+    except (ValueError, RuntimeWarning) as exc:
+        logger.debug("pearsonr failed: %s", exc)
         return float("nan"), float("nan")
 
 
@@ -310,7 +314,8 @@ def robust_alpha_beta(y_true: np.ndarray, y_pred: np.ndarray, *, method: str, se
         beta = float(reg.intercept_)
         corrected = np.clip(alpha * y_pred + beta, 1.0, 1e9)
         return alpha, beta, compute_metrics(y_true, corrected)["R2"]
-    except Exception:
+    except (ValueError, ConvergenceWarning, np.linalg.LinAlgError) as exc:
+        logger.debug("Robust %s fit failed, falling back to OLS: %s", method, exc)
         alpha, beta = fit_alpha_beta(y_true, y_pred)
         corrected = np.clip(alpha * y_pred + beta, 1.0, 1e9)
         return alpha, beta, compute_metrics(y_true, corrected)["R2"]
@@ -526,7 +531,8 @@ def write_heatmaps(direction_summary: pd.DataFrame, pair_summary: pd.DataFrame, 
     try:
         import matplotlib.pyplot as plt
         from matplotlib.colors import TwoSlopeNorm
-    except Exception:
+    except ImportError:
+        logger.info("matplotlib not available; skipping heatmap plots")
         return None
     apply_science_style()
 

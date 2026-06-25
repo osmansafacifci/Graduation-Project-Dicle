@@ -41,12 +41,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 from sklearn.preprocessing import StandardScaler
 
 from plot_style import apply_science_style
@@ -200,7 +203,8 @@ def benchmark_model_metrics(
     experiments.SOP12_FEATURE_COLS = list(feature_cols)
     try:
         from joblib import parallel_backend
-    except Exception:
+    except ImportError:
+        logger.debug("joblib parallel_backend not available; falling back to sequential execution")
         parallel_backend = None
 
     if parallel_backend is None:

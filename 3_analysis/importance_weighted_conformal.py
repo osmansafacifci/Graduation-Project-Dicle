@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 import sys
 import warnings
@@ -44,6 +45,8 @@ from statistics import NormalDist
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
@@ -486,7 +489,8 @@ def write_paper_comparison_plot(comparison: pd.DataFrame, output_dir: Path, *, c
         return None
     try:
         import matplotlib.pyplot as plt
-    except Exception:
+    except ImportError:
+        logger.info("matplotlib not available; skipping comparison plot")
         return None
 
     apply_science_style()

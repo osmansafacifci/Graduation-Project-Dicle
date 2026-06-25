@@ -36,11 +36,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import StandardScaler
@@ -322,7 +325,8 @@ def write_report(audit: pd.DataFrame, summary: pd.DataFrame, out_path: Path) -> 
 def plot_rank_signal(summary: pd.DataFrame, output_dir: Path) -> None:
     try:
         import matplotlib.pyplot as plt
-    except Exception:
+    except ImportError:
+        logger.info("matplotlib not available; skipping rank signal plot")
         return
 
     apply_science_style()
