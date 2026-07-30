@@ -38,3 +38,22 @@ docs/CLAUDE_DESIGN_PROMPTS.md
 docs/figure_01_pipeline.svg
 outputs/paper_figures/figure_01_pipeline.png
 outputs/paper_figures/figure_01_pipeline.pdf
+
+# Route 1 manuscript package is local-only; do not stage or publish.
+docs/manuscript.tex
+docs/supplementary.tex
+docs/references.bib
+docs/manuscript.pdf
+docs/supplementary.pdf
+
+# LaTeX build products (final PDFs above remain local-only too).
+docs/*.aux
+docs/*.bbl
+docs/*.blg
+docs/*.fdb_latexmk
+docs/*.fls
+docs/*.lof
+docs/*.lot
+docs/*.out
+docs/*.synctex.gz
+docs/*.toc
