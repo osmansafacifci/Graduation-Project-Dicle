@@ -1,0 +1,5 @@
+dataset,input_cells,history_eligible_cells,primary_eligible_cells,followup_fraction,cell_level_pass,valid_pack_groups,largest_duty_stratum,pack_level_pass
+luh,108,89,84,0.9438202247191011,True,7,9,True
+hust,77,77,77,1.0,True,0,1,False
+sandia,61,44,38,0.8636363636363636,False,0,4,False
+matr,135,59,0,0.0,False,0,0,False

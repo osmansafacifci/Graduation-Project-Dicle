@@ -91,6 +91,7 @@ from run_experiments import (  # noqa: E402
     fit_gaussian_process,
     fit_pls,
     fit_random_forest,
+    fit_ridge,
     fit_stacking,
     fit_xgboost,
 )
@@ -109,6 +110,7 @@ ALL_MODELS = [
     "catboost",
     "gaussian_process",
     "stacking",
+    "ridge",
 ]
 DEFAULT_MODELS = ["catboost", "random_forest"]
 DEFAULT_DATASETS = ["matr", "hust"]
@@ -128,6 +130,7 @@ FITTERS = {
     "xgboost": fit_xgboost,
     "catboost": fit_catboost,
     "stacking": fit_stacking,
+    "ridge": fit_ridge,
 }
 
 PRIMARY_MODEL_BY_DATASET = {
@@ -887,10 +890,11 @@ def cross_cp(
     adapter_k_values: list[int],
     adapter_types: list[str],
     target_repeats: int,
+    tier1_total_budget_values: list[int],
 ) -> list[dict]:
     """Cross-dataset CP across (source, target, seed, window, model, k, adapter).
 
-    Runs three CP scenarios per ordered (source, target) pair:
+    Runs four CP scenarios per ordered (source, target) pair:
 
     1. **Naive source-calibrated cross CP** — calibrate q_hat on the source's
        own calibration split and report intervals on the *entire* target
@@ -903,6 +907,12 @@ def cross_cp(
        calibration subset and conformalize on the adapter-corrected
        predictions. Reported separately per ``adapter_type`` in
        ``{"residual_mean", "linear"}``.
+    4. **Target-only CP (Tier-1 baseline)** — discard the source model;
+       fit a small-n ridge on ``tot/2`` labelled target cells, calibrate
+       split CP on a disjoint ``tot/2`` target calibration set, evaluate on
+       the remainder. Total budget ``tot`` maps 1:1 to the adapted
+       scenario's ``k_adapter = k_cp = tot/2`` cell, so comparisons are
+       fair at equal *total labelled cells consumed*.
 
     The three-way (adapter, calibration, test) split inside the target
     dataset is what makes the adapted-CP intervals coverage-valid.
@@ -914,14 +924,16 @@ def cross_cp(
 
     Predictor caching: a (source, seed, window, model) combination is fit
     once and reused for every k / adapter / confidence iteration. The
-    cache is local to the call and discarded on return.
+    cache is local to the call and discarded on return. The target-only
+    ridge is fitted per (direction, seed, tot, repeat) draw.
 
     Returns
     -------
     list of dict
         Per-row CP results from :func:`evaluate_interval`. Length grows
         like ``|directions| × |seeds| × |windows| × |models| ×
-        (1 + |k_target| + |k_adapter| × |adapter_types| × target_repeats)
+        (1 + |k_target| + |k_adapter| × |adapter_types| × target_repeats +
+        |tier1_total_budget_values| × target_repeats)
         × |confidence_levels|``.
     """
     rows: list[dict] = []
@@ -1118,6 +1130,108 @@ def cross_cp(
                                                 confidence_level=confidence_level,
                                             )
                                         )
+
+                    # ---- Tier-1 target-only baseline (fifth CP scenario) ----
+                    # Discard the source predictor entirely: fit a small-n ridge
+                    # on the labelled target fit set, calibrate split CP on a
+                    # disjoint target calibration set, evaluate on the remainder.
+                    # Budget parity (docs/TIER1_DECISION_NOTE.md): tot = fit + cal,
+                    # equal 50/50 split; each tot maps 1:1 to an adapted cell with
+                    # k_adapter = k_cp = tot/2.
+                    for tot in tier1_total_budget_values:
+                        n_fit = tot // 2
+                        n_cal = tot - n_fit
+                        if n_fit + n_cal >= n_target - 1:
+                            continue
+                        for repeat in range(target_repeats):
+                            rng = np.random.default_rng(
+                                stable_seed(
+                                    "target_only",
+                                    "ridge",
+                                    src,
+                                    tgt,
+                                    seed,
+                                    n_cycles,
+                                    model_name,
+                                    n_fit,
+                                    n_cal,
+                                    repeat,
+                                )
+                            )
+                            fit_idx = rng.choice(target_indices, size=n_fit, replace=False)
+                            remaining_idx = np.setdiff1d(target_indices, fit_idx)
+                            cal_idx = rng.choice(remaining_idx, size=n_cal, replace=False)
+                            test_idx = np.setdiff1d(remaining_idx, cal_idx)
+                            if len(set(fit_idx)) != n_fit or len(set(cal_idx)) != n_cal or \
+                                    set(fit_idx).isdisjoint(set(cal_idx)) is False or \
+                                    set(fit_idx).isdisjoint(set(test_idx)) is False or \
+                                    set(cal_idx).isdisjoint(set(test_idx)) is False:
+                                raise AssertionError(
+                                    "Tier-1 target-only split is not disjoint "
+                                    f"{src}->{tgt} seed={seed} tot={tot} repeat={repeat}"
+                                )
+
+                            target_fit_df = tgt_sub.iloc[fit_idx]
+                            target_cal_df = tgt_sub.iloc[cal_idx]
+                            target_test_df = tgt_sub.iloc[test_idx]
+
+                            # Target-only model: fitted strictly on the target fit set.
+                            target_only_predictor = fit_predictor(
+                                target_fit_df,
+                                feature_cols,
+                                model_name="ridge",
+                                seed=seed,
+                                log_target=log_target,
+                            )
+                            for confidence_level in confidence_levels:
+                                (
+                                    tgt_only_pred_test,
+                                    tgt_only_lower,
+                                    tgt_only_upper,
+                                    tgt_only_q_hat,
+                                    tgt_only_finite_q,
+                                    tgt_only_quantile_rank,
+                                ) = mapie_split_interval(
+                                    target_only_predictor,
+                                    target_cal_df,
+                                    target_test_df,
+                                    confidence_level,
+                                )
+                                rows.append(
+                                    evaluate_interval(
+                                        scenario="cross_target_only_cp",
+                                        source=src,
+                                        target=tgt,
+                                        calibration_domain=tgt,
+                                        model="ridge",
+                                        n_cycles=n_cycles,
+                                        seed=seed,
+                                        repeat=repeat,
+                                        k_target=n_cal,
+                                        k_adapter=n_fit,
+                                        n_train=n_fit,
+                                        n_adapter=0,
+                                        n_calibration=n_cal,
+                                        adapter_type="none",
+                                        adapter_slope=None,
+                                        adapter_intercept=None,
+                                        y_test=target_y[test_idx],
+                                        pred_test=tgt_only_pred_test,
+                                        lower=tgt_only_lower,
+                                        upper=tgt_only_upper,
+                                        q_hat=tgt_only_q_hat,
+                                        finite_q=tgt_only_finite_q,
+                                        quantile_rank=tgt_only_quantile_rank,
+                                        confidence_level=confidence_level,
+                                    )
+                                    | {
+                                        # Tier-1 parity / non-estimability fields.
+                                        "total_label_budget": tot,
+                                        "n_fit_lt_half_p": bool(
+                                            n_fit < len(feature_cols) / 2.0
+                                        ),
+                                    }
+                                )
     return rows
 
 
@@ -1275,6 +1389,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--target-repeats", type=int, default=DEFAULT_TARGET_REPEATS)
+    parser.add_argument(
+        "--tier1-total-budget-values",
+        type=int,
+        nargs="+",
+        default=[10, 20, 30, 40],
+        help="Total labelled-cell budgets for the Tier-1 target-only baseline "
+             "(equal fit/cal split; each maps to an adapted cell at k=tot/2).",
+    )
     parser.add_argument("--within-only", action="store_true")
     parser.add_argument("--cross-only", action="store_true")
     return parser.parse_args()
@@ -1335,7 +1457,8 @@ def main() -> int:
     print(
         f"[setup] confidence_levels={confidence_levels}, "
         f"target_k={args.target_k_values}, adapter_k={args.adapter_k_values}, "
-        f"adapter_types={args.adapter_types}, repeats={args.target_repeats}"
+        f"adapter_types={args.adapter_types}, repeats={args.target_repeats}, "
+        f"tier1_total_budget={args.tier1_total_budget_values}"
     )
 
     rows: list[dict] = []
@@ -1371,6 +1494,7 @@ def main() -> int:
                 adapter_k_values=args.adapter_k_values,
                 adapter_types=args.adapter_types,
                 target_repeats=args.target_repeats,
+                tier1_total_budget_values=args.tier1_total_budget_values,
             )
         )
 
@@ -1402,11 +1526,13 @@ def main() -> int:
         "adapter_k_values": args.adapter_k_values,
         "adapter_types": args.adapter_types,
         "target_repeats": args.target_repeats,
+        "tier1_total_budget_values": args.tier1_total_budget_values,
         "notes": [
             "Intervals are generated with MAPIE's SplitConformalRegressor using absolute residual conformity scores.",
             "cross_source_calibrated_cp is diagnostic because source-calibration and target-test residuals are not exchangeable under dataset shift.",
             "cross_target_calibrated_cp is standard split CP with a labeled target-domain calibration set.",
             "cross_target_adapted_cp fits a target-domain point adapter on k_adapter target labels, then conformalizes on disjoint k_target target labels.",
+            "cross_target_only_cp (Tier-1 baseline) discards the source model; fits a ridge (RidgeCV, closed-form LOO, alpha=logspace(-2,3,12)) on tot/2 target labels, calibrates split CP on a disjoint tot/2 target set, and evaluates on the remainder. Budget parity: tot maps 1:1 to adapted k_adapter=k_cp=tot/2.",
             "residual_mean and linear point adapters can be reported side by side; linear is useful for exposing residual-mean over-shift on heterogeneous targets.",
             "Very small calibration sets can produce infinite exact finite-sample intervals; finite_q records this explicitly.",
             "Coverage Wilson intervals are 95% Wilson score confidence intervals for empirical coverage.",

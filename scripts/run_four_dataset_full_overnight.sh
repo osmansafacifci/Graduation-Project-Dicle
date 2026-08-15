@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-cd /Users/osmancifci/Downloads/Graduation-Project-Dicle
+cd "$(dirname "$0")/.."
 mkdir -p logs
 
 echo "[start] $(date)"

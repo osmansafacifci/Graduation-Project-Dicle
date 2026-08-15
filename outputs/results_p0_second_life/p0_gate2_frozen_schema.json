@@ -1,0 +1,37 @@
+{
+  "baseline_features": [
+    "soh_t0",
+    "recent_slope",
+    "future_temp",
+    "future_charge_rate",
+    "future_discharge_rate",
+    "future_soc_min",
+    "future_soc_max",
+    "chemistry",
+    "future_protocol"
+  ],
+  "model_features": [
+    "soh_t0",
+    "recent_slope",
+    "early_slope",
+    "slope_change",
+    "curvature",
+    "history_mad",
+    "max_drop",
+    "linearity_r2",
+    "slope_ratio",
+    "history_range",
+    "future_temp",
+    "future_charge_rate",
+    "future_discharge_rate",
+    "future_soc_min",
+    "future_soc_max",
+    "chemistry",
+    "future_protocol"
+  ],
+  "training_datasets": [
+    "luh",
+    "hust"
+  ],
+  "winner": "catboost"
+}

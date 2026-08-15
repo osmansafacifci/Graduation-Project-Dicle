@@ -1,0 +1,13 @@
+direction,n,point_super_regime,mean_self_agree,min_self_agree,resolved_mean_0.90
+hust_to_luh,106,salvageable_linear_recovers,1.000,1.000,true
+hust_to_matr,129,cp_interval_only,0.997,0.990,true
+hust_to_sandia,50,salvageable_linear_recovers,0.997,0.995,true
+luh_to_sandia,50,salvageable_linear_recovers,1.000,1.000,true
+matr_to_luh,106,offset_dominant_residual_only,0.944,0.846,true
+matr_to_hust,77,cp_interval_only,0.917,0.601,true
+sandia_to_luh,106,salvageable_linear_recovers,1.000,1.000,true
+sandia_to_matr,129,cp_interval_only,0.850,0.709,false
+matr_to_sandia,50,salvageable_linear_recovers,0.773,0.500,false
+luh_to_hust,77,cp_interval_only,0.714,0.440,false
+luh_to_matr,129,cp_interval_only,0.599,0.445,false
+sandia_to_hust,77,offset_dominant_residual_only,0.534,0.454,false

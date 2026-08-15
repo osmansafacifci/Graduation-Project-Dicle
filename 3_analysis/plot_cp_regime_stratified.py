@@ -20,6 +20,7 @@ from plot_style import apply_science_style
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CP_SUMMARY = ROOT / "outputs/results_v2_four_dataset_conformal/paper_cp_summary.csv"
+DEFAULT_CP_DETAILED = ROOT / "outputs/results_v2_four_dataset_conformal/results_detailed.csv"
 DEFAULT_REGIME_SUMMARY = ROOT / "data/intermediate/four_dataset_conditional_shift_direction_summary.csv"
 DEFAULT_OUTPUT_DIR = ROOT / "outputs/results_v2_four_dataset_conformal"
 
@@ -99,8 +100,54 @@ def protocol_key(row: pd.Series) -> str:
     return scenario
 
 
-def load_regime_cp(cp_path: Path, regime_path: Path, confidence: float) -> pd.DataFrame:
+def add_cp_columns(cp_summary: pd.DataFrame, detailed_path: Path) -> pd.DataFrame:
+    """Add exact Clopper-Pearson 95% bounds on empirical coverage to a CP summary frame.
+
+    The committed summary stores per-run *Wilson* bounds (mean over runs); the manuscript
+    reports exact Clopper-Pearson intervals (consistent with SI Table S11), so this
+    recomputes the bounds from the per-run counts in ``results_detailed.csv`` with the
+    same aggregation: the mean over runs of the per-run interval bounds. Keyed by the
+    full group columns so adapted rows (k_adapter=20, k_target=20) match exactly.
+    """
+    from scipy.stats import beta
+
+    detailed = pd.read_csv(detailed_path)
+    group_cols = [
+        "scenario", "source", "target", "calibration_domain", "model", "n_cycles",
+        "confidence_level", "adapter_type", "k_adapter", "k_target",
+    ]
+    rows = []
+    for key, g in detailed.groupby(group_cols, dropna=False):
+        los, his = [], []
+        for _, r in g.iterrows():
+            k, n = int(r["covered_count"]), int(r["n_test"])
+            lo = 0.0 if k == 0 else beta.ppf(0.025, k, n - k + 1)
+            hi = 1.0 if k == n else beta.ppf(0.975, k + 1, n - k)
+            los.append(lo)
+            his.append(hi)
+        rows.append(
+            {
+                **dict(zip(group_cols, key)),
+                "coverage_cp95_lower_mean": float(np.mean(los)),
+                "coverage_cp95_upper_mean": float(np.mean(his)),
+            }
+        )
+    bounds = pd.DataFrame(rows)
+    # composite string key: pandas merge does not reliably match NaN keys
+    key = "|".join(group_cols)
+    cp_summary = cp_summary.copy()
+    cp_summary["_gk"] = cp_summary[group_cols].astype(str).agg(lambda row: "|".join(row), axis=1)
+    bounds["_gk"] = bounds[group_cols].astype(str).agg(lambda row: "|".join(row), axis=1)
+    out = cp_summary.merge(
+        bounds[["_gk", "coverage_cp95_lower_mean", "coverage_cp95_upper_mean"]],
+        on="_gk", how="left", validate="one_to_one",
+    ).drop(columns=["_gk"])
+    return out
+
+
+def load_regime_cp(cp_path: Path, regime_path: Path, confidence: float, detailed_path: Path = DEFAULT_CP_DETAILED) -> pd.DataFrame:
     cp = pd.read_csv(cp_path)
+    cp = add_cp_columns(cp, detailed_path)
     regimes = pd.read_csv(regime_path)
 
     cp = cp[
@@ -156,8 +203,8 @@ def write_markdown(df: pd.DataFrame, path: Path, confidence: float) -> None:
         "rank_signal_class",
         "scenario_short",
         "coverage_mean",
-        "coverage_wilson95_lower_mean",
-        "coverage_wilson95_upper_mean",
+        "coverage_cp95_lower_mean",
+        "coverage_cp95_upper_mean",
         "median_width_mean",
         "finite_interval_fraction_mean",
         "MAE_median" if "MAE_median" in df.columns else "MAE_mean",
@@ -168,8 +215,8 @@ def write_markdown(df: pd.DataFrame, path: Path, confidence: float) -> None:
     mae_col = "MAE_median" if "MAE_median" in df.columns else "MAE_mean"
     for col in [
         "coverage_mean",
-        "coverage_wilson95_lower_mean",
-        "coverage_wilson95_upper_mean",
+        "coverage_cp95_lower_mean",
+        "coverage_cp95_upper_mean",
         "finite_interval_fraction_mean",
         r2_col,
     ]:
@@ -252,8 +299,8 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
                 zorder=3,
             )
             if metric == "coverage_mean":
-                lower = block["coverage_wilson95_lower_mean"].to_numpy(dtype=float)
-                upper = block["coverage_wilson95_upper_mean"].to_numpy(dtype=float)
+                lower = block["coverage_cp95_lower_mean"].to_numpy(dtype=float)
+                upper = block["coverage_cp95_upper_mean"].to_numpy(dtype=float)
                 ax.errorbar(
                     x,
                     y,
@@ -302,7 +349,7 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
     fig.text(
         0.53,
         0.045,
-        "Rows sorted by rank-signal regime and naive source-calibrated MAE; horizontal bars on coverage show Wilson 95% CI.",
+        "Rows sorted by rank-signal regime and naive source-calibrated MAE; horizontal bars on coverage show exact Clopper-Pearson 95% CI.",
         ha="center",
         fontsize=8.5,
         color="#444444",
@@ -316,6 +363,7 @@ def plot_regime_cp(df: pd.DataFrame, path: Path, confidence: float) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cp-summary", type=Path, default=DEFAULT_CP_SUMMARY)
+    parser.add_argument("--detailed", type=Path, default=DEFAULT_CP_DETAILED)
     parser.add_argument("--regime-summary", type=Path, default=DEFAULT_REGIME_SUMMARY)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--confidence", type=float, nargs="+", default=[0.90, 0.95])
@@ -325,13 +373,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     cp_summary = args.cp_summary if args.cp_summary.is_absolute() else ROOT / args.cp_summary
+    detailed = args.detailed if args.detailed.is_absolute() else ROOT / args.detailed
     regime_summary = args.regime_summary if args.regime_summary.is_absolute() else ROOT / args.regime_summary
     output_dir = args.output_dir if args.output_dir.is_absolute() else ROOT / args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     all_rows = []
     for confidence in args.confidence:
-        df = load_regime_cp(cp_summary, regime_summary, confidence)
+        df = load_regime_cp(cp_summary, regime_summary, confidence, detailed_path=detailed)
         all_rows.append(df)
         suffix = f"{int(round(confidence * 100))}"
         plot_path = output_dir / f"paper_cp_regime_stratified_{suffix}.png"

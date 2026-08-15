@@ -1,0 +1,128 @@
+{
+  "claim_scope": "virtual pack construction structurally eligible",
+  "completed_utc": "2026-07-10T17:17:52Z",
+  "lock_sha256": "55b30b2aacd19e87ee96127a3ce9f5db16fcda4b09248382df44f2089e6cc301",
+  "overall_decision": "STOP",
+  "results": [
+    {
+      "decision": "GO",
+      "gate": 0,
+      "metrics": {
+        "datasets": [
+          {
+            "cell_level_pass": true,
+            "dataset": "luh",
+            "followup_fraction": 0.9438202247191011,
+            "history_eligible_cells": 89,
+            "input_cells": 108,
+            "largest_duty_stratum": 9,
+            "pack_level_pass": true,
+            "primary_eligible_cells": 84,
+            "valid_pack_groups": 7
+          },
+          {
+            "cell_level_pass": true,
+            "dataset": "hust",
+            "followup_fraction": 1.0,
+            "history_eligible_cells": 77,
+            "input_cells": 77,
+            "largest_duty_stratum": 1,
+            "pack_level_pass": false,
+            "primary_eligible_cells": 77,
+            "valid_pack_groups": 0
+          },
+          {
+            "cell_level_pass": false,
+            "dataset": "sandia",
+            "followup_fraction": 0.8636363636363636,
+            "history_eligible_cells": 44,
+            "input_cells": 61,
+            "largest_duty_stratum": 4,
+            "pack_level_pass": false,
+            "primary_eligible_cells": 38,
+            "valid_pack_groups": 0
+          },
+          {
+            "cell_level_pass": false,
+            "dataset": "matr",
+            "followup_fraction": 0.0,
+            "history_eligible_cells": 59,
+            "input_cells": 135,
+            "largest_duty_stratum": 0,
+            "pack_level_pass": false,
+            "primary_eligible_cells": 0,
+            "valid_pack_groups": 0
+          }
+        ]
+      },
+      "name": "structural_validity",
+      "reason": "Cell-level development and replication are structurally estimable; pack claims remain conditional."
+    },
+    {
+      "decision": "GO",
+      "gate": 1,
+      "metrics": {
+        "baseline": {
+          "mae": 0.00022493552284595943,
+          "rmse": 0.00035201532512168094,
+          "spearman": 0.8190341196719653
+        },
+        "baseline_pair_difference": 6.568269270597616e-05,
+        "bootstrap_p05": 0.08363161256094298,
+        "bootstrap_p95": 0.659978369471913,
+        "bootstrap_valid_iterations": 500,
+        "candidate_pair_difference": 2.533307455495517e-05,
+        "n_cells": 84,
+        "pair_benefit": 0.6143112666169632,
+        "positive_bootstrap_fraction": 0.988,
+        "signal_to_noise": 16.32885475238139
+      },
+      "name": "oracle_value_ceiling",
+      "reason": "A learnable grading signal could materially improve within-duty grouping."
+    },
+    {
+      "decision": "STOP",
+      "gate": 2,
+      "metrics": {
+        "development_mae_improvement": 0.272771766054674,
+        "development_pairing": {
+          "baseline_pair_difference": 6.568269270597616e-05,
+          "bootstrap_p05": -0.7387221237027431,
+          "bootstrap_p95": 0.34643963634200453,
+          "bootstrap_valid_iterations": 500,
+          "candidate_pair_difference": 4.808227710925151e-05,
+          "pair_benefit": 0.2679612371482947,
+          "positive_bootstrap_fraction": 0.35
+        },
+        "replication_passes": 0,
+        "replications": [
+          {
+            "baseline_mae": 9.730271628544691e-06,
+            "dataset": "hust",
+            "mae_improvement": -0.13482715784908006,
+            "model_mae": 1.104217649732091e-05,
+            "status": "fail"
+          },
+          {
+            "dataset": "sandia",
+            "status": "structural_fail"
+          },
+          {
+            "dataset": "matr",
+            "status": "structural_fail"
+          }
+        ],
+        "selected_model": "catboost"
+      },
+      "name": "prospective_prediction",
+      "reason": "The prospective model misses a locked development, pairing, or replication threshold."
+    },
+    {
+      "decision": "NOT_RUN",
+      "gate": 3,
+      "metrics": {},
+      "name": "genuine_second_life_confirmation",
+      "reason": "Stopped prospectively because Gate 2 returned STOP."
+    }
+  ]
+}

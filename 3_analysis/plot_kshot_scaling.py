@@ -50,7 +50,7 @@ COLORS = {
     "Residual-adapted CP": "#F58518",
     "Linear-adapted CP": "#5F3DC4",
     "MATR": "#4C78A8",
-    "HUST": "#54A24B",
+    "HUST": "#2E7D32",
     "Sandia": "#E45756",
     "Luh/KIT": "#B279A2",
 }

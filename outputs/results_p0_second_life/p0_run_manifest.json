@@ -1,0 +1,27 @@
+{
+  "analysis_script_sha256": "a42579343120971bf85e8e0b5cf2a5e48269af55de1cfcc7cb9a977ed9069f7d",
+  "completed_utc": "2026-07-10T17:17:52Z",
+  "config_path": "/Users/osmancifci/Desktop/MAKALELER/BilgemBatarya/Graduation-Project-Dicle/configs/p0_second_life_lock.json",
+  "config_sha256": "55b30b2aacd19e87ee96127a3ce9f5db16fcda4b09248382df44f2089e6cc301",
+  "download_mowri": true,
+  "git_commit": "1786e4e921dc424c12f7196feee05f0e5e0f7394",
+  "git_status_after": "D data/raw/batch3_varcharge.pkl\n?? 3_analysis/audit_gated_policy.py\n?? 3_analysis/feature_effect_transport.py\n?? 3_analysis/generate_feature_metrics_pdf.py\n?? 3_analysis/run_p0_second_life.py\n?? 3_analysis/test_p0_second_life.py\n?? CLAUDE.md\n?? configs/p0_second_life_lock.json\n?? data/intermediate/audit_gated_policy_draws.csv\n?? data/intermediate/audit_gated_policy_gate_rates.csv\n?? data/intermediate/audit_gated_policy_report.md\n?? data/intermediate/audit_gated_policy_summary.csv\n?? data/intermediate/feature_effect_transport_direction_summary.csv\n?? data/intermediate/feature_effect_transport_feature_contributions.csv\n?? data/intermediate/feature_effect_transport_group_contributions.csv\n?? data/intermediate/feature_effect_transport_group_summary.csv\n?? data/intermediate/feature_effect_transport_report.md\n?? data/intermediate/feature_effect_transport_runs.csv\n?? docs/manuscript.aux\n?? docs/manuscript.bbl\n?? docs/manuscript.blg\n?? docs/manuscript.fdb_latexmk\n?? docs/manuscript.fls\n?? docs/manuscript.out\n?? docs/manuscript.pdf\n?? docs/manuscript.tex\n?? docs/references.bib\n?? docs/supplementary.aux\n?? docs/supplementary.fdb_latexmk\n?? docs/supplementary.fls\n?? docs/supplementary.out\n?? docs/supplementary.pdf\n?? docs/supplementary.tex\n?? output/\n?? outputs/results_p0_second_life/\n?? outputs/results_v2_audit_gated_policy/\n?? outputs/results_v2_feature_effect_transport/\n?? presentation/extracted/\n?? presentation/reveal_v2/\n?? umich_extract_outputs_20260525-140759.zip",
+  "git_status_before": "D data/raw/batch3_varcharge.pkl\n?? 3_analysis/audit_gated_policy.py\n?? 3_analysis/feature_effect_transport.py\n?? 3_analysis/generate_feature_metrics_pdf.py\n?? 3_analysis/run_p0_second_life.py\n?? 3_analysis/test_p0_second_life.py\n?? CLAUDE.md\n?? configs/p0_second_life_lock.json\n?? data/intermediate/audit_gated_policy_draws.csv\n?? data/intermediate/audit_gated_policy_gate_rates.csv\n?? data/intermediate/audit_gated_policy_report.md\n?? data/intermediate/audit_gated_policy_summary.csv\n?? data/intermediate/feature_effect_transport_direction_summary.csv\n?? data/intermediate/feature_effect_transport_feature_contributions.csv\n?? data/intermediate/feature_effect_transport_group_contributions.csv\n?? data/intermediate/feature_effect_transport_group_summary.csv\n?? data/intermediate/feature_effect_transport_report.md\n?? data/intermediate/feature_effect_transport_runs.csv\n?? docs/manuscript.aux\n?? docs/manuscript.bbl\n?? docs/manuscript.blg\n?? docs/manuscript.fdb_latexmk\n?? docs/manuscript.fls\n?? docs/manuscript.out\n?? docs/manuscript.pdf\n?? docs/manuscript.tex\n?? docs/references.bib\n?? docs/supplementary.aux\n?? docs/supplementary.fdb_latexmk\n?? docs/supplementary.fls\n?? docs/supplementary.out\n?? docs/supplementary.pdf\n?? docs/supplementary.tex\n?? output/\n?? outputs/results_p0_second_life/\n?? outputs/results_v2_audit_gated_policy/\n?? outputs/results_v2_feature_effect_transport/\n?? presentation/extracted/\n?? presentation/reveal_v2/\n?? umich_extract_outputs_20260525-140759.zip",
+  "platform": "macOS-15.7.3-arm64-arm-64bit",
+  "project_root": "/Users/osmancifci/Desktop/MAKALELER/BilgemBatarya/Graduation-Project-Dicle",
+  "python": "3.11.5 (v3.11.5:cce6ba91b3, Aug 24 2023, 10:50:31) [Clang 13.0.0 (clang-1300.0.29.30)]",
+  "requested_gates": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "respect_gates": true,
+  "started_utc": "2026-07-10T17:17:45Z",
+  "versions": {
+    "numpy": "2.4.1",
+    "pandas": "2.2.3",
+    "scipy": "1.17.0",
+    "sklearn": "1.6.1"
+  }
+}

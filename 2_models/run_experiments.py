@@ -106,6 +106,27 @@ def fit_elastic_net(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: in
     return model
 
 
+def fit_ridge(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
+    """Tier-1 target-only baseline: ridge with closed-form leave-one-out CV.
+
+    RidgeCV with ``alpha=np.logspace(-2, 3, 12)`` uses sklearn's closed-form
+    leave-one-out score — no fold splitting, so it is well-defined at the tiny
+    fitting sizes used by the Tier-1 target-only CP baseline (n_fit as low as 5)
+    where ElasticNetCV's k-fold cv=max(2, min(5, n-1)) is unstable. Deterministic
+    for a fixed data input; ``seed`` is accepted for API compatibility with the
+    other fit_* fitters and is not used by ridge.
+
+    The alpha grid is FROZEN (see docs/TIER1_DECISION_NOTE.md); fitting happens
+    strictly inside the caller's fit set.
+    """
+    from sklearn.linear_model import RidgeCV
+
+    alphas = np.logspace(-2.0, 3.0, 12)
+    model = RidgeCV(alphas=alphas, cv=None)  # cv=None -> closed-form leave-one-out
+    model.fit(X_train_scaled, y_train)
+    return model
+
+
 def fit_xgboost(X_train_scaled: np.ndarray, y_train: np.ndarray, *, seed: int):
     """XGBoost tuning per SOP §4.2:
         - max_depth ∈ {3, 5, 7}
